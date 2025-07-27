@@ -42,8 +42,7 @@ const generateSchedulePrompt = ai.definePrompt({
 
   Ensure that all class requirements are met and that higher priority subjects are scheduled appropriately.
 
-  Return the schedule in the following JSON format:
-  {{$jsonOutput: GenerateScheduleOutputSchema}}
+  Return the schedule in a valid JSON format.
   `,
 });
 

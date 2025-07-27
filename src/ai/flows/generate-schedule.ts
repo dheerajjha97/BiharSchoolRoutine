@@ -46,6 +46,8 @@ const generateSchedulePrompt = ai.definePrompt({
 
   If "Lunch" is one of the subjects, schedule it for all classes at the same time. No teacher is required for Lunch. During the lunch period, no other subjects should be scheduled for any class.
 
+  Constraint: Every teacher must be assigned at least one period each day across all classes.
+
   Ensure that all class requirements are met and that higher priority subjects are scheduled appropriately. The output for each time slot should be a JSON object string like "{ \\"class\\": \\"Class 9A\\", \\"subject\\": \\"Math\\", \\"teacher\\": \\"Mr. Sharma\\" }". For lunch, the teacher can be "N/A". If a slot is empty, return null.
 
   Return the schedule in a valid JSON format.

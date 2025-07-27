@@ -24,6 +24,8 @@ interface RoutineControlsProps {
   setSubjectPriorities: (value: Record<string, number>) => void;
   availability: Record<string, Record<string, boolean>>;
   setAvailability: (value: Record<string, Record<string, boolean>>) => void;
+  teacherSubjects: Record<string, string[]>;
+  setTeacherSubjects: (value: Record<string, string[]>) => void;
 }
 
 export default function RoutineControls({
@@ -37,6 +39,8 @@ export default function RoutineControls({
   setSubjectPriorities,
   availability,
   setAvailability,
+  teacherSubjects,
+  setTeacherSubjects,
 }: RoutineControlsProps) {
   
   const handleRequirementChange = (className: string, subject: string, checked: boolean) => {
@@ -45,6 +49,14 @@ export default function RoutineControls({
       ? [...currentReqs, subject]
       : currentReqs.filter(s => s !== subject);
     setClassRequirements({ ...classRequirements, [className]: newReqs });
+  };
+
+  const handleTeacherSubjectChange = (teacher: string, subject: string, checked: boolean) => {
+    const currentSubjects = teacherSubjects[teacher] || [];
+    const newSubjects = checked
+      ? [...currentSubjects, subject]
+      : currentSubjects.filter(s => s !== subject);
+    setTeacherSubjects({ ...teacherSubjects, [teacher]: newSubjects });
   };
   
   const handleAvailabilityChange = (teacher: string, slot: string, checked: boolean) => {
@@ -83,6 +95,28 @@ export default function RoutineControls({
               ))}
             </AccordionContent>
           </AccordionItem>
+          <AccordionItem value="teacher-subjects">
+            <AccordionTrigger>Teacher-Subject Mapping</AccordionTrigger>
+            <AccordionContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {teachers.map(t => (
+                <div key={t} className="p-4 border rounded-lg">
+                  <h4 className="font-semibold mb-2">{t}</h4>
+                  <div className="space-y-2">
+                    {subjects.map(s => (
+                      <div key={s} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`${t}-${s}`}
+                          checked={teacherSubjects[t]?.includes(s) || false}
+                          onCheckedChange={(checked) => handleTeacherSubjectChange(t, s, !!checked)}
+                        />
+                        <Label htmlFor={`${t}-${s}`}>{s}</Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </AccordionContent>
+          </AccordionItem>
           <AccordionItem value="subject-priorities">
             <AccordionTrigger>Subject Priorities</AccordionTrigger>
             <AccordionContent className="space-y-4">
@@ -96,6 +130,7 @@ export default function RoutineControls({
                     step={1}
                     onValueChange={([value]) => setSubjectPriorities({ ...subjectPriorities, [s]: value })}
                   />
+
                   <span className="col-span-1 text-sm text-muted-foreground">
                     Priority: {subjectPriorities[s] || 5}
                   </span>

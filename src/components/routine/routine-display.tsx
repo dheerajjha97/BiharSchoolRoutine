@@ -7,14 +7,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, Printer } from "lucide-react";
+import { Download, Printer, User, School, Book } from "lucide-react";
 
 interface RoutineDisplayProps {
   scheduleData: GenerateScheduleOutput;
   timeSlots: string[];
 }
 
-type ParsedCell = Record<string, string>;
+type ParsedCell = {
+    class: string,
+    subject: string,
+    teacher: string,
+};
 
 export default function RoutineDisplay({ scheduleData, timeSlots }: RoutineDisplayProps) {
   const [printHeader, setPrintHeader] = useState("Weekly Class Schedule");
@@ -40,12 +44,13 @@ export default function RoutineDisplay({ scheduleData, timeSlots }: RoutineDispl
       for (const day of days) {
         const cellContent = schedule[day]?.[slot] ?? '';
         let parsedContent = '';
-        try {
-          // Attempt to parse content if it's a JSON-like string
-          const parsed: ParsedCell = JSON.parse(cellContent.replace(/'/g, '"'));
-          parsedContent = Object.entries(parsed).map(([key, value]) => `${key}: ${value}`).join('; ');
-        } catch (e) {
-          parsedContent = cellContent;
+        if (cellContent) {
+            try {
+              const parsed: ParsedCell = JSON.parse(cellContent.replace(/'/g, ''));
+              parsedContent = `Class: ${parsed.class}; Subject: ${parsed.subject}; Teacher: ${parsed.teacher}`;
+            } catch (e) {
+              parsedContent = cellContent;
+            }
         }
         row.push(`"${parsedContent.replace(/"/g, '""')}"`); // Escape double quotes
       }
@@ -67,15 +72,26 @@ export default function RoutineDisplay({ scheduleData, timeSlots }: RoutineDispl
   const renderCellContent = (content: string | null) => {
     if (!content) return <span className="text-muted-foreground">-</span>;
     try {
+      // The AI sometimes returns a JSON-like string with single quotes, so we replace them.
       const parsed: ParsedCell = JSON.parse(content.replace(/'/g, '"'));
       return (
-        <ul className="text-xs space-y-1">
-          {Object.entries(parsed).map(([key, value]) => (
-            <li key={key}><strong>{key}:</strong> {value}</li>
-          ))}
-        </ul>
+        <div className="text-xs space-y-1">
+          <div className="flex items-center gap-1.5">
+            <School className="w-3 h-3 text-muted-foreground" />
+            <span>{parsed.class}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Book className="w-3 h-3 text-muted-foreground" />
+            <span>{parsed.subject}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <User className="w-3 h-3 text-muted-foreground" />
+            <span>{parsed.teacher}</span>
+          </div>
+        </div>
       );
     } catch (e) {
+      // If parsing fails, display the raw content.
       return <span className="text-xs">{content}</span>;
     }
   };

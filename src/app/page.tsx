@@ -31,6 +31,7 @@ export default function Home() {
   const [classRequirements, setClassRequirements] = useState<Record<string, string[]>>({});
   const [subjectPriorities, setSubjectPriorities] = useState<Record<string, number>>({});
   const [availability, setAvailability] = useState<Record<string, Record<string, boolean>>>({});
+  const [teacherSubjects, setTeacherSubjects] = useState<Record<string, string[]>>({});
   
   const [routine, setRoutine] = useState<GenerateScheduleOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -59,6 +60,7 @@ export default function Home() {
         availability: formattedAvailability,
         subjectPriorities,
         classRequirements,
+        teacherSubjects,
       };
 
       const result = await generateSchedule(input);
@@ -156,6 +158,8 @@ export default function Home() {
             setSubjectPriorities={setSubjectPriorities}
             availability={availability}
             setAvailability={setAvailability}
+            teacherSubjects={teacherSubjects}
+            setTeacherSubjects={setTeacherSubjects}
           />
         </div>
 

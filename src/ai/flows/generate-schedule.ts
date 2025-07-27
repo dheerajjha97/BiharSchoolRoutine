@@ -13,6 +13,7 @@ const GenerateScheduleInputSchema = z.object({
   availability: z.record(z.string(), z.array(z.string())).describe('Teacher availability per day and time slot.'),
   subjectPriorities: z.record(z.string(), z.number()).describe('Subject priorities (higher number = higher priority).'),
   classRequirements: z.record(z.string(), z.array(z.string())).describe('Subjects required for each class.'),
+  teacherSubjects: z.record(z.string(), z.array(z.string())).describe('Subjects each teacher is qualified to teach.'),
 });
 export type GenerateScheduleInput = z.infer<typeof GenerateScheduleInputSchema>;
 
@@ -31,7 +32,7 @@ const generateSchedulePrompt = ai.definePrompt({
   output: {schema: GenerateScheduleOutputSchema},
   prompt: `You are an AI assistant designed to generate class schedules for schools.
 
-  Given the following information, create a schedule that optimizes for subject priorities and teacher availability.
+  Given the following information, create a schedule that optimizes for subject priorities, teacher availability, and teacher-subject mappings.
 
   Teacher Names: {{teacherNames}}
   Classes: {{classes}}
@@ -39,8 +40,11 @@ const generateSchedulePrompt = ai.definePrompt({
   Teacher Availability: {{availability}}
   Subject Priorities: {{subjectPriorities}}
   Class Requirements: {{classRequirements}}
+  Teacher-Subject Mapping: {{teacherSubjects}}
 
-  Ensure that all class requirements are met and that higher priority subjects are scheduled appropriately.
+  When assigning a teacher to a class for a specific subject, you MUST ensure the teacher is qualified to teach that subject based on the Teacher-Subject Mapping.
+
+  Ensure that all class requirements are met and that higher priority subjects are scheduled appropriately. The output for each time slot should be a JSON object string like "{ \\"class\\": \\"Class 9A\\", \\"subject\\": \\"Math\\", \\"teacher\\": \\"Mr. Sharma\\" }". If a slot is empty, return null.
 
   Return the schedule in a valid JSON format.
   `,

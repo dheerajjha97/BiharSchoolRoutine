@@ -42,14 +42,17 @@ export default function RoutineDisplay({ scheduleData, timeSlots }: RoutineDispl
     for (const slot of timeSlots) {
       const row = [slot];
       for (const day of days) {
-        const cellContent = schedule[day]?.[slot] ?? '';
+        const cellContent = schedule[day]?.[slot] ?? null;
         let parsedContent = '';
         if (cellContent) {
             try {
-              const parsed: ParsedCell = JSON.parse(cellContent.replace(/'/g, ''));
+              const parsed: ParsedCell = cellContent as ParsedCell;
               parsedContent = `Class: ${parsed.class}; Subject: ${parsed.subject}; Teacher: ${parsed.teacher}`;
             } catch (e) {
-              parsedContent = cellContent;
+               // Should not happen with the new schema, but good to have a fallback
+               if(typeof cellContent === 'string') {
+                parsedContent = cellContent;
+               }
             }
         }
         row.push(`"${parsedContent.replace(/"/g, '""')}"`); // Escape double quotes
@@ -69,11 +72,10 @@ export default function RoutineDisplay({ scheduleData, timeSlots }: RoutineDispl
     document.body.removeChild(link);
   };
   
-  const renderCellContent = (content: string | null) => {
+  const renderCellContent = (content: ParsedCell | null) => {
     if (!content) return <span className="text-muted-foreground">-</span>;
     try {
-      // The AI sometimes returns a JSON-like string with single quotes, so we replace them.
-      const parsed: ParsedCell = JSON.parse(content.replace(/'/g, '"'));
+      const parsed: ParsedCell = content;
       return (
         <div className="text-xs space-y-1">
           <div className="flex items-center gap-1.5">
@@ -92,7 +94,8 @@ export default function RoutineDisplay({ scheduleData, timeSlots }: RoutineDispl
       );
     } catch (e) {
       // If parsing fails, display the raw content.
-      return <span className="text-xs">{content}</span>;
+      if (typeof content === 'string') return <span className="text-xs">{content}</span>;
+      return <span className="text-muted-foreground">-</span>;
     }
   };
 

@@ -17,8 +17,21 @@ const GenerateScheduleInputSchema = z.object({
 });
 export type GenerateScheduleInput = z.infer<typeof GenerateScheduleInputSchema>;
 
+const ScheduleEntrySchema = z.object({
+  class: z.string(),
+  subject: z.string(),
+  teacher: z.string(),
+});
+
 const GenerateScheduleOutputSchema = z.object({
-  schedule: z.record(z.string(), z.record(z.string(), z.string().nullable())).describe('Generated schedule (day -> time slot -> class -> subject or null if empty).'),
+  schedule: z
+    .record(
+      z.string(),
+      z.record(z.string(), z.union([ScheduleEntrySchema, z.null()]))
+    )
+    .describe(
+      'Generated schedule (day -> time slot -> schedule entry or null if empty).'
+    ),
 });
 export type GenerateScheduleOutput = z.infer<typeof GenerateScheduleOutputSchema>;
 
@@ -44,11 +57,11 @@ const generateSchedulePrompt = ai.definePrompt({
 
   When assigning a teacher to a class for a specific subject, you MUST ensure the teacher is qualified to teach that subject based on the Teacher-Subject Mapping.
 
-  If "Lunch" is one of the subjects, schedule it for all classes at the same time. No teacher is required for Lunch. During the lunch period, no other subjects should be scheduled for any class.
+  If "Lunch" is one of the subjects, schedule it for all classes at the same time. No teacher is required for Lunch. During the lunch period, no other subjects should be scheduled for any class. For lunch, the teacher can be "N/A".
 
   Constraint: Every teacher must be assigned at least one period each day across all classes.
 
-  Ensure that all class requirements are met and that higher priority subjects are scheduled appropriately. The output for each time slot should be a JSON object string like "{ \\"class\\": \\"Class 9A\\", \\"subject\\": \\"Math\\", \\"teacher\\": \\"Mr. Sharma\\" }". For lunch, the teacher can be "N/A". If a slot is empty, return null.
+  Ensure that all class requirements are met and that higher priority subjects are scheduled appropriately. For lunch, the teacher can be "N/A". If a slot is empty, return null.
 
   Return the schedule in a valid JSON format.
   `,

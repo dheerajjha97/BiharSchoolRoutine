@@ -1,30 +1,28 @@
+
 "use client";
 
 type SchoolData = {
   teachers: string[];
   classes: string[];
   subjects: string[];
+  timeSlots?: string[];
 };
 
 export const exportToCsv = (data: SchoolData, filename: string) => {
-  const allData = {
-    teachers: data.teachers.join('\n'),
-    classes: data.classes.join('\n'),
-    subjects: data.subjects.join('\n'),
-  };
-
-  const headers = Object.keys(allData);
-  const maxLength = Math.max(data.teachers.length, data.classes.length, data.subjects.length);
+  const { teachers, classes, subjects, timeSlots = [] } = data;
   
-  let csvContent = headers.join(',') + '\n';
+  let csvContent = 'teachers,classes,subjects,timeSlots\n';
+
+  const maxLength = Math.max(teachers.length, classes.length, subjects.length, timeSlots.length);
 
   for (let i = 0; i < maxLength; i++) {
     const row = [
-      data.teachers[i] || '',
-      data.classes[i] || '',
-      data.subjects[i] || '',
+      teachers[i] || '',
+      classes[i] || '',
+      subjects[i] || '',
+      timeSlots[i] || '',
     ];
-    csvContent += row.join(',') + '\n';
+    csvContent += row.map(v => `"${v.replace(/"/g, '""')}"`).join(',') + '\n';
   }
 
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -53,15 +51,16 @@ export const importFromCsv = (file: File): Promise<SchoolData> => {
             throw new Error("CSV file is empty or has only headers.");
         }
 
-        const headers = lines[0].split(',').map(h => h.trim());
-        const data: SchoolData = { teachers: [], classes: [], subjects: [] };
+        const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+        const data: SchoolData = { teachers: [], classes: [], subjects: [], timeSlots: [] };
 
         const teacherIndex = headers.indexOf('teachers');
         const classIndex = headers.indexOf('classes');
         const subjectIndex = headers.indexOf('subjects');
+        const timeSlotIndex = headers.indexOf('timeSlots');
 
         for (let i = 1; i < lines.length; i++) {
-            const values = lines[i].split(',').map(v => v.trim());
+            const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
             if (teacherIndex !== -1 && values[teacherIndex]) {
                 data.teachers.push(values[teacherIndex]);
             }
@@ -71,12 +70,18 @@ export const importFromCsv = (file: File): Promise<SchoolData> => {
             if (subjectIndex !== -1 && values[subjectIndex]) {
                 data.subjects.push(values[subjectIndex]);
             }
+            if (timeSlotIndex !== -1 && values[timeSlotIndex]) {
+                data.timeSlots?.push(values[timeSlotIndex]);
+            }
         }
         
         // Remove duplicates
         data.teachers = [...new Set(data.teachers)];
         data.classes = [...new Set(data.classes)];
         data.subjects = [...new Set(data.subjects)];
+        if (data.timeSlots) {
+          data.timeSlots = [...new Set(data.timeSlots)];
+        }
         
         resolve(data);
       } catch (error) {

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, ChangeEvent, useRef } from "react";
@@ -6,27 +7,26 @@ import { generateSchedule } from "@/ai/flows/generate-schedule";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Book, Download, Loader2, School, Upload, User, Wand2 } from "lucide-react";
+import { Book, Download, Loader2, School, Upload, User, Wand2, Clock } from "lucide-react";
 import { Logo } from "@/components/icons";
 import DataManager from "@/components/routine/data-manager";
 import RoutineControls from "@/components/routine/routine-controls";
 import RoutineDisplay from "@/components/routine/routine-display";
 import { exportToCsv, importFromCsv } from "@/lib/csv-helpers";
 
-const timeSlots = [
-  "09:00 - 10:00",
-  "10:00 - 11:00",
-  "11:00 - 12:00",
-  "12:00 - 13:00",
-  "13:00 - 14:00",
-  "14:00 - 15:00",
-  "15:00 - 16:00",
-];
-
 export default function Home() {
   const [teachers, setTeachers] = useState<string[]>(["Mr. Sharma", "Mrs. Gupta", "Mr. Singh"]);
   const [classes, setClasses] = useState<string[]>(["Class 9A", "Class 10B"]);
   const [subjects, setSubjects] = useState<string[]>(["Math", "Science", "History", "English"]);
+  const [timeSlots, setTimeSlots] = useState<string[]>([
+    "09:00 - 10:00",
+    "10:00 - 11:00",
+    "11:00 - 12:00",
+    "12:00 - 13:00",
+    "13:00 - 14:00",
+    "14:00 - 15:00",
+    "15:00 - 16:00",
+  ]);
   
   const [classRequirements, setClassRequirements] = useState<Record<string, string[]>>({});
   const [subjectPriorities, setSubjectPriorities] = useState<Record<string, number>>({});
@@ -41,8 +41,8 @@ export default function Home() {
   const handleGenerateRoutine = async () => {
     setIsLoading(true);
     try {
-      if (teachers.length === 0 || classes.length === 0 || subjects.length === 0) {
-        throw new Error("Please provide teachers, classes, and subjects before generating a routine.");
+      if (teachers.length === 0 || classes.length === 0 || subjects.length === 0 || timeSlots.length === 0) {
+        throw new Error("Please provide teachers, classes, subjects, and time slots before generating a routine.");
       }
 
       const formattedAvailability: Record<string, string[]> = {};
@@ -82,7 +82,7 @@ export default function Home() {
 
   const handleExport = () => {
     try {
-      const dataToExport = { teachers, classes, subjects };
+      const dataToExport = { teachers, classes, subjects, timeSlots };
       exportToCsv(dataToExport, "bihar-school-data.csv");
       toast({ title: "Data exported successfully!" });
     } catch (error) {
@@ -103,6 +103,7 @@ export default function Home() {
       if (data.teachers) setTeachers(data.teachers);
       if (data.classes) setClasses(data.classes);
       if (data.subjects) setSubjects(data.subjects);
+      if (data.timeSlots) setTimeSlots(data.timeSlots);
       toast({ title: "Data imported successfully!" });
     } catch (error) {
       toast({ variant: "destructive", title: "Import failed", description: "Could not parse the CSV file." });
@@ -138,10 +139,11 @@ export default function Home() {
       
       <main className="flex-grow grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 flex flex-col gap-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <DataManager title="Teachers" icon={User} items={teachers} setItems={setTeachers} placeholder="New teacher name..." />
             <DataManager title="Classes" icon={School} items={classes} setItems={setClasses} placeholder="New class name..." />
             <DataManager title="Subjects" icon={Book} items={subjects} setItems={setSubjects} placeholder="New subject name..." />
+            <DataManager title="Time Slots" icon={Clock} items={timeSlots} setItems={setTimeSlots} placeholder="e.g. 09:00 - 10:00" />
           </div>
           <RoutineControls
             teachers={teachers}

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -40,7 +41,7 @@ export default function DataManager({ title, icon: Icon, items, setItems, placeh
         <CardDescription>Add or remove {title.toLowerCase()}.</CardDescription>
       </CardHeader>
       <CardContent className="flex-grow">
-        <ScrollArea className="h-40 w-full">
+        <ScrollArea className="h-24 w-full">
           <div className="space-y-2">
             {items.length > 0 ? (
               items.map(item => (

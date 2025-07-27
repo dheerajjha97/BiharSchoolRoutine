@@ -44,7 +44,9 @@ const generateSchedulePrompt = ai.definePrompt({
 
   When assigning a teacher to a class for a specific subject, you MUST ensure the teacher is qualified to teach that subject based on the Teacher-Subject Mapping.
 
-  Ensure that all class requirements are met and that higher priority subjects are scheduled appropriately. The output for each time slot should be a JSON object string like "{ \\"class\\": \\"Class 9A\\", \\"subject\\": \\"Math\\", \\"teacher\\": \\"Mr. Sharma\\" }". If a slot is empty, return null.
+  If "Lunch" is one of the subjects, schedule it for all classes at the same time. No teacher is required for Lunch. During the lunch period, no other subjects should be scheduled for any class.
+
+  Ensure that all class requirements are met and that higher priority subjects are scheduled appropriately. The output for each time slot should be a JSON object string like "{ \\"class\\": \\"Class 9A\\", \\"subject\\": \\"Math\\", \\"teacher\\": \\"Mr. Sharma\\" }". For lunch, the teacher can be "N/A". If a slot is empty, return null.
 
   Return the schedule in a valid JSON format.
   `,

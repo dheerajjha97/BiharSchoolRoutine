@@ -17,7 +17,7 @@ import { exportToCsv, importFromCsv } from "@/lib/csv-helpers";
 export default function Home() {
   const [teachers, setTeachers] = useState<string[]>(["Mr. Sharma", "Mrs. Gupta", "Mr. Singh"]);
   const [classes, setClasses] = useState<string[]>(["Class 9A", "Class 10B"]);
-  const [subjects, setSubjects] = useState<string[]>(["Math", "Science", "History", "English"]);
+  const [subjects, setSubjects] = useState<string[]>(["Math", "Science", "History", "English", "Lunch"]);
   const [timeSlots, setTimeSlots] = useState<string[]>([
     "09:00 - 10:00",
     "10:00 - 11:00",

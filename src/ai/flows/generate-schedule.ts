@@ -27,6 +27,7 @@ const ScheduleEntrySchema = z.object({
   subject: z.string(),
   teacher: z.string(),
 });
+export type ScheduleEntry = z.infer<typeof ScheduleEntrySchema>;
 
 const GenerateScheduleOutputSchema = z.object({
   schedule: z.array(ScheduleEntrySchema).describe("A flat list of all the scheduled classes for the week."),
@@ -68,7 +69,7 @@ const generateSchedulePrompt = ai.definePrompt({
 
   Ensure that all class requirements are met and that higher priority subjects are scheduled appropriately.
 
-  IMPORTANT: Your response MUST be a valid JSON object that strictly follows the provided output schema. Ensure every object in the 'schedule' array contains all the required fields: 'day', 'timeSlot', 'className', 'subject', and 'teacher'. Do not generate incomplete entries.
+  IMPORTANT: Your response MUST be a valid JSON object that strictly follows the provided output schema. Ensure every object in the 'schedule' array contains all the required fields: 'day', 'timeSlot', 'className', 'subject', and 'teacher'. Do not generate incomplete or partial entries. Every single entry must be a complete object.
   `,
 });
 
@@ -83,3 +84,5 @@ const generateScheduleFlow = ai.defineFlow(
     return output!;
   }
 );
+
+    

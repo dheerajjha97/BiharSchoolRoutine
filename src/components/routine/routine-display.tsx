@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo } from 'react';
-import type { GenerateScheduleOutput } from "@/ai/flows/generate-schedule";
+import type { GenerateScheduleOutput, ScheduleEntry } from "@/ai/flows/generate-schedule";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,26 +11,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Download, Printer } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-
 interface RoutineDisplayProps {
   scheduleData: GenerateScheduleOutput;
   timeSlots: string[];
   classes: string[];
 }
 
-type ScheduleEntry = {
-    day: string;
-    timeSlot: string;
-    className: string;
-    subject: string;
-    teacher: string;
-};
-
 type GridSchedule = {
   [day: string]: {
     [timeSlot: string]: ScheduleEntry[]
   }
 };
+
+const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export default function RoutineDisplay({ scheduleData, timeSlots, classes }: RoutineDisplayProps) {
   const [printHeader, setPrintHeader] = useState("Weekly Class Schedule");
@@ -39,7 +32,6 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes }: Rou
 
   const gridSchedule = useMemo<GridSchedule>(() => {
     const grid: GridSchedule = {};
-    const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     
     daysOfWeek.forEach(day => {
         grid[day] = {};
@@ -57,7 +49,6 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes }: Rou
     return grid;
   }, [scheduleData, timeSlots]);
 
-  const days = Object.keys(gridSchedule);
 
   const handlePrint = () => {
     const root = document.documentElement;
@@ -167,14 +158,14 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes }: Rou
                     <TableHeader>
                     <TableRow>
                         <TableHead className="min-w-[120px]">Time</TableHead>
-                        {days.map(day => <TableHead key={day} className="text-center">{day}</TableHead>)}
+                        {daysOfWeek.map(day => <TableHead key={day} className="text-center">{day}</TableHead>)}
                     </TableRow>
                     </TableHeader>
                     <TableBody>
                     {timeSlots.map(slot => (
                         <TableRow key={slot}>
                         <TableCell className="font-medium align-top">{slot}</TableCell>
-                        {days.map(day => (
+                        {daysOfWeek.map(day => (
                             <TableCell key={`${day}-${slot}`}>
                                 {renderCellContent(gridSchedule[day]?.[slot] ?? null)}
                             </TableCell>
@@ -191,3 +182,5 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes }: Rou
     </Card>
   );
 }
+
+    

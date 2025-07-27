@@ -2,17 +2,19 @@
 "use client";
 
 import { useState, useMemo, ChangeEvent, useRef } from "react";
-import type { GenerateScheduleInput, GenerateScheduleOutput } from "@/ai/flows/generate-schedule";
+import type { GenerateScheduleInput, GenerateScheduleOutput, ScheduleEntry } from "@/ai/flows/generate-schedule";
 import { generateSchedule } from "@/ai/flows/generate-schedule";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Book, Download, Loader2, School, Upload, User, Wand2, Clock, Save, FolderOpen } from "lucide-react";
+import { Book, Download, Loader2, School, Upload, User, Wand2, Clock, Save, FolderOpen, Pencil } from "lucide-react";
 import { Logo } from "@/components/icons";
 import DataManager from "@/components/routine/data-manager";
 import RoutineControls from "@/components/routine/routine-controls";
 import RoutineDisplay from "@/components/routine/routine-display";
 import { exportToCsv, importFromCsv } from "@/lib/csv-helpers";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ManualRoutineEditor from "@/components/routine/manual-routine-editor";
 
 type SchoolConfig = {
   classRequirements: Record<string, string[]>;
@@ -45,6 +47,7 @@ export default function Home() {
 
   const [routine, setRoutine] = useState<GenerateScheduleOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("automatic");
   const { toast } = useToast();
 
   const csvInputRef = useRef<HTMLInputElement>(null);
@@ -95,6 +98,10 @@ export default function Home() {
     }
   };
 
+  const handleManualScheduleChange = (newSchedule: ScheduleEntry[]) => {
+    setRoutine({ schedule: newSchedule });
+  };
+  
   const handleExportCsv = () => {
     try {
       exportToCsv({ teachers, classes, subjects, timeSlots }, "school-data.csv");
@@ -245,26 +252,44 @@ export default function Home() {
         </div>
 
         <div className="flex flex-col gap-6">
-            <Card className="flex-grow flex flex-col">
-                <CardContent className="p-6 flex-grow flex flex-col items-center justify-center">
-                    <Button
-                        size="lg"
-                        className="w-full text-lg py-8"
-                        onClick={handleGenerateRoutine}
-                        disabled={isLoading}
-                    >
-                        {isLoading ? (
-                        <Loader2 className="mr-2 h-6 w-6 animate-spin" />
-                        ) : (
-                        <Wand2 className="mr-2 h-6 w-6" />
-                        )}
-                        Generate Routine
-                    </Button>
-                    <p className="text-xs text-muted-foreground mt-4 text-center">
-                        Click to generate the school routine using AI based on the provided data.
-                    </p>
-                </CardContent>
-            </Card>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="automatic"><Wand2 className="mr-2 h-4 w-4" />Automatic</TabsTrigger>
+                <TabsTrigger value="manual"><Pencil className="mr-2 h-4 w-4" />Manual</TabsTrigger>
+              </TabsList>
+              <TabsContent value="automatic">
+                <Card className="flex-grow flex flex-col mt-4">
+                  <CardContent className="p-6 flex-grow flex flex-col items-center justify-center">
+                      <Button
+                          size="lg"
+                          className="w-full text-lg py-8"
+                          onClick={handleGenerateRoutine}
+                          disabled={isLoading}
+                      >
+                          {isLoading ? (
+                          <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+                          ) : (
+                          <Wand2 className="mr-2 h-6 w-6" />
+                          )}
+                          Generate Routine
+                      </Button>
+                      <p className="text-xs text-muted-foreground mt-4 text-center">
+                          Click to generate the school routine using AI based on the provided data.
+                      </p>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              <TabsContent value="manual">
+                <ManualRoutineEditor
+                    teachers={teachers}
+                    classes={classes}
+                    subjects={subjects}
+                    timeSlots={timeSlots}
+                    schedule={routine?.schedule || []}
+                    onScheduleChange={handleManualScheduleChange}
+                />
+              </TabsContent>
+            </Tabs>
             <div className="flex-grow">
               {routine && routine.schedule.length > 0 ? (
                 <RoutineDisplay 
@@ -280,7 +305,7 @@ export default function Home() {
                       </div>
                       <h3 className="font-semibold text-lg text-foreground">Your routine will appear here</h3>
                       <p className="text-sm text-muted-foreground mt-1">
-                        After generating a routine, you can view, print, and export it from this panel.
+                        Generate or manually create a routine to see it displayed here.
                       </p>
                   </CardContent>
                 </Card>

@@ -23,15 +23,28 @@ const ScheduleEntrySchema = z.object({
   teacher: z.string(),
 });
 
+const DayScheduleSchema = z.object({
+  "09:00 - 10:00": z.union([ScheduleEntrySchema, z.null()]).optional(),
+  "10:00 - 11:00": z.union([ScheduleEntrySchema, z.null()]).optional(),
+  "11:00 - 12:00": z.union([ScheduleEntrySchema, z.null()]).optional(),
+  "12:00 - 13:00": z.union([ScheduleEntrySchema, z.null()]).optional(),
+  "13:00 - 14:00": z.union([ScheduleEntrySchema, z.null()]).optional(),
+  "14:00 - 15:00": z.union([ScheduleEntrySchema, z.null()]).optional(),
+  "15:00 - 16:00": z.union([ScheduleEntrySchema, z.null()]).optional(),
+}).catchall(z.union([ScheduleEntrySchema, z.null()]));
+
 const GenerateScheduleOutputSchema = z.object({
-  schedule: z
-    .record(
-      z.string(),
-      z.record(z.string(), z.union([ScheduleEntrySchema, z.null()]))
-    )
-    .describe(
-      'Generated schedule (day -> time slot -> schedule entry or null if empty).'
-    ),
+  schedule: z.object({
+    Monday: DayScheduleSchema.optional(),
+    Tuesday: DayScheduleSchema.optional(),
+    Wednesday: DayScheduleSchema.optional(),
+    Thursday: DayScheduleSchema.optional(),
+    Friday: DayScheduleSchema.optional(),
+    Saturday: DayScheduleSchema.optional(),
+  }).catchall(DayScheduleSchema)
+  .describe(
+    'Generated schedule. The top-level keys are days of the week. The next level keys are time slots. The value is either a schedule entry or null if the slot is empty.'
+  ),
 });
 export type GenerateScheduleOutput = z.infer<typeof GenerateScheduleOutputSchema>;
 
@@ -45,7 +58,7 @@ const generateSchedulePrompt = ai.definePrompt({
   output: {schema: GenerateScheduleOutputSchema},
   prompt: `You are an AI assistant designed to generate class schedules for schools.
 
-  Given the following information, create a schedule that optimizes for subject priorities, teacher availability, and teacher-subject mappings.
+  Given the following information, create a schedule for Monday, Tuesday, Wednesday, Thursday, and Friday.
 
   Teacher Names: {{teacherNames}}
   Classes: {{classes}}

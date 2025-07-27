@@ -12,7 +12,7 @@ import { Logo } from "@/components/icons";
 import DataManager from "@/components/routine/data-manager";
 import RoutineControls from "@/components/routine/routine-controls";
 import RoutineDisplay from "@/components/routine/routine-display";
-import { exportConfig, importConfig } from "@/lib/config-helpers";
+import { exportToCsv, importFromCsv } from "@/lib/csv-helpers";
 
 export default function Home() {
   const [teachers, setTeachers] = useState<string[]>(["Mr. Sharma", "Mrs. Gupta", "Mr. Singh"]);
@@ -88,21 +88,10 @@ export default function Home() {
 
   const handleExport = () => {
     try {
-      const config = {
-        teachers,
-        classes,
-        subjects,
-        timeSlots,
-        classRequirements,
-        subjectPriorities,
-        availability,
-        teacherSubjects,
-        teacherClasses,
-      };
-      exportConfig(config, "school-config.json");
-      toast({ title: "Configuration exported successfully!" });
+      exportToCsv({ teachers, classes, subjects, timeSlots }, "school-data.csv");
+      toast({ title: "Data exported successfully!" });
     } catch (error) {
-      toast({ variant: "destructive", title: "Export failed", description: "Could not export the configuration." });
+      toast({ variant: "destructive", title: "Export failed", description: "Could not export the data." });
     }
   };
 
@@ -115,19 +104,14 @@ export default function Home() {
     if (!file) return;
 
     try {
-      const config = await importConfig(file);
-      if (config.teachers) setTeachers(config.teachers);
-      if (config.classes) setClasses(config.classes);
-      if (config.subjects) setSubjects(config.subjects);
-      if (config.timeSlots) setTimeSlots(config.timeSlots);
-      if (config.classRequirements) setClassRequirements(config.classRequirements);
-      if (config.subjectPriorities) setSubjectPriorities(config.subjectPriorities);
-      if (config.availability) setAvailability(config.availability);
-      if (config.teacherSubjects) setTeacherSubjects(config.teacherSubjects);
-      if (config.teacherClasses) setTeacherClasses(config.teacherClasses);
-      toast({ title: "Configuration imported successfully!" });
+      const data = await importFromCsv(file);
+      if (data.teachers) setTeachers(data.teachers);
+      if (data.classes) setClasses(data.classes);
+      if (data.subjects) setSubjects(data.subjects);
+      if (data.timeSlots) setTimeSlots(data.timeSlots);
+      toast({ title: "Data imported successfully!" });
     } catch (error) {
-      toast({ variant: "destructive", title: "Import failed", description: "Could not parse the configuration file." });
+      toast({ variant: "destructive", title: "Import failed", description: "Could not parse the CSV file." });
     }
     // Reset file input
     if(fileInputRef.current) fileInputRef.current.value = "";
@@ -147,13 +131,13 @@ export default function Home() {
             ref={fileInputRef}
             onChange={handleFileImport}
             className="hidden"
-            accept=".json, application/json"
+            accept=".csv, text/csv"
           />
           <Button variant="outline" size="sm" onClick={handleImportClick}>
-            <Upload className="mr-2 h-4 w-4" /> Import Config
+            <Upload className="mr-2 h-4 w-4" /> Import Data
           </Button>
           <Button variant="outline" size="sm" onClick={handleExport}>
-            <Download className="mr-2 h-4 w-4" /> Export Config
+            <Download className="mr-2 h-4 w-4" /> Export Data
           </Button>
         </div>
       </header>

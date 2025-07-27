@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Download, Printer } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 
 interface RoutineDisplayProps {
   scheduleData: GenerateScheduleOutput;
@@ -70,7 +72,7 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes }: Rou
     csvRows.push(headers.join(','));
 
     for (const entry of scheduleData.schedule) {
-        if(selectedClass === 'all' || entry.className === selectedClass) {
+        if(selectedClass === 'all' || entry.className.includes(selectedClass)) {
             const row = [
                 entry.day,
                 entry.timeSlot,
@@ -99,7 +101,7 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes }: Rou
     
     const filteredEntries = selectedClass === 'all' 
         ? entries 
-        : entries.filter(e => e.className === selectedClass);
+        : entries.filter(e => e.className.includes(selectedClass));
 
     if (filteredEntries.length === 0) return <span className="text-muted-foreground">-</span>;
 
@@ -108,7 +110,8 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes }: Rou
             {filteredEntries.map((entry, index) => (
                 <div key={index} className="text-xs text-center p-1 bg-muted/50 rounded">
                   <div className="font-semibold">{entry.subject}</div>
-                  <div className="text-muted-foreground">{selectedClass === 'all' ? `${entry.className} - ` : ''}{entry.teacher}</div>
+                  <div className="text-muted-foreground">{entry.className}</div>
+                  <div className="text-muted-foreground">{entry.teacher}</div>
                 </div>
             ))}
         </div>
@@ -137,10 +140,15 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes }: Rou
               {classes.length > 0 && (
                 <div>
                     <Label htmlFor="class-filter">Filter by Class</Label>
-                    <select id="class-filter" value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)} className="w-full p-2 border rounded-md bg-background">
-                        <option value="all">All Classes</option>
-                        {classes.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
+                    <Select value={selectedClass} onValueChange={setSelectedClass}>
+                      <SelectTrigger id="class-filter" className="w-full">
+                        <SelectValue placeholder="Select a class" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Classes</SelectItem>
+                        {classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                 </div>
               )}
               <div className="flex gap-2">

@@ -128,7 +128,7 @@ export default function Home() {
             ref={fileInputRef}
             onChange={handleFileImport}
             className="hidden"
-            accept=".csv"
+            accept="text/csv"
           />
           <Button variant="outline" size="sm" onClick={handleImportClick}>
             <Upload className="mr-2 h-4 w-4" /> Import Data

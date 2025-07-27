@@ -61,7 +61,7 @@ const generateSchedulePrompt = ai.definePrompt({
 
   Ensure that all class requirements are met and that higher priority subjects are scheduled appropriately. For lunch, the teacher can be "N/A".
 
-  Return the schedule as a flat array of schedule entries in a valid JSON format.
+  IMPORTANT: Your response MUST be a valid JSON object that strictly follows the provided output schema. Ensure every object in the 'schedule' array contains all the required fields: 'day', 'timeSlot', 'className', 'subject', and 'teacher'. Do not generate incomplete entries.
   `,
 });
 

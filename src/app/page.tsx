@@ -7,7 +7,7 @@ import { generateSchedule } from "@/ai/flows/generate-schedule";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Book, Download, Loader2, School, Upload, User, Wand2, Clock, Save, FolderOpen } from "lucide-react";
+import { Book, Download, Loader2, School, Upload, User, Wand2, Clock, Save, FolderOpen, Trash2 } from "lucide-react";
 import { Logo } from "@/components/icons";
 import DataManager from "@/components/routine/data-manager";
 import RoutineControls from "@/components/routine/routine-controls";
@@ -33,8 +33,8 @@ export default function Home() {
     "11:00 - 12:00",
     "12:00 - 13:00",
     "13:00 - 14:00",
-    "14:00 - 15:00",
     "15:00 - 16:00",
+    "16:00 - 17:00",
   ]);
   
   const [classRequirements, setClassRequirements] = useState<Record<string, string[]>>({});
@@ -95,7 +95,7 @@ export default function Home() {
     }
   };
 
-  const handleManualScheduleChange = (newSchedule: ScheduleEntry[]) => {
+  const handleScheduleChange = (newSchedule: ScheduleEntry[]) => {
     setRoutine({ schedule: newSchedule });
   };
   
@@ -223,76 +223,63 @@ export default function Home() {
       </header>
       
       <main className="flex-grow grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 flex flex-col gap-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="lg:col-span-1 flex flex-col gap-6">
+          <Card>
+            <CardContent className="p-6 flex flex-col items-center justify-center">
+                <Button
+                    size="lg"
+                    className="w-full text-lg py-8"
+                    onClick={handleGenerateRoutine}
+                    disabled={isLoading}
+                >
+                    {isLoading ? (
+                    <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+                    ) : (
+                    <Wand2 className="mr-2 h-6 w-6" />
+                    )}
+                    Generate Routine
+                </Button>
+                <p className="text-xs text-muted-foreground mt-4 text-center">
+                    Generate the school routine using AI. You can edit the result in the main display.
+                </p>
+            </CardContent>
+          </Card>
+           <Button variant="destructive" size="sm" onClick={() => setRoutine(null)}>
+              <Trash2 className="mr-2 h-4 w-4" /> Clear Routine
+            </Button>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-6">
             <DataManager title="Teachers" icon={User} items={teachers} setItems={setTeachers} placeholder="New teacher name..." />
             <DataManager title="Classes" icon={School} items={classes} setItems={setClasses} placeholder="New class name..." />
             <DataManager title="Subjects" icon={Book} items={subjects} setItems={setSubjects} placeholder="New subject name..." />
             <DataManager title="Time Slots" icon={Clock} items={timeSlots} setItems={setTimeSlots} placeholder="e.g. 09:00 - 10:00" />
           </div>
-          <RoutineControls
-            teachers={teachers}
-            classes={classes}
-            subjects={subjects}
-            timeSlots={timeSlots}
-            classRequirements={classRequirements}
-            setClassRequirements={setClassRequirements}
-            subjectPriorities={subjectPriorities}
-            setSubjectPriorities={setSubjectPriorities}
-            availability={availability}
-            setAvailability={setAvailability}
-            teacherSubjects={teacherSubjects}
-            setTeacherSubjects={setTeacherSubjects}
-            teacherClasses={teacherClasses}
-            setTeacherClasses={setTeacherClasses}
-          />
         </div>
 
-        <div className="flex flex-col gap-6">
-            <Card className="flex-grow flex flex-col">
-              <CardContent className="p-6 flex-grow flex flex-col items-center justify-center">
-                  <Button
-                      size="lg"
-                      className="w-full text-lg py-8"
-                      onClick={handleGenerateRoutine}
-                      disabled={isLoading}
-                  >
-                      {isLoading ? (
-                      <Loader2 className="mr-2 h-6 w-6 animate-spin" />
-                      ) : (
-                      <Wand2 className="mr-2 h-6 w-6" />
-                      )}
-                      Generate Routine
-                  </Button>
-                  <p className="text-xs text-muted-foreground mt-4 text-center">
-                      Click to generate the school routine using AI. You can click on any cell in the generated routine to make manual changes.
-                  </p>
-              </CardContent>
-            </Card>
-            <div className="flex-grow">
-              {routine && routine.schedule.length > 0 ? (
-                <RoutineDisplay 
-                  scheduleData={routine} 
-                  timeSlots={timeSlots} 
-                  classes={classes}
-                  subjects={subjects}
-                  teachers={teachers}
-                  onScheduleChange={handleManualScheduleChange}
-                />
-              ) : (
-                <Card className="h-full">
-                  <CardContent className="h-full flex flex-col items-center justify-center text-center p-6">
-                      <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
-                      </div>
-                      <h3 className="font-semibold text-lg text-foreground">Your routine will appear here</h3>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Generate a routine to see it displayed here. You can click on any cell to edit it.
-                      </p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
+        <div className="lg:col-span-2 flex flex-col gap-6">
+             <RoutineControls
+                teachers={teachers}
+                classes={classes}
+                subjects={subjects}
+                timeSlots={timeSlots}
+                classRequirements={classRequirements}
+                setClassRequirements={setClassRequirements}
+                subjectPriorities={subjectPriorities}
+                setSubjectPriorities={setSubjectPriorities}
+                availability={availability}
+                setAvailability={setAvailability}
+                teacherSubjects={teacherSubjects}
+                setTeacherSubjects={setTeacherSubjects}
+                teacherClasses={teacherClasses}
+                setTeacherClasses={setTeacherClasses}
+              />
+             <RoutineDisplay 
+                scheduleData={routine}
+                onScheduleChange={handleScheduleChange}
+                timeSlots={timeSlots} 
+                classes={classes}
+                subjects={subjects}
+                teachers={teachers}
+              />
         </div>
       </main>
     </div>

@@ -19,7 +19,7 @@ import { Download, Printer, Trash2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface RoutineDisplayProps {
-  scheduleData: GenerateScheduleOutput;
+  scheduleData: GenerateScheduleOutput | null;
   timeSlots: string[];
   classes: string[];
   subjects: string[];
@@ -41,7 +41,7 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
   const [selectedClass, setSelectedClass] = useState<string>('all');
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [currentCell, setCurrentCell] = useState<{ day: string; timeSlot: string; class: string } | null>(null);
+  const [currentCell, setCurrentCell] = useState<{ day: string; timeSlot: string; entry: ScheduleEntry | null } | null>(null);
   const [cellData, setCellData] = useState<{ subject: string; className: string; teacher: string }>({
     subject: "",
     className: "",
@@ -59,11 +59,13 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
         })
     });
 
-    scheduleData.schedule.forEach(entry => {
-      if (grid[entry.day] && grid[entry.day][entry.timeSlot]) {
-        grid[entry.day][entry.timeSlot].push(entry);
-      }
-    });
+    if (scheduleData?.schedule) {
+      scheduleData.schedule.forEach(entry => {
+        if (grid[entry.day] && grid[entry.day][entry.timeSlot]) {
+          grid[entry.day][entry.timeSlot].push(entry);
+        }
+      });
+    }
 
     return grid;
   }, [scheduleData, timeSlots]);
@@ -81,17 +83,19 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
     const headers = ['Day', 'Time Slot', 'Class', 'Subject', 'Teacher'];
     csvRows.push(headers.join(','));
 
-    for (const entry of scheduleData.schedule) {
-        if(selectedClass === 'all' || entry.className.includes(selectedClass)) {
-            const row = [
-                entry.day,
-                entry.timeSlot,
-                entry.className,
-                entry.subject,
-                entry.teacher,
-            ].map(v => `"${v.replace(/"/g, '""')}"`);
-            csvRows.push(row.join(','));
-        }
+    if (scheduleData?.schedule) {
+      for (const entry of scheduleData.schedule) {
+          if(selectedClass === 'all' || entry.className.includes(selectedClass)) {
+              const row = [
+                  entry.day,
+                  entry.timeSlot,
+                  entry.className,
+                  entry.subject,
+                  entry.teacher,
+              ].map(v => `"${v.replace(/"/g, '""')}"`);
+              csvRows.push(row.join(','));
+          }
+      }
     }
     
     const csvString = csvRows.join('\n');
@@ -107,7 +111,7 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
   };
   
   const handleCellClick = (day: string, timeSlot: string, entry: ScheduleEntry | null) => {
-    setCurrentCell({ day, timeSlot, class: entry?.className || '' });
+    setCurrentCell({ day, timeSlot, entry });
     if (entry) {
         setCellData({
             subject: entry.subject,
@@ -115,7 +119,8 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
             teacher: entry.teacher,
         });
     } else {
-        setCellData({ subject: "", className: "", teacher: "" });
+        // When clicking an empty cell, we pre-fill the class if one is filtered
+        setCellData({ subject: "", className: selectedClass !== 'all' ? selectedClass : "", teacher: "" });
     }
     setIsDialogOpen(true);
   };
@@ -123,29 +128,33 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
   const handleSave = () => {
     if (!currentCell) return;
   
-    // Remove all existing entries for the specific day, time slot, and class
-    let newSchedule = scheduleData.schedule.filter(
-      (e) => !(e.day === currentCell.day && e.timeSlot === currentCell.timeSlot && e.className === currentCell.class)
-    );
+    const currentSchedule = scheduleData?.schedule || [];
+    let newSchedule: ScheduleEntry[];
   
-    // Add the new or updated entry if all fields are filled
-    if (cellData.subject && cellData.className && cellData.teacher) {
-      newSchedule.push({
+    if (currentCell.entry) {
+      // Update existing entry
+      newSchedule = currentSchedule.map(e =>
+        e === currentCell.entry ? { ...e, ...cellData } : e
+      );
+    } else {
+      // Add new entry
+      const newEntry: ScheduleEntry = {
         day: currentCell.day,
         timeSlot: currentCell.timeSlot,
         ...cellData,
-      });
+      };
+      newSchedule = [...currentSchedule, newEntry];
     }
-  
+    
     onScheduleChange(newSchedule);
     setIsDialogOpen(false);
     setCurrentCell(null);
   };
   
   const handleDelete = () => {
-     if (!currentCell) return;
-     const newSchedule = scheduleData.schedule.filter(
-        (e) => !(e.day === currentCell.day && e.timeSlot === currentCell.timeSlot && e.className === currentCell.class)
+     if (!currentCell || !currentCell.entry) return;
+     const newSchedule = (scheduleData?.schedule || []).filter(
+        (e) => e !== currentCell.entry
       );
       onScheduleChange(newSchedule);
       setIsDialogOpen(false);
@@ -160,10 +169,10 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
     if (!filteredEntries || filteredEntries.length === 0) {
         return (
             <div 
-                className="h-full min-h-[60px] cursor-pointer"
+                className="h-full min-h-[60px] cursor-pointer hover:bg-muted/50 rounded-md"
                 onClick={() => handleCellClick(day, timeSlot, null)}
             >
-                <span className="text-muted-foreground">-</span>
+                <span className="text-muted-foreground p-2 text-xs">+ Add</span>
             </div>
         );
     }
@@ -173,30 +182,71 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
             {filteredEntries.map((entry, index) => (
                 <div 
                     key={index} 
-                    className="text-xs text-center p-1 bg-muted/50 rounded cursor-pointer hover:bg-accent"
+                    className="text-xs text-center p-1 bg-muted/50 rounded cursor-pointer hover:bg-accent hover:shadow-md"
                     onClick={() => handleCellClick(day, timeSlot, entry)}
                 >
                   <div className="font-semibold">{entry.subject}</div>
                   <div className="text-muted-foreground">{entry.className}</div>
-                  <div className="text-muted-foreground">{entry.teacher}</div>
+                  <div className="text-muted-foreground text-xs">{entry.teacher}</div>
                 </div>
             ))}
+             <div 
+                className="text-center cursor-pointer pt-1"
+                onClick={() => handleCellClick(day, timeSlot, null)}
+            >
+                <span className="text-muted-foreground text-xs hover:text-primary">+</span>
+            </div>
         </div>
     );
   };
+
+  const renderEmptyState = () => (
+     <Card className="h-full">
+        <CardContent className="h-full flex flex-col items-center justify-center text-center p-6">
+            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+            </div>
+            <h3 className="font-semibold text-lg text-foreground">Your routine will appear here</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Generate a routine with AI or build one by clicking the cells in the grid.
+            </p>
+        </CardContent>
+      </Card>
+  )
 
   return (
     <>
     <Card className="h-full flex flex-col">
       <CardHeader>
-        <CardTitle>Generated Routine</CardTitle>
-        <CardDescription>View, print, export, or edit your new routine by clicking on a cell.</CardDescription>
-      </CardHeader>
-      <CardContent className="flex-grow flex flex-col gap-4">
-        <div className="printable-area flex-grow">
-          <div className="no-print space-y-4 p-4 border rounded-lg bg-muted/30">
-              <div className="grid grid-cols-2 gap-4">
-                  <div>
+        <div className="flex justify-between items-start">
+            <div>
+                <CardTitle>School Routine</CardTitle>
+                <CardDescription>View, print, export, or edit your routine by clicking on a cell.</CardDescription>
+            </div>
+             <div className="flex gap-2 no-print">
+                  <Button onClick={handlePrint} size="sm" variant="outline">
+                      <Printer className="mr-2 h-4 w-4" /> Print
+                  </Button>
+                  <Button onClick={handleExport} size="sm" variant="outline">
+                      <Download className="mr-2 h-4 w-4" /> Export CSV
+                  </Button>
+              </div>
+        </div>
+        <div className="no-print space-y-4 pt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="sm:col-span-1">
+                      <Label htmlFor="class-filter">Filter by Class</Label>
+                       <Select value={selectedClass} onValueChange={setSelectedClass}>
+                        <SelectTrigger id="class-filter" className="w-full">
+                          <SelectValue placeholder="Select a class" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Classes</SelectItem>
+                          {classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                  </div>
+                   <div>
                       <Label htmlFor="print-header">Print Header</Label>
                       <Input id="print-header" value={printHeader} onChange={(e) => setPrintHeader(e.target.value)} />
                   </div>
@@ -205,55 +255,38 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
                       <Input id="print-footer" value={printFooter} onChange={(e) => setPrintFooter(e.target.value)} />
                   </div>
               </div>
-              {classes.length > 0 && (
-                <div>
-                    <Label htmlFor="class-filter">Filter by Class</Label>
-                    <Select value={selectedClass} onValueChange={setSelectedClass}>
-                      <SelectTrigger id="class-filter" className="w-full">
-                        <SelectValue placeholder="Select a class" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Classes</SelectItem>
-                        {classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+          </div>
+      </CardHeader>
+      <CardContent className="flex-grow flex flex-col gap-4">
+        <div className="printable-area flex-grow">
+          {!scheduleData || scheduleData.schedule.length === 0 ? renderEmptyState() : (
+            <>
+                <h3 className="text-center font-bold text-lg mb-2 print-only">{printHeader}{selectedClass !== 'all' && ` - ${selectedClass}`}</h3>
+                <div className="overflow-x-auto border rounded-lg">
+                  <Table>
+                      <TableHeader>
+                      <TableRow>
+                          <TableHead className="min-w-[120px] font-bold">Time</TableHead>
+                          {daysOfWeek.map(day => <TableHead key={day} className="text-center font-bold">{day}</TableHead>)}
+                      </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                      {timeSlots.map(slot => (
+                          <TableRow key={slot}>
+                          <TableCell className="font-medium align-top text-xs">{slot}</TableCell>
+                          {daysOfWeek.map(day => (
+                              <TableCell key={`${day}-${slot}`} className="p-1 align-top">
+                                  {renderCellContent(gridSchedule[day]?.[slot] ?? null, day, slot)}
+                              </TableCell>
+                          ))}
+                          </TableRow>
+                      ))}
+                      </TableBody>
+                  </Table>
                 </div>
-              )}
-              <div className="flex gap-2">
-                  <Button onClick={handlePrint} className="w-full">
-                      <Printer className="mr-2 h-4 w-4" /> Print
-                  </Button>
-                  <Button onClick={handleExport} variant="secondary" className="w-full">
-                      <Download className="mr-2 h-4 w-4" /> Export CSV
-                  </Button>
-              </div>
-          </div>
-          <div className="mt-4">
-              <h3 className="text-center font-bold text-lg mb-2">{printHeader}{selectedClass !== 'all' && ` - ${selectedClass}`}</h3>
-              <div className="overflow-x-auto">
-                <Table>
-                    <TableHeader>
-                    <TableRow>
-                        <TableHead className="min-w-[120px]">Time</TableHead>
-                        {daysOfWeek.map(day => <TableHead key={day} className="text-center">{day}</TableHead>)}
-                    </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                    {timeSlots.map(slot => (
-                        <TableRow key={slot}>
-                        <TableCell className="font-medium align-top">{slot}</TableCell>
-                        {daysOfWeek.map(day => (
-                            <TableCell key={`${day}-${slot}`}>
-                                {renderCellContent(gridSchedule[day]?.[slot] ?? null, day, slot)}
-                            </TableCell>
-                        ))}
-                        </TableRow>
-                    ))}
-                    </TableBody>
-                </Table>
-              </div>
-              <p className="text-center text-xs text-muted-foreground mt-4">{printFooter}</p>
-          </div>
+                <p className="text-center text-xs text-muted-foreground mt-4 print-only">{printFooter}</p>
+            </>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -299,7 +332,7 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
               <Label htmlFor="teacher" className="text-right">Teacher</Label>
               <Select
                 value={cellData.teacher}
-                onValueChange={(value) => setCellData({ ...cellData, teacher: value })}
+                onValue-change={(value) => setCellData({ ...cellData, teacher: value })}
               >
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Select teacher" />
@@ -314,9 +347,11 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
             </div>
           </div>
           <DialogFooter className="sm:justify-between">
-            <Button type="button" variant="destructive" onClick={handleDelete} className="gap-1">
-              <Trash2 /> Delete
-            </Button>
+             {currentCell?.entry ? (
+                <Button type="button" variant="destructive" onClick={handleDelete} className="gap-1">
+                  <Trash2 /> Delete
+                </Button>
+             ) : <div></div>}
             <div className="flex gap-2">
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
                 <Button type="submit" onClick={handleSave}>Save changes</Button>

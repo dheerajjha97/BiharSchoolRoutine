@@ -17,9 +17,10 @@ import { exportToCsv, importFromCsv } from "@/lib/csv-helpers";
 export default function Home() {
   const [teachers, setTeachers] = useState<string[]>(["Mr. Sharma", "Mrs. Gupta", "Mr. Singh"]);
   const [classes, setClasses] = useState<string[]>(["Class 9A", "Class 10B"]);
-  const [subjects, setSubjects] = useState<string[]>(["Math", "Science", "History", "English", "Lunch"]);
+  const [subjects, setSubjects] = useState<string[]>(["Math", "Science", "History", "English", "Prayer", "Lunch"]);
   const [timeSlots, setTimeSlots] = useState<string[]>([
-    "09:00 - 10:00",
+    "09:00 - 09:15",
+    "09:15 - 10:00",
     "10:00 - 11:00",
     "11:00 - 12:00",
     "12:00 - 13:00",
@@ -32,7 +33,8 @@ export default function Home() {
   const [subjectPriorities, setSubjectPriorities] = useState<Record<string, number>>({});
   const [availability, setAvailability] = useState<Record<string, Record<string, boolean>>>({});
   const [teacherSubjects, setTeacherSubjects] = useState<Record<string, string[]>>({});
-  
+  const [teacherClasses, setTeacherClasses] = useState<Record<string, string[]>>({});
+
   const [routine, setRoutine] = useState<GenerateScheduleOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -62,6 +64,7 @@ export default function Home() {
         subjectPriorities,
         classRequirements,
         teacherSubjects,
+        teacherClasses,
       };
 
       const result = await generateSchedule(input);
@@ -161,6 +164,8 @@ export default function Home() {
             setAvailability={setAvailability}
             teacherSubjects={teacherSubjects}
             setTeacherSubjects={setTeacherSubjects}
+            teacherClasses={teacherClasses}
+            setTeacherClasses={setTeacherClasses}
           />
         </div>
 

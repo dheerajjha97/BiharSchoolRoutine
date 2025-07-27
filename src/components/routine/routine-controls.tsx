@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -26,6 +27,8 @@ interface RoutineControlsProps {
   setAvailability: (value: Record<string, Record<string, boolean>>) => void;
   teacherSubjects: Record<string, string[]>;
   setTeacherSubjects: (value: Record<string, string[]>) => void;
+  teacherClasses: Record<string, string[]>;
+  setTeacherClasses: (value: Record<string, string[]>) => void;
 }
 
 export default function RoutineControls({
@@ -41,6 +44,8 @@ export default function RoutineControls({
   setAvailability,
   teacherSubjects,
   setTeacherSubjects,
+  teacherClasses,
+  setTeacherClasses,
 }: RoutineControlsProps) {
   
   const handleRequirementChange = (className: string, subject: string, checked: boolean) => {
@@ -57,6 +62,14 @@ export default function RoutineControls({
       ? [...currentSubjects, subject]
       : currentSubjects.filter(s => s !== subject);
     setTeacherSubjects({ ...teacherSubjects, [teacher]: newSubjects });
+  };
+
+  const handleTeacherClassChange = (teacher: string, className: string, checked: boolean) => {
+    const currentClasses = teacherClasses[teacher] || [];
+    const newClasses = checked
+      ? [...currentClasses, className]
+      : currentClasses.filter(c => c !== className);
+    setTeacherClasses({ ...teacherClasses, [teacher]: newClasses });
   };
   
   const handleAvailabilityChange = (teacher: string, slot: string, checked: boolean) => {
@@ -110,6 +123,28 @@ export default function RoutineControls({
                           onCheckedChange={(checked) => handleTeacherSubjectChange(t, s, !!checked)}
                         />
                         <Label htmlFor={`${t}-${s}`}>{s}</Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="teacher-classes">
+            <AccordionTrigger>Teacher-Class Mapping</AccordionTrigger>
+            <AccordionContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {teachers.map(t => (
+                <div key={t} className="p-4 border rounded-lg">
+                  <h4 className="font-semibold mb-2">{t}</h4>
+                  <div className="space-y-2">
+                    {classes.map(c => (
+                      <div key={c} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`${t}-${c}`}
+                          checked={teacherClasses[t]?.includes(c) || false}
+                          onCheckedChange={(checked) => handleTeacherClassChange(t, c, !!checked)}
+                        />
+                        <Label htmlFor={`${t}-${c}`}>{c}</Label>
                       </div>
                     ))}
                   </div>

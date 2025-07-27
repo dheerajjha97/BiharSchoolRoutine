@@ -1,3 +1,4 @@
+
 // This file implements the Genkit flow for the generateSchedule story.
 // It allows teachers to automatically generate a draft schedule based on teacher availability, subject priorities, and class requirements.
 
@@ -15,6 +16,7 @@ const GenerateScheduleInputSchema = z.object({
   subjectPriorities: z.record(z.string(), z.number()).describe('Subject priorities (higher number = higher priority).'),
   classRequirements: z.record(z.string(), z.array(z.string())).describe('Subjects required for each class.'),
   teacherSubjects: z.record(z.string(), z.array(z.string())).describe('Subjects each teacher is qualified to teach.'),
+  teacherClasses: z.record(z.string(), z.array(z.string())).describe('Classes each teacher is qualified to teach.'),
 });
 export type GenerateScheduleInput = z.infer<typeof GenerateScheduleInputSchema>;
 
@@ -52,14 +54,17 @@ const generateSchedulePrompt = ai.definePrompt({
   Subject Priorities: {{subjectPriorities}}
   Class Requirements: {{classRequirements}}
   Teacher-Subject Mapping: {{teacherSubjects}}
+  Teacher-Class Mapping: {{teacherClasses}}
 
-  When assigning a teacher to a class for a specific subject, you MUST ensure the teacher is qualified to teach that subject based on the Teacher-Subject Mapping.
+  When assigning a teacher to a class for a specific subject, you MUST ensure:
+  1. The teacher is qualified to teach that subject based on the Teacher-Subject Mapping.
+  2. The teacher is assigned to teach that class based on the Teacher-Class Mapping.
 
-  If "Lunch" is one of the subjects, schedule it for all classes at the same time. No teacher is required for Lunch. During the lunch period, no other subjects should be scheduled for any class. For lunch, the teacher can be "N/A".
+  If "Prayer" or "Lunch" are among the subjects, schedule them for all classes at the same time. No teacher is required for Prayer or Lunch. During these periods, all teachers are considered busy, so no other subjects should be scheduled for any class. For "Prayer" and "Lunch", the teacher can be "N/A".
 
-  Constraint: Every teacher must be assigned at least one period each day across all classes.
+  Constraint: Every teacher must be assigned at least one period each day across all classes, excluding Prayer and Lunch periods.
 
-  Ensure that all class requirements are met and that higher priority subjects are scheduled appropriately. For lunch, the teacher can be "N/A".
+  Ensure that all class requirements are met and that higher priority subjects are scheduled appropriately.
 
   IMPORTANT: Your response MUST be a valid JSON object that strictly follows the provided output schema. Ensure every object in the 'schedule' array contains all the required fields: 'day', 'timeSlot', 'className', 'subject', and 'teacher'. Do not generate incomplete entries.
   `,

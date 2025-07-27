@@ -60,7 +60,7 @@ const generateSchedulePrompt = ai.definePrompt({
   1. The teacher is qualified to teach that subject based on the Teacher-Subject Mapping.
   2. The teacher is assigned to teach that class based on the Teacher-Class Mapping.
 
-  If "Prayer" or "Lunch" are among the subjects, schedule them for all classes at the same time. No teacher is required for Prayer or Lunch. During these periods, all teachers are considered busy, so no other subjects should be scheduled for any class. For "Prayer" and "Lunch", the teacher can be "N/A".
+  If "Prayer" or "Lunch" are among the subjects, no teacher is required. For "Prayer" and "Lunch", the teacher can be "N/A". During these periods, all teachers are considered busy, so no other subjects should be scheduled for any class.
 
   Constraint: Every teacher must be assigned at least one period each day across all classes, excluding Prayer and Lunch periods.
 

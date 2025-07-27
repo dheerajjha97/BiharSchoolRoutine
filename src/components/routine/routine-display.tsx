@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Download, Printer, Trash2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from '../ui/checkbox';
 
 interface RoutineDisplayProps {
   scheduleData: GenerateScheduleOutput | null;
@@ -42,12 +43,24 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [currentCell, setCurrentCell] = useState<{ day: string; timeSlot: string; entry: ScheduleEntry | null } | null>(null);
-  const [cellData, setCellData] = useState<{ subject: string; className: string; teacher: string }>({
+  const [cellData, setCellData] = useState<{ subject: string; classNames: string[]; teacher: string }>({
     subject: "",
-    className: "",
+    classNames: [],
     teacher: "",
   });
 
+  const { secondaryClasses, seniorSecondaryClasses } = useMemo(() => {
+    const secondary: string[] = [];
+    const seniorSecondary: string[] = [];
+    classes.forEach(c => {
+      if (c.includes('9') || c.includes('10')) {
+        secondary.push(c);
+      } else if (c.includes('11') || c.includes('12')) {
+        seniorSecondary.push(c);
+      }
+    });
+    return { secondaryClasses: secondary, seniorSecondaryClasses: seniorSecondary };
+  }, [classes]);
 
   const gridSchedule = useMemo<GridSchedule>(() => {
     const grid: GridSchedule = {};
@@ -115,33 +128,39 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
     if (entry) {
         setCellData({
             subject: entry.subject,
-            className: entry.className,
+            classNames: entry.className.split(' & '),
             teacher: entry.teacher,
         });
     } else {
         // When clicking an empty cell, we pre-fill the class if one is filtered
-        setCellData({ subject: "", className: selectedClass !== 'all' ? selectedClass : "", teacher: "" });
+        setCellData({ subject: "", classNames: selectedClass !== 'all' ? [selectedClass] : [], teacher: "" });
     }
     setIsDialogOpen(true);
   };
   
   const handleSave = () => {
-    if (!currentCell) return;
+    if (!currentCell || cellData.classNames.length === 0) return;
   
     const currentSchedule = scheduleData?.schedule || [];
     let newSchedule: ScheduleEntry[];
   
+    const newEntryData = {
+        subject: cellData.subject,
+        className: cellData.classNames.join(' & '),
+        teacher: cellData.teacher
+    };
+
     if (currentCell.entry) {
       // Update existing entry
       newSchedule = currentSchedule.map(e =>
-        e === currentCell.entry ? { ...e, ...cellData } : e
+        e === currentCell.entry ? { ...e, ...newEntryData } : e
       );
     } else {
       // Add new entry
       const newEntry: ScheduleEntry = {
         day: currentCell.day,
         timeSlot: currentCell.timeSlot,
-        ...cellData,
+        ...newEntryData,
       };
       newSchedule = [...currentSchedule, newEntry];
     }
@@ -161,10 +180,17 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
       setCurrentCell(null);
   }
 
-  const renderCellContent = (entries: ScheduleEntry[] | null, day: string, timeSlot: string) => {
-    const filteredEntries = selectedClass === 'all' 
-        ? entries 
-        : entries?.filter(e => e.className.includes(selectedClass));
+  const renderCellContent = (entries: ScheduleEntry[] | null, day: string, timeSlot: string, displayClasses: string[]) => {
+    const filteredEntries = entries?.filter(e => {
+        const entryClasses = e.className.split(' & ');
+        const isInDisplayClasses = entryClasses.some(ec => displayClasses.some(dc => ec.trim() === dc.trim()));
+        
+        if (!isInDisplayClasses) return false;
+
+        if (selectedClass === 'all') return true;
+        
+        return entryClasses.includes(selectedClass);
+    });
 
     if (!filteredEntries || filteredEntries.length === 0) {
         return (
@@ -214,6 +240,34 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
       </Card>
   )
 
+  const renderScheduleTable = (title: string, displayClasses: string[]) => (
+    <div>
+      <h3 className="text-lg font-semibold mb-2">{title}</h3>
+      <div className="overflow-x-auto border rounded-lg">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="min-w-[120px] font-bold">Time</TableHead>
+              {daysOfWeek.map(day => <TableHead key={day} className="text-center font-bold">{day}</TableHead>)}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {timeSlots.map(slot => (
+              <TableRow key={slot}>
+                <TableCell className="font-medium align-top text-xs">{slot}</TableCell>
+                {daysOfWeek.map(day => (
+                  <TableCell key={`${day}-${slot}`} className="p-1 align-top">
+                    {renderCellContent(gridSchedule[day]?.[slot] ?? null, day, slot, displayClasses)}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+
   return (
     <>
     <Card className="h-full flex flex-col">
@@ -262,27 +316,9 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
           {!scheduleData || scheduleData.schedule.length === 0 ? renderEmptyState() : (
             <>
                 <h3 className="text-center font-bold text-lg mb-2 print-only">{printHeader}{selectedClass !== 'all' && ` - ${selectedClass}`}</h3>
-                <div className="overflow-x-auto border rounded-lg">
-                  <Table>
-                      <TableHeader>
-                      <TableRow>
-                          <TableHead className="min-w-[120px] font-bold">Time</TableHead>
-                          {daysOfWeek.map(day => <TableHead key={day} className="text-center font-bold">{day}</TableHead>)}
-                      </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                      {timeSlots.map(slot => (
-                          <TableRow key={slot}>
-                          <TableCell className="font-medium align-top text-xs">{slot}</TableCell>
-                          {daysOfWeek.map(day => (
-                              <TableCell key={`${day}-${slot}`} className="p-1 align-top">
-                                  {renderCellContent(gridSchedule[day]?.[slot] ?? null, day, slot)}
-                              </TableCell>
-                          ))}
-                          </TableRow>
-                      ))}
-                      </TableBody>
-                  </Table>
+                <div className="space-y-6">
+                    {secondaryClasses.length > 0 && renderScheduleTable("Secondary", secondaryClasses)}
+                    {seniorSecondaryClasses.length > 0 && renderScheduleTable("Senior Secondary", seniorSecondaryClasses)}
                 </div>
                 <p className="text-center text-xs text-muted-foreground mt-4 print-only">{printFooter}</p>
             </>
@@ -312,27 +348,31 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="className" className="text-right">Class</Label>
-               <Select
-                value={cellData.className}
-                onValueChange={(value) => setCellData({ ...cellData, className: value })}
-              >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select class" />
-                </SelectTrigger>
-                <SelectContent>
+            <div className="grid grid-cols-4 items-start gap-4">
+              <Label className="text-right pt-2">Class</Label>
+               <div className="col-span-3 grid grid-cols-2 gap-2">
                   {classes.map((c) => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                    <div key={c} className="flex items-center space-x-2">
+                        <Checkbox
+                            id={`class-${c}`}
+                            checked={cellData.classNames.includes(c)}
+                            onCheckedChange={(checked) => {
+                                const newClassNames = checked
+                                    ? [...cellData.classNames, c]
+                                    : cellData.classNames.filter(name => name !== c);
+                                setCellData({...cellData, classNames: newClassNames});
+                            }}
+                        />
+                        <Label htmlFor={`class-${c}`}>{c}</Label>
+                    </div>
                   ))}
-                </SelectContent>
-              </Select>
+                </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="teacher" className="text-right">Teacher</Label>
               <Select
                 value={cellData.teacher}
-                onValue-change={(value) => setCellData({ ...cellData, teacher: value })}
+                onValueChange={(value) => setCellData({ ...cellData, teacher: value })}
               >
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Select teacher" />

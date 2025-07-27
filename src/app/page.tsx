@@ -7,12 +7,20 @@ import { generateSchedule } from "@/ai/flows/generate-schedule";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Book, Download, Loader2, School, Upload, User, Wand2, Clock } from "lucide-react";
+import { Book, Download, Loader2, School, Upload, User, Wand2, Clock, Save, FolderOpen } from "lucide-react";
 import { Logo } from "@/components/icons";
 import DataManager from "@/components/routine/data-manager";
 import RoutineControls from "@/components/routine/routine-controls";
 import RoutineDisplay from "@/components/routine/routine-display";
 import { exportToCsv, importFromCsv } from "@/lib/csv-helpers";
+
+type SchoolConfig = {
+  classRequirements: Record<string, string[]>;
+  subjectPriorities: Record<string, number>;
+  availability: Record<string, Record<string, boolean>>;
+  teacherSubjects: Record<string, string[]>;
+  teacherClasses: Record<string, string[]>;
+};
 
 export default function Home() {
   const [teachers, setTeachers] = useState<string[]>(["Mr. Sharma", "Mrs. Gupta", "Mr. Singh"]);
@@ -39,7 +47,8 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const csvInputRef = useRef<HTMLInputElement>(null);
+  const jsonInputRef = useRef<HTMLInputElement>(null);
 
   const handleGenerateRoutine = async () => {
     setIsLoading(true);
@@ -86,7 +95,7 @@ export default function Home() {
     }
   };
 
-  const handleExport = () => {
+  const handleExportCsv = () => {
     try {
       exportToCsv({ teachers, classes, subjects, timeSlots }, "school-data.csv");
       toast({ title: "Data exported successfully!" });
@@ -95,11 +104,11 @@ export default function Home() {
     }
   };
 
-  const handleImportClick = () => {
-    fileInputRef.current?.click();
+  const handleImportCsvClick = () => {
+    csvInputRef.current?.click();
   };
 
-  const handleFileImport = async (event: ChangeEvent<HTMLInputElement>) => {
+  const handleFileImportCsv = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -114,30 +123,97 @@ export default function Home() {
       toast({ variant: "destructive", title: "Import failed", description: "Could not parse the CSV file." });
     }
     // Reset file input
-    if(fileInputRef.current) fileInputRef.current.value = "";
+    if(csvInputRef.current) csvInputRef.current.value = "";
+  };
+
+  const handleSaveConfig = () => {
+    try {
+      const config: SchoolConfig = {
+        classRequirements,
+        subjectPriorities,
+        availability,
+        teacherSubjects,
+        teacherClasses,
+      };
+      const jsonString = JSON.stringify(config, null, 2);
+      const blob = new Blob([jsonString], { type: "application/json" });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", "school-config.json");
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast({ title: "Configuration saved successfully!" });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Save failed", description: "Could not save the configuration." });
+    }
+  };
+
+  const handleLoadConfigClick = () => {
+    jsonInputRef.current?.click();
+  };
+
+  const handleFileLoadConfig = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const config: SchoolConfig = JSON.parse(text);
+      
+      // Basic validation
+      if (typeof config !== 'object' || config === null) throw new Error("Invalid config file format.");
+
+      setClassRequirements(config.classRequirements || {});
+      setSubjectPriorities(config.subjectPriorities || {});
+      setAvailability(config.availability || {});
+      setTeacherSubjects(config.teacherSubjects || {});
+      setTeacherClasses(config.teacherClasses || {});
+
+      toast({ title: "Configuration loaded successfully!" });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Load failed", description: "Could not parse the configuration file." });
+    }
+    // Reset file input
+    if(jsonInputRef.current) jsonInputRef.current.value = "";
   };
 
 
   return (
     <div className="min-h-screen flex flex-col p-4 sm:p-6 lg:p-8 bg-background font-sans">
-      <header className="flex items-center justify-between mb-6">
+      <header className="flex items-center justify-between mb-6 flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <Logo className="h-8 w-8 text-primary" />
           <h1 className="text-2xl font-bold text-foreground">BiharSchoolRoutine</h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
            <input
             type="file"
-            ref={fileInputRef}
-            onChange={handleFileImport}
+            ref={csvInputRef}
+            onChange={handleFileImportCsv}
             className="hidden"
             accept=".csv, text/csv"
           />
-          <Button variant="outline" size="sm" onClick={handleImportClick}>
+           <input
+            type="file"
+            ref={jsonInputRef}
+            onChange={handleFileLoadConfig}
+            className="hidden"
+            accept="application/json"
+          />
+          <Button variant="outline" size="sm" onClick={handleImportCsvClick}>
             <Upload className="mr-2 h-4 w-4" /> Import Data
           </Button>
-          <Button variant="outline" size="sm" onClick={handleExport}>
+          <Button variant="outline" size="sm" onClick={handleExportCsv}>
             <Download className="mr-2 h-4 w-4" /> Export Data
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleLoadConfigClick}>
+            <FolderOpen className="mr-2 h-4 w-4" /> Load Config
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleSaveConfig}>
+            <Save className="mr-2 h-4 w-4" /> Save Config
           </Button>
         </div>
       </header>
@@ -215,3 +291,5 @@ export default function Home() {
     </div>
   );
 }
+
+    

@@ -10,6 +10,7 @@ const GenerateScheduleInputSchema = z.object({
   teacherNames: z.array(z.string()).describe('List of teacher names.'),
   classes: z.array(z.string()).describe('List of classes.'),
   subjects: z.array(z.string()).describe('List of subjects.'),
+  timeSlots: z.array(z.string()).describe('List of available time slots for the day (e.g., "09:00 - 10:00").'),
   availability: z.record(z.string(), z.array(z.string())).describe('Teacher availability per day and time slot.'),
   subjectPriorities: z.record(z.string(), z.number()).describe('Subject priorities (higher number = higher priority).'),
   classRequirements: z.record(z.string(), z.array(z.string())).describe('Subjects required for each class.'),
@@ -18,35 +19,18 @@ const GenerateScheduleInputSchema = z.object({
 export type GenerateScheduleInput = z.infer<typeof GenerateScheduleInputSchema>;
 
 const ScheduleEntrySchema = z.object({
-  class: z.string(),
+  day: z.enum(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]),
+  timeSlot: z.string(),
+  className: z.string(),
   subject: z.string(),
   teacher: z.string(),
 });
 
-const DayScheduleSchema = z.object({
-  "09:00 - 10:00": z.union([ScheduleEntrySchema, z.null()]).optional(),
-  "10:00 - 11:00": z.union([ScheduleEntrySchema, z.null()]).optional(),
-  "11:00 - 12:00": z.union([ScheduleEntrySchema, z.null()]).optional(),
-  "12:00 - 13:00": z.union([ScheduleEntrySchema, z.null()]).optional(),
-  "13:00 - 14:00": z.union([ScheduleEntrySchema, z.null()]).optional(),
-  "14:00 - 15:00": z.union([ScheduleEntrySchema, z.null()]).optional(),
-  "15:00 - 16:00": z.union([ScheduleEntrySchema, z.null()]).optional(),
-}).catchall(z.union([ScheduleEntrySchema, z.null()]));
-
 const GenerateScheduleOutputSchema = z.object({
-  schedule: z.object({
-    Monday: DayScheduleSchema.optional(),
-    Tuesday: DayScheduleSchema.optional(),
-    Wednesday: DayScheduleSchema.optional(),
-    Thursday: DayScheduleSchema.optional(),
-    Friday: DayScheduleSchema.optional(),
-    Saturday: DayScheduleSchema.optional(),
-  }).catchall(DayScheduleSchema)
-  .describe(
-    'Generated schedule. The top-level keys are days of the week. The next level keys are time slots. The value is either a schedule entry or null if the slot is empty.'
-  ),
+  schedule: z.array(ScheduleEntrySchema).describe("A flat list of all the scheduled classes for the week."),
 });
 export type GenerateScheduleOutput = z.infer<typeof GenerateScheduleOutputSchema>;
+
 
 export async function generateSchedule(input: GenerateScheduleInput): Promise<GenerateScheduleOutput> {
   return generateScheduleFlow(input);
@@ -58,11 +42,12 @@ const generateSchedulePrompt = ai.definePrompt({
   output: {schema: GenerateScheduleOutputSchema},
   prompt: `You are an AI assistant designed to generate class schedules for schools.
 
-  Given the following information, create a schedule for Monday, Tuesday, Wednesday, Thursday, and Friday.
+  Given the following information, create a schedule for Monday, Tuesday, Wednesday, Thursday, and Friday. The schedule should be a flat list of individual class bookings.
 
   Teacher Names: {{teacherNames}}
   Classes: {{classes}}
   Subjects: {{subjects}}
+  Time Slots: {{timeSlots}}
   Teacher Availability: {{availability}}
   Subject Priorities: {{subjectPriorities}}
   Class Requirements: {{classRequirements}}
@@ -74,9 +59,9 @@ const generateSchedulePrompt = ai.definePrompt({
 
   Constraint: Every teacher must be assigned at least one period each day across all classes.
 
-  Ensure that all class requirements are met and that higher priority subjects are scheduled appropriately. For lunch, the teacher can be "N/A". If a slot is empty, return null.
+  Ensure that all class requirements are met and that higher priority subjects are scheduled appropriately. For lunch, the teacher can be "N/A".
 
-  Return the schedule in a valid JSON format.
+  Return the schedule as a flat array of schedule entries in a valid JSON format.
   `,
 });
 

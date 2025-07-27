@@ -57,6 +57,7 @@ export default function Home() {
         teacherNames: teachers,
         classes,
         subjects,
+        timeSlots,
         availability: formattedAvailability,
         subjectPriorities,
         classRequirements,
@@ -128,7 +129,7 @@ export default function Home() {
             ref={fileInputRef}
             onChange={handleFileImport}
             className="hidden"
-            accept="text/csv"
+            accept=".csv, text/csv"
           />
           <Button variant="outline" size="sm" onClick={handleImportClick}>
             <Upload className="mr-2 h-4 w-4" /> Import Data
@@ -185,8 +186,12 @@ export default function Home() {
                 </CardContent>
             </Card>
             <div className="flex-grow">
-              {routine ? (
-                <RoutineDisplay scheduleData={routine} timeSlots={timeSlots} />
+              {routine && routine.schedule.length > 0 ? (
+                <RoutineDisplay 
+                  scheduleData={routine} 
+                  timeSlots={timeSlots} 
+                  classes={classes}
+                />
               ) : (
                 <Card className="h-full">
                   <CardContent className="h-full flex flex-col items-center justify-center text-center p-6">

@@ -101,6 +101,7 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
                         classBookings[`${day}-${timeSlot}-${className}`] = entry;
                     }
                 });
+                // Block all teachers during prayer time
                 teacherNames.forEach(t => teacherBookings[t].add(`${day}-${timeSlot}`));
                 return; // Move to next time slot
             }
@@ -114,6 +115,7 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
                         classBookings[`${day}-${timeSlot}-${className}`] = entry;
                     }
                 });
+                 // Block all teachers during lunch time
                 teacherNames.forEach(t => teacherBookings[t].add(`${day}-${timeSlot}`));
                 return; // Move to next time slot
             }
@@ -209,3 +211,5 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
 
     return { schedule };
 }
+
+    

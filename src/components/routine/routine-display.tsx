@@ -60,6 +60,23 @@ const categorizeClasses = (classes: string[]) => {
     return { secondaryClasses: secondary.sort(), seniorSecondaryClasses: seniorSecondary.sort() };
 };
 
+const toRoman = (num: number): string => {
+    const romanMap: { [key: number]: string } = {
+        1: 'I', 4: 'IV', 5: 'V', 9: 'IX', 10: 'X',
+        40: 'XL', 50: 'L', 90: 'XC', 100: 'C',
+        400: 'CD', 500: 'D', 900: 'CM', 1000: 'M'
+    };
+    let result = '';
+    const sortedKeys = Object.keys(romanMap).map(Number).sort((a, b) => b - a);
+    for (const key of sortedKeys) {
+        while (num >= key) {
+            result += romanMap[key];
+            num -= key;
+        }
+    }
+    return result;
+};
+
 
 const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects, teachers, teacherSubjects, onScheduleChange }: RoutineDisplayProps, ref) => {
   const [printHeader, setPrintHeader] = useState("Weekly Class Schedule");
@@ -75,6 +92,19 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
   });
 
   const { secondaryClasses, seniorSecondaryClasses } = useMemo(() => categorizeClasses(classes), [classes]);
+  const { instructionalSlots, instructionalSlotMap } = useMemo(() => {
+    const instructionalSlots: string[] = [];
+    const instructionalSlotMap: { [timeSlot: string]: number } = {};
+    let periodCounter = 1;
+    timeSlots.forEach(slot => {
+        // Exclude slots typically for Prayer and Lunch
+        if (!slot.includes('09:00') && !slot.includes('09:15') && !slot.includes('13:00')) {
+            instructionalSlots.push(slot);
+            instructionalSlotMap[slot] = periodCounter++;
+        }
+    });
+    return { instructionalSlots, instructionalSlotMap };
+  }, [timeSlots]);
 
   const gridSchedule = useMemo<GridSchedule>(() => {
     const grid: GridSchedule = {};
@@ -300,9 +330,16 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="min-w-[100px] font-bold">Day</TableHead>
-                <TableHead className="min-w-[120px] font-bold">Class</TableHead>
-                {timeSlots.map(slot => <TableHead key={slot} className="text-center font-bold text-xs min-w-[100px]">{slot}</TableHead>)}
+                <TableHead className="min-w-[100px] font-bold align-bottom">Day</TableHead>
+                <TableHead className="min-w-[120px] font-bold align-bottom">Class</TableHead>
+                {timeSlots.map(slot => (
+                  <TableHead key={slot} className="text-center font-bold text-xs min-w-[100px] p-1 align-bottom">
+                      <div>{slot}</div>
+                      <div className="font-normal text-muted-foreground">
+                        {instructionalSlotMap[slot] ? toRoman(instructionalSlotMap[slot]) : '-'}
+                      </div>
+                  </TableHead>
+                ))}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -470,3 +507,5 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
 RoutineDisplay.displayName = 'RoutineDisplay';
 
 export default RoutineDisplay;
+
+    

@@ -28,6 +28,7 @@ type SchoolConfig = {
   unavailability: Unavailability[];
   teacherSubjects: Record<string, string[]>;
   teacherClasses: Record<string, string[]>;
+  lunchTimeSlot?: string;
 };
 
 export default function Home() {
@@ -50,6 +51,7 @@ export default function Home() {
   const [unavailability, setUnavailability] = useState<Unavailability[]>([]);
   const [teacherSubjects, setTeacherSubjects] = useState<Record<string, string[]>>({});
   const [teacherClasses, setTeacherClasses] = useState<Record<string, string[]>>({});
+  const [lunchTimeSlot, setLunchTimeSlot] = useState<string>("");
 
   const [routine, setRoutine] = useState<GenerateScheduleOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -75,6 +77,7 @@ export default function Home() {
         classRequirements,
         teacherSubjects,
         teacherClasses,
+        lunchTimeSlot,
       };
 
       const result = generateScheduleLogic(input);
@@ -139,6 +142,7 @@ export default function Home() {
         unavailability,
         teacherSubjects,
         teacherClasses,
+        lunchTimeSlot,
       };
       const jsonString = JSON.stringify(config, null, 2);
       const blob = new Blob([jsonString], { type: "application/json" });
@@ -176,6 +180,7 @@ export default function Home() {
       setUnavailability(config.unavailability || []);
       setTeacherSubjects(config.teacherSubjects || {});
       setTeacherClasses(config.teacherClasses || {});
+      setLunchTimeSlot(config.lunchTimeSlot || "");
 
       toast({ title: "Configuration loaded successfully!" });
     } catch (error) {
@@ -272,6 +277,8 @@ export default function Home() {
                 setTeacherSubjects={setTeacherSubjects}
                 teacherClasses={teacherClasses}
                 setTeacherClasses={setTeacherClasses}
+                lunchTimeSlot={lunchTimeSlot}
+                setLunchTimeSlot={setLunchTimeSlot}
               />
              <RoutineDisplay 
                 scheduleData={routine}

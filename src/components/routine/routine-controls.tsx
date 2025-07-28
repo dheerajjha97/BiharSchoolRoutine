@@ -38,6 +38,8 @@ interface RoutineControlsProps {
   setTeacherSubjects: (value: Record<string, string[]>) => void;
   teacherClasses: Record<string, string[]>;
   setTeacherClasses: (value: Record<string, string[]>) => void;
+  lunchTimeSlot: string;
+  setLunchTimeSlot: (value: string) => void;
 }
 
 const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -57,6 +59,8 @@ export default function RoutineControls({
   setTeacherSubjects,
   teacherClasses,
   setTeacherClasses,
+  lunchTimeSlot,
+  setLunchTimeSlot,
 }: RoutineControlsProps) {
   
   const [newUnavailability, setNewUnavailability] = useState<Omit<Unavailability, ''>>({ teacher: '', day: '', timeSlot: '' });
@@ -199,6 +203,23 @@ export default function RoutineControls({
                   </span>
                 </div>
               ))}
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="lunch-period">
+            <AccordionTrigger>Lunch Period</AccordionTrigger>
+            <AccordionContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                    Select a time slot to be the designated lunch period. This will schedule a "Lunch" break for all classes at that time.
+                </p>
+                <Select value={lunchTimeSlot} onValueChange={setLunchTimeSlot}>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Select Lunch Time Slot" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="">None</SelectItem>
+                        {timeSlots.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                    </SelectContent>
+                </Select>
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="teacher-unavailability">

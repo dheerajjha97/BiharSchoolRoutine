@@ -17,6 +17,7 @@ export type GenerateScheduleLogicInput = {
     classRequirements: Record<string, string[]>;
     teacherSubjects: Record<string, string[]>;
     teacherClasses: Record<string, string[]>;
+    lunchTimeSlot?: string;
 };
 
 const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -42,6 +43,7 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
         classRequirements,
         teacherSubjects,
         teacherClasses,
+        lunchTimeSlot,
     } = input;
 
     const schedule: ScheduleEntry[] = [];
@@ -93,7 +95,7 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
             }
 
             const lunchSubject = sortedSubjectsByPriority.find(s => s.toLowerCase() === "lunch");
-            if (lunchSubject && (timeSlot.includes("12:00") || timeSlot.includes("13:00"))) {
+            if (lunchSubject && lunchTimeSlot && timeSlot === lunchTimeSlot) {
                  classes.forEach(className => {
                     if (!isClassSlotBooked(day, timeSlot, className)) {
                         const entry = { day, timeSlot, className, subject: lunchSubject, teacher: "N/A" };

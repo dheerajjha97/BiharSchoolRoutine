@@ -115,10 +115,7 @@ body {
   .printable-section th, .printable-section td {
     padding: 2px 4px;
     border: 1px solid #ccc;
-  }
-
-  .printable-section th {
-    font-size: 8pt;
+    text-align: center;
   }
 
   .printable-section .min-h-\[60px\] {
@@ -145,4 +142,7 @@ body {
     background-color: transparent !important;
   }
 
+  .printable-section .bg-accent {
+    background-color: transparent !important;
+  }
 }

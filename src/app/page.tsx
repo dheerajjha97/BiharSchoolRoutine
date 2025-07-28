@@ -13,7 +13,7 @@ import RoutineControls from "@/components/routine/routine-controls";
 import RoutineDisplay from "@/components/routine/routine-display";
 import { exportToCsv, importFromCsv } from "@/lib/csv-helpers";
 import { generateScheduleLogic } from "@/lib/schedule-generator";
-import type { GenerateScheduleLogicInput } from "@/lib/schedule-generator";
+import type { GenerateScheduleLogicInput, SubjectPriority } from "@/lib/schedule-generator";
 
 
 type Unavailability = {
@@ -24,7 +24,7 @@ type Unavailability = {
 
 type SchoolConfig = {
   classRequirements: Record<string, string[]>;
-  subjectImportance: Record<string, number>;
+  subjectPriorities: Record<string, SubjectPriority>;
   unavailability: Unavailability[];
   teacherSubjects: Record<string, string[]>;
   teacherClasses: Record<string, string[]>;
@@ -33,8 +33,8 @@ type SchoolConfig = {
 
 export default function Home() {
   const [teachers, setTeachers] = useState<string[]>(["Mr. Sharma", "Mrs. Gupta", "Mr. Singh"]);
-  const [classes, setClasses] = useState<string[]>(["Class 9A", "Class 10B"]);
-  const [subjects, setSubjects] = useState<string[]>(["Math", "Science", "History", "English", "Prayer", "Lunch"]);
+  const [classes, setClasses] = useState<string[]>(["Class 9A", "Class 10B", "Class 11A", "Class 12B"]);
+  const [subjects, setSubjects] = useState<string[]>(["Math", "Science", "History", "English", "Prayer", "Lunch", "Library", "Sports"]);
   const [timeSlots, setTimeSlots] = useState<string[]>([
     "09:00 - 09:15",
     "09:15 - 10:00",
@@ -42,16 +42,16 @@ export default function Home() {
     "11:00 - 12:00",
     "12:00 - 13:00",
     "13:00 - 14:00",
+    "14:00 - 15:00",
     "15:00 - 16:00",
-    "16:00 - 17:00",
   ]);
   
   const [classRequirements, setClassRequirements] = useState<Record<string, string[]>>({});
-  const [subjectImportance, setSubjectImportance] = useState<Record<string, number>>({});
+  const [subjectPriorities, setSubjectPriorities] = useState<Record<string, SubjectPriority>>({});
   const [unavailability, setUnavailability] = useState<Unavailability[]>([]);
   const [teacherSubjects, setTeacherSubjects] = useState<Record<string, string[]>>({});
   const [teacherClasses, setTeacherClasses] = useState<Record<string, string[]>>({});
-  const [lunchTimeSlot, setLunchTimeSlot] = useState<string>("");
+  const [lunchTimeSlot, setLunchTimeSlot] = useState<string>("12:00 - 13:00");
 
   const [routine, setRoutine] = useState<GenerateScheduleOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -74,7 +74,7 @@ export default function Home() {
         subjects,
         timeSlots,
         unavailability,
-        subjectPriorities: subjectImportance,
+        subjectPriorities,
         classRequirements,
         teacherSubjects,
         teacherClasses,
@@ -139,7 +139,7 @@ export default function Home() {
     try {
       const config: SchoolConfig = {
         classRequirements,
-        subjectImportance,
+        subjectPriorities: subjectPriorities,
         unavailability,
         teacherSubjects,
         teacherClasses,
@@ -177,7 +177,7 @@ export default function Home() {
       if (typeof config !== 'object' || config === null) throw new Error("Invalid config file format.");
 
       setClassRequirements(config.classRequirements || {});
-      setSubjectImportance(config.subjectImportance || {});
+      setSubjectPriorities(config.subjectPriorities || {});
       setUnavailability(config.unavailability || []);
       setTeacherSubjects(config.teacherSubjects || {});
       setTeacherClasses(config.teacherClasses || {});
@@ -276,8 +276,8 @@ export default function Home() {
                 timeSlots={timeSlots}
                 classRequirements={classRequirements}
                 setClassRequirements={setClassRequirements}
-                subjectImportance={subjectImportance}
-                setSubjectImportance={setSubjectImportance}
+                subjectPriorities={subjectPriorities}
+                setSubjectPriorities={setSubjectPriorities}
                 unavailability={unavailability}
                 setUnavailability={setUnavailability}
                 teacherSubjects={teacherSubjects}
@@ -302,3 +302,5 @@ export default function Home() {
     </div>
   );
 }
+
+    

@@ -9,13 +9,14 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Slider } from "@/components/ui/slider";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Trash2 } from "lucide-react";
+import type { SubjectPriority } from "@/lib/schedule-generator";
 
 type Unavailability = {
   teacher: string;
@@ -30,8 +31,8 @@ interface RoutineControlsProps {
   timeSlots: string[];
   classRequirements: Record<string, string[]>;
   setClassRequirements: (value: Record<string, string[]>) => void;
-  subjectImportance: Record<string, number>;
-  setSubjectImportance: (value: Record<string, number>) => void;
+  subjectPriorities: Record<string, SubjectPriority>;
+  setSubjectPriorities: (value: Record<string, SubjectPriority>) => void;
   unavailability: Unavailability[];
   setUnavailability: (value: Unavailability[]) => void;
   teacherSubjects: Record<string, string[]>;
@@ -51,8 +52,8 @@ export default function RoutineControls({
   timeSlots,
   classRequirements,
   setClassRequirements,
-  subjectImportance,
-  setSubjectImportance,
+  subjectPriorities,
+  setSubjectPriorities,
   unavailability,
   setUnavailability,
   teacherSubjects,
@@ -181,28 +182,48 @@ export default function RoutineControls({
               ))}
             </AccordionContent>
           </AccordionItem>
-          <AccordionItem value="subject-importance">
-            <AccordionTrigger>Subject Importance</AccordionTrigger>
+          <AccordionItem value="subject-priority">
+            <AccordionTrigger>Subject Priority</AccordionTrigger>
             <AccordionContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Set the importance for each subject. The AI will prioritize scheduling subjects with higher importance.
+                Set when subjects should be prioritized. This helps in scheduling important subjects before lunch.
               </p>
-              {subjects.map(s => (
-                <div key={s} className="grid grid-cols-4 items-center gap-4">
-                  <Label className="col-span-1">{s}</Label>
-                  <Slider
-                    className="col-span-2"
-                    defaultValue={[subjectImportance[s] || 5]}
-                    max={10}
-                    step={1}
-                    onValueChange={([value]) => setSubjectImportance({ ...subjectImportance, [s]: value })}
-                  />
-
-                  <span className="col-span-1 text-sm text-muted-foreground">
-                    Importance: {subjectImportance[s] || 5}
-                  </span>
-                </div>
-              ))}
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Subject</TableHead>
+                    <TableHead className="text-center">Before Lunch</TableHead>
+                    <TableHead className="text-center">After Lunch</TableHead>
+                    <TableHead className="text-center">No Preference</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {subjects
+                    .filter(s => s.toLowerCase() !== 'prayer' && s.toLowerCase() !== 'lunch')
+                    .map(s => (
+                    <TableRow key={s}>
+                      <TableCell><Label>{s}</Label></TableCell>
+                      <TableCell colSpan={3}>
+                        <RadioGroup
+                          value={subjectPriorities[s] || 'none'}
+                          onValueChange={(value: SubjectPriority) => setSubjectPriorities({ ...subjectPriorities, [s]: value })}
+                          className="grid grid-cols-3"
+                        >
+                          <div className="flex items-center justify-center space-x-2">
+                            <RadioGroupItem value="before" id={`${s}-before`} />
+                          </div>
+                          <div className="flex items-center justify-center space-x-2">
+                            <RadioGroupItem value="after" id={`${s}-after`} />
+                          </div>
+                          <div className="flex items-center justify-center space-x-2">
+                            <RadioGroupItem value="none" id={`${s}-none`} />
+                          </div>
+                        </RadioGroup>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="lunch-period">
@@ -277,3 +298,5 @@ export default function RoutineControls({
     </Card>
   );
 }
+
+    

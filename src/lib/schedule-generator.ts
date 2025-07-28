@@ -7,13 +7,15 @@ type Unavailability = {
     timeSlot: string;
 }
 
+export type SubjectPriority = "before" | "after" | "none";
+
 export type GenerateScheduleLogicInput = {
     teacherNames: string[];
     classes: string[];
     subjects: string[];
     timeSlots: string[];
     unavailability: Unavailability[];
-    subjectPriorities: Record<string, number>;
+    subjectPriorities: Record<string, SubjectPriority>;
     classRequirements: Record<string, string[]>;
     teacherSubjects: Record<string, string[]>;
     teacherClasses: Record<string, string[]>;
@@ -82,13 +84,8 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
         });
     });
     
-    // Define early periods (e.g., first 4 slots, excluding prayer and lunch)
-    const earlyPeriodCount = 4;
-    const instructionalTimeSlots = timeSlots.filter(slot => {
-        const isPrayerSlot = slot.includes("09:00") || slot.includes("09:15");
-        const isLunchSlot = lunchTimeSlot && slot === lunchTimeSlot;
-        return !isPrayerSlot && !isLunchSlot;
-    });
+    // Find the index of the lunch slot
+    const lunchSlotIndex = lunchTimeSlot ? timeSlots.indexOf(lunchTimeSlot) : -1;
     
     // 1. Handle fixed-time subjects like Prayer and Lunch first
     daysOfWeek.forEach(day => {
@@ -124,7 +121,7 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
     // 2. Handle regular instructional periods
     daysOfWeek.forEach(day => {
         // Use only instructional slots for this part
-        instructionalTimeSlots.forEach((timeSlot, slotIndex) => {
+        timeSlots.forEach((timeSlot, slotIndex) => {
             // Shuffle classes to ensure different classes get priority on different days/slots
             shuffleArray(classes).forEach(className => {
                 if (isClassSlotBooked(day, timeSlot, className)) {
@@ -140,27 +137,24 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
                     s.toLowerCase() !== "lunch" &&
                     !subjectsAlreadyTaughtToday.has(s)
                 );
+                
+                const isBeforeLunch = lunchSlotIndex === -1 || slotIndex < lunchSlotIndex;
 
                 // Sort subjects for this specific slot:
                 const sortedSubjectsForSlot = availableSubjects.sort((a, b) => {
-                    const isEarlyPeriod = slotIndex < earlyPeriodCount;
-                    
-                    // In early periods, prioritize subjects with high importance
-                    if (isEarlyPeriod) {
-                        const priorityA = subjectPriorities[a] || 0;
-                        const priorityB = subjectPriorities[b] || 0;
-                        if (priorityA !== priorityB) {
-                            return priorityB - priorityA; // Higher priority first
-                        }
-                    } else { // In later periods, prioritize subjects with low importance
-                         const priorityA = subjectPriorities[a] || 0;
-                         const priorityB = subjectPriorities[b] || 0;
-                         if (priorityA !== priorityB) {
-                            return priorityA - priorityB; // Lower priority first
-                        }
+                    const priorityA = subjectPriorities[a] || 'none';
+                    const priorityB = subjectPriorities[b] || 'none';
+
+                    // Prioritize based on Before/After Lunch preference
+                    if (isBeforeLunch) {
+                        if (priorityA === 'before' && priorityB !== 'before') return -1;
+                        if (priorityA !== 'before' && priorityB === 'before') return 1;
+                    } else { // After lunch
+                        if (priorityA === 'after' && priorityB !== 'after') return -1;
+                        if (priorityA !== 'after' && priorityB === 'after') return 1;
                     }
 
-                    // As a secondary criteria, prioritize subjects taught less often this week
+                    // Secondary criteria: prioritize subjects taught less often this week
                     const countA = classSubjectCount[className][a] || 0;
                     const countB = classSubjectCount[className][b] || 0;
                     if (countA !== countB) {
@@ -216,3 +210,5 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
 
     return { schedule };
 }
+
+    

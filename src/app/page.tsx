@@ -2,8 +2,7 @@
 "use client";
 
 import { useState, useMemo, ChangeEvent, useRef } from "react";
-import type { GenerateScheduleInput, GenerateScheduleOutput, ScheduleEntry } from "@/ai/flows/generate-schedule";
-import { generateSchedule } from "@/ai/flows/generate-schedule";
+import type { GenerateScheduleOutput, ScheduleEntry } from "@/ai/flows/generate-schedule";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +12,9 @@ import DataManager from "@/components/routine/data-manager";
 import RoutineControls from "@/components/routine/routine-controls";
 import RoutineDisplay from "@/components/routine/routine-display";
 import { exportToCsv, importFromCsv } from "@/lib/csv-helpers";
+import { generateScheduleLogic } from "@/lib/schedule-generator";
+import type { GenerateScheduleLogicInput } from "@/lib/schedule-generator";
+
 
 type Unavailability = {
   teacher: string;
@@ -63,7 +65,7 @@ export default function Home() {
         throw new Error("Please provide teachers, classes, subjects, and time slots before generating a routine.");
       }
       
-      const input: GenerateScheduleInput = {
+      const input: GenerateScheduleLogicInput = {
         teacherNames: teachers,
         classes,
         subjects,
@@ -75,7 +77,7 @@ export default function Home() {
         teacherClasses,
       };
 
-      const result = await generateSchedule(input);
+      const result = generateScheduleLogic(input);
       setRoutine(result);
       toast({
         title: "Routine Generated Successfully!",
@@ -239,7 +241,7 @@ export default function Home() {
                     Generate Routine
                 </Button>
                 <p className="text-xs text-muted-foreground mt-4 text-center">
-                    Generate the school routine using AI. You can edit the result in the main display.
+                    Generate the school routine using a logic-based algorithm. You can edit the result in the main display.
                 </p>
             </CardContent>
           </Card>

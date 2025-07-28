@@ -47,6 +47,7 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
     const schedule: ScheduleEntry[] = [];
     const teacherBookings: Record<string, Set<string>> = {}; // key: teacher, value: Set of "day-timeSlot"
     const classBookings: Record<string, ScheduleEntry> = {}; // key: "day-timeSlot-className"
+    const classSubjectCount: Record<string, Record<string, number>> = {}; // key: className, value: { subject: count }
 
     // Helper to check if a teacher is booked
     const isTeacherBooked = (teacher: string, day: string, timeSlot: string): boolean => {
@@ -63,18 +64,22 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
         return !!classBookings[`${day}-${timeSlot}-${className}`];
     }
 
-    // Initialize bookings
-    teacherNames.forEach(t => {
-        teacherBookings[t] = new Set();
+    // Initialize bookings and counts
+    teacherNames.forEach(t => { teacherBookings[t] = new Set(); });
+    classes.forEach(c => { 
+        classSubjectCount[c] = {};
+        subjects.forEach(s => {
+            classSubjectCount[c][s] = 0;
+        });
     });
     
-    // Sort subjects by priority
-    const sortedSubjects = [...subjects].sort((a, b) => (subjectPriorities[b] || 0) - (subjectPriorities[a] || 0));
+    // Sort subjects by priority only as a tie-breaker
+    const sortedSubjectsByPriority = [...subjects].sort((a, b) => (subjectPriorities[b] || 0) - (subjectPriorities[a] || 0));
 
     daysOfWeek.forEach(day => {
         timeSlots.forEach(timeSlot => {
-            // Handle special subjects like Prayer and Lunch first
-            const prayerSubject = sortedSubjects.find(s => s.toLowerCase() === "prayer");
+            // Handle special fixed-time subjects like Prayer and Lunch first
+            const prayerSubject = sortedSubjectsByPriority.find(s => s.toLowerCase() === "prayer");
             if (prayerSubject && (timeSlot.includes("09:00") || timeSlot.includes("09:15") || timeSlot.includes("09:30"))) {
                 classes.forEach(className => {
                     if (!isClassSlotBooked(day, timeSlot, className)) {
@@ -83,39 +88,52 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
                         classBookings[`${day}-${timeSlot}-${className}`] = entry;
                     }
                 });
-                 // Block all teachers during this time
                 teacherNames.forEach(t => teacherBookings[t].add(`${day}-${timeSlot}`));
+                return; // Move to next time slot
             }
 
-            const lunchSubject = sortedSubjects.find(s => s.toLowerCase() === "lunch");
+            const lunchSubject = sortedSubjectsByPriority.find(s => s.toLowerCase() === "lunch");
             if (lunchSubject && (timeSlot.includes("12:00") || timeSlot.includes("13:00"))) {
-                classes.forEach(className => {
+                 classes.forEach(className => {
                     if (!isClassSlotBooked(day, timeSlot, className)) {
                         const entry = { day, timeSlot, className, subject: lunchSubject, teacher: "N/A" };
                         schedule.push(entry);
                         classBookings[`${day}-${timeSlot}-${className}`] = entry;
                     }
                 });
-                // Block all teachers during this time
                 teacherNames.forEach(t => teacherBookings[t].add(`${day}-${timeSlot}`));
+                return; // Move to next time slot
             }
 
-            classes.forEach(className => {
-                // Check if this class already has this subject scheduled in this slot
+            // Shuffle classes to ensure different classes get priority on different days/slots
+            shuffleArray(classes).forEach(className => {
                 if (isClassSlotBooked(day, timeSlot, className)) {
-                    return; // Already has a class, continue to next class
+                    return; 
                 }
 
                 const requiredSubjects = classRequirements[className] || [];
-                const availableSubjects = sortedSubjects.filter(s => requiredSubjects.includes(s) && s.toLowerCase() !== "prayer" && s.toLowerCase() !== "lunch");
                 
-                for (const subject of availableSubjects) {
-                     // Check again in case a subject was added in this loop
+                // Filter out special subjects already handled
+                const availableSubjects = requiredSubjects.filter(s => s.toLowerCase() !== "prayer" && s.toLowerCase() !== "lunch");
+
+                // Sort subjects for this specific slot:
+                // 1. By how many times they've been scheduled (ascending)
+                // 2. By overall priority (descending) as a tie-breaker
+                const sortedSubjectsForSlot = availableSubjects.sort((a, b) => {
+                    const countA = classSubjectCount[className][a] || 0;
+                    const countB = classSubjectCount[className][b] || 0;
+                    if (countA !== countB) {
+                        return countA - countB;
+                    }
+                    return (subjectPriorities[b] || 0) - (subjectPriorities[a] || 0);
+                });
+                
+                for (const subject of sortedSubjectsForSlot) {
+                    // This check is redundant if the outer one works, but good for safety
                     if (isClassSlotBooked(day, timeSlot, className)) {
                         break; 
                     }
 
-                    // Find an available teacher
                     const potentialTeachers = teacherNames.filter(t => 
                         (teacherSubjects[t]?.includes(subject)) &&
                         (teacherClasses[t]?.includes(className)) &&
@@ -124,21 +142,17 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
                     );
 
                     if (potentialTeachers.length > 0) {
-                        // Shuffle teachers to distribute workload more evenly
                         const shuffledTeachers = shuffleArray(potentialTeachers);
                         const teacher = shuffledTeachers[0]; 
 
-                        const entry = {
-                            day,
-                            timeSlot,
-                            className,
-                            subject,
-                            teacher
-                        };
+                        const entry = { day, timeSlot, className, subject, teacher };
+                        
                         schedule.push(entry);
                         teacherBookings[teacher].add(`${day}-${timeSlot}`);
                         classBookings[`${day}-${timeSlot}-${className}`] = entry;
-                        break; // Move to next class once a subject is scheduled
+                        classSubjectCount[className][subject]++;
+                        
+                        break; // Subject found and scheduled, move to the next class
                     }
                 }
             });

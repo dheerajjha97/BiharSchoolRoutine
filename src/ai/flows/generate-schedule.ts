@@ -84,7 +84,7 @@ const generateSchedulePrompt = ai.definePrompt({
   When assigning a teacher to a class for a specific subject, you MUST ensure:
   1. The teacher is not marked as unavailable at that specific day and time slot.
   2. The teacher is qualified to teach that subject based on the Teacher-Subject Mapping.
-  3. The teacher is assigned to teach that class based on the Teacher-Class Mapping.
+  3. CRITICAL: The teacher must be assigned to teach that class based on the Teacher-Class Mapping. If a teacher is not in the list for a specific class in teacherClasses, they CANNOT be assigned to it.
   4. CRITICAL: A teacher cannot be assigned to more than one class during the same time slot on the same day.
 
   If "Prayer" or "Lunch" are among the subjects, no teacher is required. For "Prayer" and "Lunch", the teacher can be "N/A". During these periods, all teachers are considered busy, so no other subjects should be scheduled for any class.

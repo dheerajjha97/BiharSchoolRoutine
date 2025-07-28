@@ -219,7 +219,7 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
 };
 
   const renderScheduleTable = (title: string, displayClasses: string[]) => {
-    if (displayClasses.length === 0) return null;
+    if (!scheduleData && displayClasses.length === 0) return null;
   
     return (
       <div>
@@ -228,15 +228,15 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="min-w-[120px] font-bold">Time</TableHead>
-                {daysOfWeek.map(day => <TableHead key={day} className="text-center font-bold">{day}</TableHead>)}
+                <TableHead className="min-w-[120px] font-bold">Day</TableHead>
+                {timeSlots.map(slot => <TableHead key={slot} className="text-center font-bold text-xs">{slot}</TableHead>)}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {timeSlots.map(slot => (
-                <TableRow key={slot}>
-                  <TableCell className="font-medium align-top text-xs">{slot}</TableCell>
-                  {daysOfWeek.map(day => (
+              {daysOfWeek.map(day => (
+                <TableRow key={day}>
+                  <TableCell className="font-medium align-top">{day}</TableCell>
+                  {timeSlots.map(slot => (
                     <TableCell key={`${day}-${slot}`} className="p-1 align-top">
                       {renderCellContent(day, slot, displayClasses)}
                     </TableCell>

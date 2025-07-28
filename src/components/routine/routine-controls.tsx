@@ -1,18 +1,27 @@
 
 "use client";
 
+import { useState } from "react";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Trash2 } from "lucide-react";
+
+type Unavailability = {
+  teacher: string;
+  day: string;
+  timeSlot: string;
+}
 
 interface RoutineControlsProps {
   teachers: string[];
@@ -23,13 +32,15 @@ interface RoutineControlsProps {
   setClassRequirements: (value: Record<string, string[]>) => void;
   subjectPriorities: Record<string, number>;
   setSubjectPriorities: (value: Record<string, number>) => void;
-  availability: Record<string, Record<string, boolean>>;
-  setAvailability: (value: Record<string, Record<string, boolean>>) => void;
+  unavailability: Unavailability[];
+  setUnavailability: (value: Unavailability[]) => void;
   teacherSubjects: Record<string, string[]>;
   setTeacherSubjects: (value: Record<string, string[]>) => void;
   teacherClasses: Record<string, string[]>;
   setTeacherClasses: (value: Record<string, string[]>) => void;
 }
+
+const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export default function RoutineControls({
   teachers,
@@ -40,14 +51,16 @@ export default function RoutineControls({
   setClassRequirements,
   subjectPriorities,
   setSubjectPriorities,
-  availability,
-  setAvailability,
+  unavailability,
+  setUnavailability,
   teacherSubjects,
   setTeacherSubjects,
   teacherClasses,
   setTeacherClasses,
 }: RoutineControlsProps) {
   
+  const [newUnavailability, setNewUnavailability] = useState<Omit<Unavailability, ''>>({ teacher: '', day: '', timeSlot: '' });
+
   const handleRequirementChange = (className: string, subject: string, checked: boolean) => {
     const currentReqs = classRequirements[className] || [];
     const newReqs = checked
@@ -72,12 +85,24 @@ export default function RoutineControls({
     setTeacherClasses({ ...teacherClasses, [teacher]: newClasses });
   };
   
-  const handleAvailabilityChange = (teacher: string, slot: string, checked: boolean) => {
-    const newAvailability = { ...availability };
-    if (!newAvailability[teacher]) newAvailability[teacher] = {};
-    newAvailability[teacher][slot] = checked;
-    setAvailability(newAvailability);
+  const handleAddUnavailability = () => {
+    if (newUnavailability.teacher && newUnavailability.day && newUnavailability.timeSlot) {
+      // Avoid adding duplicates
+      if (!unavailability.some(u => 
+          u.teacher === newUnavailability.teacher && 
+          u.day === newUnavailability.day && 
+          u.timeSlot === newUnavailability.timeSlot
+      )) {
+        setUnavailability([...unavailability, newUnavailability as Unavailability]);
+      }
+      setNewUnavailability({ teacher: '', day: '', timeSlot: '' });
+    }
   };
+
+  const handleRemoveUnavailability = (index: number) => {
+    setUnavailability(unavailability.filter((_, i) => i !== index));
+  };
+
 
   return (
     <Card>
@@ -173,34 +198,54 @@ export default function RoutineControls({
               ))}
             </AccordionContent>
           </AccordionItem>
-          <AccordionItem value="teacher-availability">
-            <AccordionTrigger>Teacher Availability</AccordionTrigger>
-            <AccordionContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Teacher</TableHead>
-                      {timeSlots.map(slot => <TableHead key={slot} className="text-center">{slot}</TableHead>)}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {teachers.map(teacher => (
-                      <TableRow key={teacher}>
-                        <TableCell className="font-medium">{teacher}</TableCell>
-                        {timeSlots.map(slot => (
-                          <TableCell key={slot} className="text-center">
-                            <Checkbox
-                              checked={availability[teacher]?.[slot] || false}
-                              onCheckedChange={(checked) => handleAvailabilityChange(teacher, slot, !!checked)}
-                            />
+          <AccordionItem value="teacher-unavailability">
+            <AccordionTrigger>Teacher Unavailability</AccordionTrigger>
+            <AccordionContent className="space-y-4">
+               <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                  <Select value={newUnavailability.teacher} onValueChange={(value) => setNewUnavailability({...newUnavailability, teacher: value})}>
+                      <SelectTrigger><SelectValue placeholder="Select Teacher" /></SelectTrigger>
+                      <SelectContent>{teachers.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                  </Select>
+                  <Select value={newUnavailability.day} onValueChange={(value) => setNewUnavailability({...newUnavailability, day: value})}>
+                      <SelectTrigger><SelectValue placeholder="Select Day" /></SelectTrigger>
+                      <SelectContent>{daysOfWeek.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
+                  </Select>
+                  <Select value={newUnavailability.timeSlot} onValueChange={(value) => setNewUnavailability({...newUnavailability, timeSlot: value})}>
+                      <SelectTrigger><SelectValue placeholder="Select Time Slot" /></SelectTrigger>
+                      <SelectContent>{timeSlots.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                  </Select>
+                   <Button onClick={handleAddUnavailability}>Add Rule</Button>
+               </div>
+               <div className="mt-4 space-y-2">
+                  {unavailability.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Teacher</TableHead>
+                          <TableHead>Day</TableHead>
+                          <TableHead>Time Slot</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                      {unavailability.map((rule, index) => (
+                        <TableRow key={index}>
+                          <TableCell>{rule.teacher}</TableCell>
+                          <TableCell>{rule.day}</TableCell>
+                          <TableCell>{rule.timeSlot}</TableCell>
+                          <TableCell className="text-right">
+                             <Button variant="ghost" size="icon" onClick={() => handleRemoveUnavailability(index)}>
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
                           </TableCell>
-                        ))}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                        </TableRow>
+                      ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center">No unavailability rules added. All teachers are assumed to be available.</p>
+                  )}
+               </div>
             </AccordionContent>
           </AccordionItem>
         </Accordion>

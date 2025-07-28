@@ -14,10 +14,16 @@ import RoutineControls from "@/components/routine/routine-controls";
 import RoutineDisplay from "@/components/routine/routine-display";
 import { exportToCsv, importFromCsv } from "@/lib/csv-helpers";
 
+type Unavailability = {
+  teacher: string;
+  day: string;
+  timeSlot: string;
+}
+
 type SchoolConfig = {
   classRequirements: Record<string, string[]>;
   subjectPriorities: Record<string, number>;
-  availability: Record<string, Record<string, boolean>>;
+  unavailability: Unavailability[];
   teacherSubjects: Record<string, string[]>;
   teacherClasses: Record<string, string[]>;
 };
@@ -39,7 +45,7 @@ export default function Home() {
   
   const [classRequirements, setClassRequirements] = useState<Record<string, string[]>>({});
   const [subjectPriorities, setSubjectPriorities] = useState<Record<string, number>>({});
-  const [availability, setAvailability] = useState<Record<string, Record<string, boolean>>>({});
+  const [unavailability, setUnavailability] = useState<Unavailability[]>([]);
   const [teacherSubjects, setTeacherSubjects] = useState<Record<string, string[]>>({});
   const [teacherClasses, setTeacherClasses] = useState<Record<string, string[]>>({});
 
@@ -56,20 +62,13 @@ export default function Home() {
       if (teachers.length === 0 || classes.length === 0 || subjects.length === 0 || timeSlots.length === 0) {
         throw new Error("Please provide teachers, classes, subjects, and time slots before generating a routine.");
       }
-
-      const formattedAvailability: Record<string, string[]> = {};
-      for (const teacher in availability) {
-        formattedAvailability[teacher] = Object.entries(availability[teacher])
-          .filter(([, isAvailable]) => isAvailable)
-          .map(([slot]) => slot);
-      }
       
       const input: GenerateScheduleInput = {
         teacherNames: teachers,
         classes,
         subjects,
         timeSlots,
-        availability: formattedAvailability,
+        unavailability,
         subjectPriorities,
         classRequirements,
         teacherSubjects,
@@ -135,7 +134,7 @@ export default function Home() {
       const config: SchoolConfig = {
         classRequirements,
         subjectPriorities,
-        availability,
+        unavailability,
         teacherSubjects,
         teacherClasses,
       };
@@ -172,7 +171,7 @@ export default function Home() {
 
       setClassRequirements(config.classRequirements || {});
       setSubjectPriorities(config.subjectPriorities || {});
-      setAvailability(config.availability || {});
+      setUnavailability(config.unavailability || []);
       setTeacherSubjects(config.teacherSubjects || {});
       setTeacherClasses(config.teacherClasses || {});
 
@@ -265,8 +264,8 @@ export default function Home() {
                 setClassRequirements={setClassRequirements}
                 subjectPriorities={subjectPriorities}
                 setSubjectPriorities={setSubjectPriorities}
-                availability={availability}
-                setAvailability={setAvailability}
+                unavailability={unavailability}
+                setUnavailability={setUnavailability}
                 teacherSubjects={teacherSubjects}
                 setTeacherSubjects={setTeacherSubjects}
                 teacherClasses={teacherClasses}

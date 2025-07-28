@@ -7,12 +7,18 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
+const UnavailabilitySchema = z.object({
+  teacher: z.string(),
+  day: z.string(),
+  timeSlot: z.string(),
+});
+
 const GenerateScheduleInputSchema = z.object({
   teacherNames: z.array(z.string()).describe('List of teacher names.'),
   classes: z.array(z.string()).describe('List of classes.'),
   subjects: z.array(z.string()).describe('List of subjects.'),
   timeSlots: z.array(z.string()).describe('List of available time slots for the day (e.g., "09:00 - 10:00").'),
-  availability: z.record(z.string(), z.array(z.string())).describe('Teacher availability per day and time slot.'),
+  unavailability: z.array(UnavailabilitySchema).describe('A list of specific time slots when a teacher is unavailable.'),
   subjectPriorities: z.record(z.string(), z.number()).describe('Subject priorities (higher number = higher priority).'),
   classRequirements: z.record(z.string(), z.array(z.string())).describe('Subjects required for each class.'),
   teacherSubjects: z.record(z.string(), z.array(z.string())).describe('Subjects each teacher is qualified to teach.'),
@@ -63,15 +69,18 @@ const generateSchedulePrompt = ai.definePrompt({
   Classes: {{classes}}
   Subjects: {{subjects}}
   Time Slots: {{timeSlots}}
-  Teacher Availability: {{availability}}
+  Teacher Unavailability: {{jsonStringify unavailability}}
   Subject Priorities: {{subjectPriorities}}
   Class Requirements: {{classRequirements}}
   Teacher-Subject Mapping: {{teacherSubjects}}
   Teacher-Class Mapping: {{teacherClasses}}
 
+  The Teacher Unavailability list specifies when a teacher CANNOT be scheduled. By default, assume all teachers are available for all time slots unless specified in this list.
+
   When assigning a teacher to a class for a specific subject, you MUST ensure:
-  1. The teacher is qualified to teach that subject based on the Teacher-Subject Mapping.
-  2. The teacher is assigned to teach that class based on the Teacher-Class Mapping.
+  1. The teacher is not marked as unavailable at that specific day and time slot.
+  2. The teacher is qualified to teach that subject based on the Teacher-Subject Mapping.
+  3. The teacher is assigned to teach that class based on the Teacher-Class Mapping.
 
   If "Prayer" or "Lunch" are among the subjects, no teacher is required. For "Prayer" and "Lunch", the teacher can be "N/A". During these periods, all teachers are considered busy, so no other subjects should be scheduled for any class.
 
@@ -79,7 +88,7 @@ const generateSchedulePrompt = ai.definePrompt({
 
   For common subjects like "Hindi", "English", "Computer", or "Sports", if a teacher teaches the same subject to multiple classes (e.g., "12th Arts" and "12th Science"), you can schedule these as a combined class. When this happens, create a single schedule entry with the className as a combined string (e.g., "12th Arts & 12th Science"). The assigned teacher teaches both classes together in that time slot.
 
-  IMPORTANT: Your response MUST be a valid JSON object. Ensure every object in the 'schedule' array contains all the required fields: 'day', 'timeSlot', 'className', 'subject', and 'teacher'. Do not generate incomplete or partial entries. Every single entry must be a complete object.
+  IMPORTANT: Your response MUST be a valid JSON object that strictly adheres to the output schema. Ensure every object in the 'schedule' array contains all the required fields: 'day', 'timeSlot', 'className', 'subject', and 'teacher'. Do not generate incomplete or partial entries. Every single entry must be a complete object.
   `,
 });
 

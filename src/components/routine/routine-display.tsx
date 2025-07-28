@@ -53,9 +53,9 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
     const secondary: string[] = [];
     const seniorSecondary: string[] = [];
     classes.forEach(c => {
-      if (c.includes('9') || c.includes('10th') || c.includes('9th') || c.includes('10')) {
+      if (/\b(9|10)\b/.test(c) || c.includes('9th') || c.includes('10th')) {
         secondary.push(c);
-      } else if (c.includes('11') || c.includes('12') || c.includes('11th') || c.includes('12th')) {
+      } else if (/\b(11|12)\b/.test(c) || c.includes('11th') || c.includes('12th')) {
         seniorSecondary.push(c);
       }
     });
@@ -242,14 +242,6 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
 
   const renderScheduleTable = (title: string, displayClasses: string[]) => {
     if (displayClasses.length === 0) return null;
-    
-    // Check if there's any schedule data for the classes in this section
-    const hasDataForSection = scheduleData?.schedule.some(entry => {
-        const entryClasses = entry.className.split(' & ');
-        return entryClasses.some(ec => displayClasses.includes(ec.trim()));
-    });
-    
-    if (!hasDataForSection) return null;
 
     return (
     <div>
@@ -414,5 +406,3 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
     </>
   );
 }
-
-    

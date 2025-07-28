@@ -50,6 +50,7 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
     const teacherBookings: Record<string, Set<string>> = {}; // key: teacher, value: Set of "day-timeSlot"
     const classBookings: Record<string, ScheduleEntry> = {}; // key: "day-timeSlot-className"
     const classSubjectCount: Record<string, Record<string, number>> = {}; // key: className, value: { subject: count }
+    const dailyClassSubject: Record<string, Record<string, Set<string>>> = {}; // key: day -> className -> Set of subjects taught on that day
 
     // Helper to check if a teacher is booked
     const isTeacherBooked = (teacher: string, day: string, timeSlot: string): boolean => {
@@ -72,6 +73,12 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
         classSubjectCount[c] = {};
         subjects.forEach(s => {
             classSubjectCount[c][s] = 0;
+        });
+    });
+    daysOfWeek.forEach(day => {
+        dailyClassSubject[day] = {};
+        classes.forEach(c => {
+            dailyClassSubject[day][c] = new Set();
         });
     });
     
@@ -115,8 +122,13 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
 
                 const requiredSubjects = classRequirements[className] || [];
                 
-                // Filter out special subjects already handled
-                const availableSubjects = requiredSubjects.filter(s => s.toLowerCase() !== "prayer" && s.toLowerCase() !== "lunch");
+                // Filter out special subjects already handled and subjects already taught today
+                const subjectsAlreadyTaughtToday = dailyClassSubject[day][className];
+                const availableSubjects = requiredSubjects.filter(s => 
+                    s.toLowerCase() !== "prayer" && 
+                    s.toLowerCase() !== "lunch" &&
+                    !subjectsAlreadyTaughtToday.has(s)
+                );
 
                 // Sort subjects for this specific slot:
                 // 1. By how many times they've been scheduled (ascending)
@@ -153,6 +165,7 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
                         teacherBookings[teacher].add(`${day}-${timeSlot}`);
                         classBookings[`${day}-${timeSlot}-${className}`] = entry;
                         classSubjectCount[className][subject]++;
+                        dailyClassSubject[day][className].add(subject); // Mark subject as taught for this class today
                         
                         break; // Subject found and scheduled, move to the next class
                     }

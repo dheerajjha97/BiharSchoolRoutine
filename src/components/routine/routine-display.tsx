@@ -53,9 +53,9 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
     const secondary: string[] = [];
     const seniorSecondary: string[] = [];
     classes.forEach(c => {
-      if (c.includes('9') || c.includes('10')) {
+      if (c.includes('9') || c.includes('10th') || c.includes('9th') || c.includes('10')) {
         secondary.push(c);
-      } else if (c.includes('11') || c.includes('12')) {
+      } else if (c.includes('11') || c.includes('12') || c.includes('11th') || c.includes('12th')) {
         seniorSecondary.push(c);
       }
     });
@@ -240,7 +240,18 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
       </Card>
   )
 
-  const renderScheduleTable = (title: string, displayClasses: string[]) => (
+  const renderScheduleTable = (title: string, displayClasses: string[]) => {
+    if (displayClasses.length === 0) return null;
+    
+    // Check if there's any schedule data for the classes in this section
+    const hasDataForSection = scheduleData?.schedule.some(entry => {
+        const entryClasses = entry.className.split(' & ');
+        return entryClasses.some(ec => displayClasses.includes(ec.trim()));
+    });
+    
+    if (!hasDataForSection) return null;
+
+    return (
     <div>
       <h3 className="text-lg font-semibold mb-2">{title}</h3>
       <div className="overflow-x-auto border rounded-lg">
@@ -266,7 +277,8 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
         </Table>
       </div>
     </div>
-  );
+    )
+  };
 
   return (
     <>
@@ -317,8 +329,8 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
             <>
                 <h3 className="text-center font-bold text-lg mb-2 print-only">{printHeader}{selectedClass !== 'all' && ` - ${selectedClass}`}</h3>
                 <div className="space-y-6">
-                    {secondaryClasses.length > 0 && renderScheduleTable("Secondary", secondaryClasses)}
-                    {seniorSecondaryClasses.length > 0 && renderScheduleTable("Senior Secondary", seniorSecondaryClasses)}
+                    {renderScheduleTable("Secondary", secondaryClasses)}
+                    {renderScheduleTable("Senior Secondary", seniorSecondaryClasses)}
                 </div>
                 <p className="text-center text-xs text-muted-foreground mt-4 print-only">{printFooter}</p>
             </>
@@ -402,3 +414,5 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
     </>
   );
 }
+
+    

@@ -82,16 +82,17 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
         });
     });
     
-    // Sort subjects by priority only as a tie-breaker
-    const sortedSubjectsByPriority = [...subjects].sort((a, b) => (subjectPriorities[b] || 0) - (subjectPriorities[a] || 0));
-    
-    // Define early periods (e.g., first 4 slots, excluding prayer)
+    // Define early periods (e.g., first 4 slots, excluding prayer and lunch)
     const earlyPeriodCount = 4;
-    const instructionalTimeSlots = timeSlots.filter(slot => !slot.includes("09:00") && !slot.includes("09:15") && (!lunchTimeSlot || slot !== lunchTimeSlot));
+    const instructionalTimeSlots = timeSlots.filter(slot => {
+        const isPrayerSlot = slot.includes("09:00") || slot.includes("09:15");
+        const isLunchSlot = lunchTimeSlot && slot === lunchTimeSlot;
+        return !isPrayerSlot && !isLunchSlot;
+    });
     
+    // 1. Handle fixed-time subjects like Prayer and Lunch first
     daysOfWeek.forEach(day => {
-        timeSlots.forEach((timeSlot, slotIndex) => {
-            // Handle special fixed-time subjects like Prayer and Lunch first
+        timeSlots.forEach(timeSlot => {
             const prayerSubject = subjects.find(s => s.toLowerCase() === "prayer");
             if (prayerSubject && (timeSlot.includes("09:00") || timeSlot.includes("09:15"))) {
                  classes.forEach(className => {
@@ -103,7 +104,6 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
                 });
                 // Block all teachers during prayer time
                 teacherNames.forEach(t => teacherBookings[t].add(`${day}-${timeSlot}`));
-                return; // Move to next time slot
             }
             
             const lunchSubject = subjects.find(s => s.toLowerCase() === "lunch");
@@ -117,9 +117,14 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
                 });
                  // Block all teachers during lunch time
                 teacherNames.forEach(t => teacherBookings[t].add(`${day}-${timeSlot}`));
-                return; // Move to next time slot
             }
+        });
+    });
 
+    // 2. Handle regular instructional periods
+    daysOfWeek.forEach(day => {
+        // Use only instructional slots for this part
+        instructionalTimeSlots.forEach((timeSlot, slotIndex) => {
             // Shuffle classes to ensure different classes get priority on different days/slots
             shuffleArray(classes).forEach(className => {
                 if (isClassSlotBooked(day, timeSlot, className)) {
@@ -128,7 +133,7 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
 
                 const requiredSubjects = classRequirements[className] || [];
                 
-                // Filter out special subjects already handled and subjects already taught today
+                // Filter out special subjects and subjects already taught today
                 const subjectsAlreadyTaughtToday = dailyClassSubject[day][className];
                 const availableSubjects = requiredSubjects.filter(s => 
                     s.toLowerCase() !== "prayer" && 
@@ -138,7 +143,7 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
 
                 // Sort subjects for this specific slot:
                 const sortedSubjectsForSlot = availableSubjects.sort((a, b) => {
-                    const isEarlyPeriod = instructionalTimeSlots.indexOf(timeSlot) < earlyPeriodCount;
+                    const isEarlyPeriod = slotIndex < earlyPeriodCount;
                     
                     // In early periods, prioritize subjects with high importance
                     if (isEarlyPeriod) {
@@ -167,7 +172,7 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
                 });
                 
                 for (const subject of sortedSubjectsForSlot) {
-                    if (isClassSlotBooked(day, timeSlot, className)) {
+                     if (isClassSlotBooked(day, timeSlot, className)) {
                         break; 
                     }
 
@@ -211,5 +216,3 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
 
     return { schedule };
 }
-
-    

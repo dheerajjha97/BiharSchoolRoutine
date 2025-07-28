@@ -27,11 +27,12 @@ const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Sat
 
 // Helper function to shuffle an array
 const shuffleArray = <T>(array: T[]): T[] => {
-    for (let i = array.length - 1; i > 0; i--) {
+    const newArray = [...array];
+    for (let i = newArray.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
+        [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
     }
-    return array;
+    return newArray;
 };
 
 
@@ -125,7 +126,8 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
         // Use only instructional slots for this part
         timeSlots.forEach((timeSlot, slotIndex) => {
             // Shuffle classes to ensure different classes get priority on different days/slots
-            shuffleArray(classes).forEach(className => {
+            const shuffledClasses = shuffleArray(classes);
+            shuffledClasses.forEach(className => {
                 if (isClassSlotBooked(day, timeSlot, className)) {
                     return; 
                 }
@@ -190,23 +192,46 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
                         classSubjectCount[className][subject]++;
                         dailyClassSubject[day][className].add(subject);
                         break; // Subject found and scheduled, move to the next class
-                    } else {
-                        // If no mapped and available teacher is found, check if subject is still required.
-                        // If so, schedule it with "N/A" to ensure the class gets the subject.
-                        const isSubjectRequired = classRequirements[className]?.includes(subject);
-                        if (isSubjectRequired) {
-                             const entry = { day, timeSlot, className, subject, teacher: "N/A" };
-                             schedule.push(entry);
-                             classBookings[`${day}-${timeSlot}-${className}`] = entry;
-                             classSubjectCount[className][subject]++;
-                             dailyClassSubject[day][className].add(subject);
-                             break; // Subject scheduled without a teacher, move to next class
-                        }
                     }
                 }
             });
         });
     });
+    
+    // 3. Post-processing step to fill any remaining empty required slots with N/A
+    daysOfWeek.forEach(day => {
+        timeSlots.forEach(timeSlot => {
+            classes.forEach(className => {
+                if (isClassSlotBooked(day, timeSlot, className)) {
+                    return;
+                }
+                const requiredSubjects = classRequirements[className] || [];
+                const scheduledSubjectsThisWeek = Object.keys(classSubjectCount[className] || {}).filter(s => classSubjectCount[className][s] > 0);
+
+                const neededSubjects = requiredSubjects.filter(s => !scheduledSubjectsThisWeek.includes(s) && s.toLowerCase() !== 'prayer' && s.toLowerCase() !== 'lunch');
+
+                 if (neededSubjects.length > 0) {
+                     const subjectToSchedule = neededSubjects[0]; // Just take the first one needed
+                     // Double-check no teacher is available before assigning N/A
+                     const isAnyTeacherAvailable = teacherNames.some(t =>
+                        teacherSubjects[t]?.includes(subjectToSchedule) &&
+                        teacherClasses[t]?.includes(className) &&
+                        !isTeacherBooked(t, day, timeSlot) &&
+                        !isTeacherUnavailable(t, day, timeSlot)
+                     );
+
+                     if (!isAnyTeacherAvailable) {
+                         const entry = { day, timeSlot, className, subject: subjectToSchedule, teacher: "N/A" };
+                         schedule.push(entry);
+                         classBookings[`${day}-${timeSlot}-${className}`] = entry;
+                         classSubjectCount[className][subjectToSchedule]++;
+                         dailyClassSubject[day][className].add(subjectToSchedule);
+                     }
+                 }
+            });
+        });
+    });
+
 
     return { schedule };
 }

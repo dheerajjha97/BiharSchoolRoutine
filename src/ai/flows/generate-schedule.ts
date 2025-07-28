@@ -42,7 +42,19 @@ export async function generateSchedule(input: GenerateScheduleInput): Promise<Ge
 const generateSchedulePrompt = ai.definePrompt({
   name: 'generateSchedulePrompt',
   input: {schema: GenerateScheduleInputSchema},
-  output: {schema: GenerateScheduleOutputSchema},
+  output: {
+    // Loosen the output schema to allow the AI to occasionally fail.
+    // We will manually filter for valid entries in the flow itself.
+    schema: z.object({
+      schedule: z.array(z.object({
+        day: z.string().optional(),
+        timeSlot: z.string().optional(),
+        className: z.string().optional(),
+        subject: z.string().optional(),
+        teacher: z.string().optional(),
+      })),
+    }),
+  },
   prompt: `You are an AI assistant designed to generate class schedules for schools.
 
   Given the following information, create a schedule for Monday, Tuesday, Wednesday, Thursday, and Friday. The schedule should be a flat list of individual class bookings.
@@ -67,7 +79,7 @@ const generateSchedulePrompt = ai.definePrompt({
 
   For common subjects like "Hindi", "English", "Computer", or "Sports", if a teacher teaches the same subject to multiple classes (e.g., "12th Arts" and "12th Science"), you can schedule these as a combined class. When this happens, create a single schedule entry with the className as a combined string (e.g., "12th Arts & 12th Science"). The assigned teacher teaches both classes together in that time slot.
 
-  IMPORTANT: Your response MUST be a valid JSON object that strictly follows the provided output schema. Ensure every object in the 'schedule' array contains all the required fields: 'day', 'timeSlot', 'className', 'subject', and 'teacher'. Do not generate incomplete or partial entries. Every single entry must be a complete object.
+  IMPORTANT: Your response MUST be a valid JSON object. Ensure every object in the 'schedule' array contains all the required fields: 'day', 'timeSlot', 'className', 'subject', and 'teacher'. Do not generate incomplete or partial entries. Every single entry must be a complete object.
   `,
 });
 
@@ -85,11 +97,13 @@ const generateScheduleFlow = ai.defineFlow(
     }
 
     // Filter out any incomplete entries to prevent validation errors.
+    // This provides a robust way to handle unreliable AI output.
     const cleanSchedule = output.schedule.filter(entry => {
       return !!entry.day && !!entry.timeSlot && !!entry.className && !!entry.subject && !!entry.teacher;
     });
 
-    return { schedule: cleanSchedule };
+    // We can now safely cast the cleaned schedule to the correct type.
+    return { schedule: cleanSchedule as ScheduleEntry[] };
   }
 );
     

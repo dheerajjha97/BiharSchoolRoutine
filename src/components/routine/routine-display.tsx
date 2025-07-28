@@ -38,16 +38,16 @@ const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Sat
 
 // Function to categorize classes
 const categorizeClasses = (classes: string[]) => {
-  const secondary: string[] = [];
-  const seniorSecondary: string[] = [];
-  classes.forEach(c => {
-    if (/\b(9|10)\b/.test(c)) {
-      secondary.push(c);
-    } else if (/\b(11|12)\b/.test(c)) {
-      seniorSecondary.push(c);
-    }
-  });
-  return { secondaryClasses: secondary, seniorSecondaryClasses: seniorSecondary };
+    const secondary: string[] = [];
+    const seniorSecondary: string[] = [];
+    classes.forEach(c => {
+      if (c.includes('9') || c.includes('10')) {
+        secondary.push(c);
+      } else if (c.includes('11') || c.includes('12')) {
+        seniorSecondary.push(c);
+      }
+    });
+    return { secondaryClasses: secondary, seniorSecondaryClasses: seniorSecondary };
 };
 
 
@@ -184,69 +184,41 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
       setCurrentCell(null);
   }
 
-  const renderCellContent = (entries: ScheduleEntry[] | undefined, day: string, timeSlot: string, displayClasses: string[]) => {
-    const filteredEntries = entries?.filter(entry => {
-      const entryClasses = entry.className.split(' & ').map(c => c.trim());
-      // An entry should be displayed if at least one of its classes is in the current section's display list
-      const isInDisplayClasses = entryClasses.some(ec => displayClasses.includes(ec));
-  
-      if (!isInDisplayClasses) return false;
-  
-      // Further filter by the dropdown selection if it's not 'all'
-      if (selectedClass === 'all') return true;
-      return entryClasses.includes(selectedClass);
-    });
-  
-    if (!filteredEntries || filteredEntries.length === 0) {
-      return (
-        <div
-          className="h-full min-h-[60px] cursor-pointer hover:bg-muted/50 rounded-md flex items-center justify-center"
-          onClick={() => handleCellClick(day, timeSlot, null)}
-        >
-          <span className="text-muted-foreground p-2 text-xs opacity-50 hover:opacity-100">+</span>
-        </div>
-      );
-    }
-  
-    return (
-      <div className="space-y-1">
-        {filteredEntries.map((entry, index) => (
-          <div
-            key={index}
-            className="text-xs text-center p-1 bg-muted/50 rounded cursor-pointer hover:bg-accent hover:shadow-md"
-            onClick={() => handleCellClick(day, timeSlot, entry)}
-          >
-            <div className="font-semibold">{entry.subject}</div>
-            <div className="text-muted-foreground">{entry.className}</div>
-            <div className="text-muted-foreground text-xs">{entry.teacher}</div>
-          </div>
-        ))}
-        <div
-          className="text-center cursor-pointer pt-1"
-          onClick={() => handleCellClick(day, timeSlot, null)}
-        >
-          <span className="text-muted-foreground text-xs hover:text-primary">+</span>
-        </div>
-      </div>
-    );
-  };
+  const renderCellContent = (day: string, timeSlot: string, displayClasses: string[]) => {
+    const entries = gridSchedule[day]?.[timeSlot] || [];
+    const filteredEntries = entries.filter(entry => {
+        const entryClasses = entry.className.split(' & ').map(c => c.trim());
+        const isInDisplayClasses = entryClasses.some(ec => displayClasses.includes(ec));
+        if (!isInDisplayClasses) return false;
 
-  const renderEmptyState = () => (
-     <Card className="h-full">
-        <CardContent className="h-full flex flex-col items-center justify-center text-center p-6">
-            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
-              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+        if (selectedClass === 'all') return true;
+        return entryClasses.includes(selectedClass);
+    });
+
+    return (
+        <div className="h-full min-h-[60px] cursor-pointer hover:bg-muted/50 rounded-md flex flex-col items-center justify-center p-1 space-y-1">
+            {filteredEntries.map((entry, index) => (
+                <div
+                    key={index}
+                    className="w-full text-xs text-center p-1 bg-background rounded cursor-pointer hover:bg-accent hover:shadow-md"
+                    onClick={() => handleCellClick(day, timeSlot, entry)}
+                >
+                    <div className="font-semibold">{entry.subject}</div>
+                    <div className="text-muted-foreground">{entry.className}</div>
+                    <div className="text-muted-foreground text-xs">{entry.teacher}</div>
+                </div>
+            ))}
+            <div
+                className="text-center cursor-pointer pt-1 flex-grow w-full flex items-center justify-center"
+                onClick={() => handleCellClick(day, timeSlot, null)}
+            >
+                <span className="text-muted-foreground text-xs hover:text-primary opacity-50 hover:opacity-100">+</span>
             </div>
-            <h3 className="font-semibold text-lg text-foreground">Your routine will appear here</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Generate a routine with AI or build one by clicking the cells in the grid.
-            </p>
-        </CardContent>
-      </Card>
-  )
+        </div>
+    );
+};
 
   const renderScheduleTable = (title: string, displayClasses: string[]) => {
-    // Only render the table if there are classes defined for this section
     if (displayClasses.length === 0) return null;
   
     return (
@@ -266,7 +238,7 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
                   <TableCell className="font-medium align-top text-xs">{slot}</TableCell>
                   {daysOfWeek.map(day => (
                     <TableCell key={`${day}-${slot}`} className="p-1 align-top">
-                      {renderCellContent(gridSchedule[day]?.[slot], day, slot, displayClasses)}
+                      {renderCellContent(day, slot, displayClasses)}
                     </TableCell>
                   ))}
                 </TableRow>
@@ -323,16 +295,12 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
       </CardHeader>
       <CardContent className="flex-grow flex flex-col gap-4">
         <div className="printable-area flex-grow">
-          {!scheduleData || scheduleData.schedule.length === 0 ? renderEmptyState() : (
-            <>
-                <h3 className="text-center font-bold text-lg mb-2 print-only">{printHeader}{selectedClass !== 'all' && ` - ${selectedClass}`}</h3>
-                <div className="space-y-6">
-                    {renderScheduleTable("Secondary", secondaryClasses)}
-                    {renderScheduleTable("Senior Secondary", seniorSecondaryClasses)}
-                </div>
-                <p className="text-center text-xs text-muted-foreground mt-4 print-only">{printFooter}</p>
-            </>
-          )}
+            <h3 className="text-center font-bold text-lg mb-2 print-only">{printHeader}{selectedClass !== 'all' && ` - ${selectedClass}`}</h3>
+            <div className="space-y-6">
+                {renderScheduleTable("Secondary", secondaryClasses)}
+                {renderScheduleTable("Senior Secondary", seniorSecondaryClasses)}
+            </div>
+            <p className="text-center text-xs text-muted-foreground mt-4 print-only">{printFooter}</p>
         </div>
       </CardContent>
     </Card>
@@ -412,5 +380,3 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
     </>
   );
 }
-
-    

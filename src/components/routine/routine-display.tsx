@@ -98,7 +98,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
     let periodCounter = 1;
     timeSlots.forEach(slot => {
         // Exclude slots typically for Prayer and Lunch
-        if (!slot.includes('09:00') && !slot.includes('09:15') && !slot.includes('13:00')) {
+        if (!slot.includes('09:00') && !slot.includes('09:15') && !slot.includes('12:00') && !slot.includes('13:00')) {
             instructionalSlots.push(slot);
             instructionalSlotMap[slot] = periodCounter++;
         }
@@ -181,7 +181,16 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
         const root = document.documentElement;
         root.style.setProperty('--print-header-content', `"${printHeader}"`);
         root.style.setProperty('--print-footer-content', `"${printFooter}"`);
-        window.print();
+        // We need to inject the printable area into the body for printing
+        const printableArea = document.getElementById('printable-area-container');
+        if (printableArea) {
+           const printDiv = document.createElement('div');
+           printDiv.id = 'printable-area';
+           printDiv.innerHTML = printableArea.innerHTML;
+           document.body.appendChild(printDiv);
+           window.print();
+           document.body.removeChild(printDiv);
+        }
       }
   }));
 
@@ -279,7 +288,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
     if (entries.length === 0) {
         return (
              <div
-                className="h-full min-h-[60px] text-center cursor-pointer pt-1 flex-grow w-full flex items-center justify-center no-print"
+                className="h-full min-h-[60px] text-center cursor-pointer pt-1 flex-grow w-full flex items-center justify-center"
                 onClick={() => handleCellClick(day, timeSlot, className, null)}
             >
                 <span className="text-muted-foreground text-xs hover:text-primary opacity-50 hover:opacity-100">+</span>
@@ -367,22 +376,28 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
     );
   };
 
+  const PrintableContent = () => (
+    <div id="printable-area-container">
+        <h2 className="text-center font-bold text-lg mb-4">
+            {printHeader}{selectedClass !== 'all' && ` - ${selectedClass}`}
+        </h2>
+        <div className="space-y-6">
+            {renderScheduleTable("Secondary", secondaryClasses)}
+            {renderScheduleTable("Senior Secondary", seniorSecondaryClasses)}
+        </div>
+        <p className="text-center text-xs text-muted-foreground mt-4">
+            {printFooter}
+        </p>
+    </div>
+  );
+
   return (
     <>
-      <div className="printable-area">
-          <h2 className="text-center font-bold text-lg mb-4 print-only">
-              {printHeader}{selectedClass !== 'all' && ` - ${selectedClass}`}
-          </h2>
-          <div className="space-y-6">
-              {renderScheduleTable("Secondary", secondaryClasses)}
-              {renderScheduleTable("Senior Secondary", seniorSecondaryClasses)}
-          </div>
-          <p className="text-center text-xs text-muted-foreground mt-4 print-only">
-              {printFooter}
-          </p>
+      <div className='hidden'>
+        <PrintableContent />
       </div>
 
-      <Card className="h-full flex flex-col no-print">
+      <Card className="h-full flex flex-col">
         <CardHeader>
           <div className="flex justify-between items-start">
               <div>
@@ -507,5 +522,3 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
 RoutineDisplay.displayName = 'RoutineDisplay';
 
 export default RoutineDisplay;
-
-    

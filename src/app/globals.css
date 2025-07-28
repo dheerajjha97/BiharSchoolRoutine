@@ -72,16 +72,16 @@ body {
     print-color-adjust: exact;
   }
   
-  .no-print {
+  body > *:not(#printable-area) {
     display: none !important;
   }
 
-  .printable-area {
+  #printable-area {
     display: block !important;
-  }
-
-  .print-only {
-    display: block !important;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
   }
   
   @page {
@@ -100,12 +100,4 @@ body {
       color: #666;
     }
   }
-}
-
-.printable-area {
-  display: none;
-}
-
-.print-only {
-  display: none;
 }

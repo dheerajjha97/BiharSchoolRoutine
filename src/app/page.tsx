@@ -202,7 +202,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col p-4 sm:p-6 lg:p-8 bg-background font-sans">
-      <header className="flex items-center justify-between mb-6 flex-wrap gap-2 no-print">
+      <header className="flex items-center justify-between mb-6 flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <Logo className="h-8 w-8 text-primary" />
           <h1 className="text-2xl font-bold text-foreground">BiharSchoolRoutine</h1>
@@ -241,7 +241,7 @@ export default function Home() {
       </header>
       
       <main className="flex-grow grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1 flex flex-col gap-6 no-print">
+        <div className="lg:col-span-1 flex flex-col gap-6">
           <Card>
             <CardContent className="p-6 flex flex-col items-center justify-center">
                 <Button

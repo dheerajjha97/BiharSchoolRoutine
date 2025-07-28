@@ -76,10 +76,6 @@ body {
     display: none !important;
   }
   
-  .printable-area {
-    display: block !important;
-  }
-  
   @page {
     size: A4 landscape;
     margin: 0.5in;

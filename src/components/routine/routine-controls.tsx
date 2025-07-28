@@ -39,6 +39,8 @@ interface RoutineControlsProps {
   setTeacherSubjects: (value: Record<string, string[]>) => void;
   teacherClasses: Record<string, string[]>;
   setTeacherClasses: (value: Record<string, string[]>) => void;
+  prayerTimeSlot: string;
+  setPrayerTimeSlot: (value: string) => void;
   lunchTimeSlot: string;
   setLunchTimeSlot: (value: string) => void;
 }
@@ -60,6 +62,8 @@ export default function RoutineControls({
   setTeacherSubjects,
   teacherClasses,
   setTeacherClasses,
+  prayerTimeSlot,
+  setPrayerTimeSlot,
   lunchTimeSlot,
   setLunchTimeSlot,
 }: RoutineControlsProps) {
@@ -226,6 +230,23 @@ export default function RoutineControls({
               </Table>
             </AccordionContent>
           </AccordionItem>
+           <AccordionItem value="prayer-period">
+            <AccordionTrigger>Prayer Period</AccordionTrigger>
+            <AccordionContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                    Select a time slot to be the designated prayer period.
+                </p>
+                <Select value={prayerTimeSlot} onValueChange={(v) => setPrayerTimeSlot(v === 'none' ? '' : v)}>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Select Prayer Time Slot" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {timeSlots.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+            </AccordionContent>
+          </AccordionItem>
           <AccordionItem value="lunch-period">
             <AccordionTrigger>Lunch Period</AccordionTrigger>
             <AccordionContent className="space-y-4">
@@ -298,5 +319,3 @@ export default function RoutineControls({
     </Card>
   );
 }
-
-    

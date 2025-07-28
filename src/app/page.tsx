@@ -28,6 +28,7 @@ type SchoolConfig = {
   unavailability: Unavailability[];
   teacherSubjects: Record<string, string[]>;
   teacherClasses: Record<string, string[]>;
+  prayerTimeSlot?: string;
   lunchTimeSlot?: string;
 };
 
@@ -51,6 +52,7 @@ export default function Home() {
   const [unavailability, setUnavailability] = useState<Unavailability[]>([]);
   const [teacherSubjects, setTeacherSubjects] = useState<Record<string, string[]>>({});
   const [teacherClasses, setTeacherClasses] = useState<Record<string, string[]>>({});
+  const [prayerTimeSlot, setPrayerTimeSlot] = useState<string>("09:00 - 09:15");
   const [lunchTimeSlot, setLunchTimeSlot] = useState<string>("12:00 - 13:00");
 
   const [routine, setRoutine] = useState<GenerateScheduleOutput | null>(null);
@@ -78,6 +80,7 @@ export default function Home() {
         classRequirements,
         teacherSubjects,
         teacherClasses,
+        prayerTimeSlot,
         lunchTimeSlot,
       };
 
@@ -143,6 +146,7 @@ export default function Home() {
         unavailability,
         teacherSubjects,
         teacherClasses,
+        prayerTimeSlot,
         lunchTimeSlot,
       };
       const jsonString = JSON.stringify(config, null, 2);
@@ -181,6 +185,7 @@ export default function Home() {
       setUnavailability(config.unavailability || []);
       setTeacherSubjects(config.teacherSubjects || {});
       setTeacherClasses(config.teacherClasses || {});
+      setPrayerTimeSlot(config.prayerTimeSlot || "");
       setLunchTimeSlot(config.lunchTimeSlot || "");
 
       toast({ title: "Configuration loaded successfully!" });
@@ -284,6 +289,8 @@ export default function Home() {
                 setTeacherSubjects={setTeacherSubjects}
                 teacherClasses={teacherClasses}
                 setTeacherClasses={setTeacherClasses}
+                prayerTimeSlot={prayerTimeSlot}
+                setPrayerTimeSlot={setPrayerTimeSlot}
                 lunchTimeSlot={lunchTimeSlot}
                 setLunchTimeSlot={setLunchTimeSlot}
               />
@@ -302,5 +309,3 @@ export default function Home() {
     </div>
   );
 }
-
-    

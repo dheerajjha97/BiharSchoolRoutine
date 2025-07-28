@@ -295,7 +295,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
             {uniqueEntries.map((entry, index) => (
                 <div
                     key={index}
-                    className="w-full text-xs text-center p-1 bg-background rounded cursor-pointer hover:bg-accent hover:shadow-md"
+                    className="w-full text-xs text-center p-1 bg-background rounded cursor-pointer hover:bg-accent hover:shadow-md no-print:shadow-sm"
                     onClick={() => handleCellClick(day, timeSlot, className, entry)}
                 >
                     <div className="font-semibold">{entry.subject}</div>
@@ -324,7 +324,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
     }
   
     return (
-      <div className="printable-section">
+      <div className="printable-section break-inside-avoid">
         <h3 className="text-lg font-semibold mb-2">{title}</h3>
         <div className="overflow-x-auto border rounded-lg">
           <Table>
@@ -353,7 +353,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
                         )}
                         <TableCell className="font-medium align-top">{className}</TableCell>
                         {timeSlots.map(slot => (
-                            <TableCell key={`${day}-${className}-${slot}`} className="p-1 align-top">
+                            <TableCell key={`${day}-${className}-${slot}`} className="p-0 align-top">
                             {renderCellContent(day, className, slot)}
                             </TableCell>
                         ))}

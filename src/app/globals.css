@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -92,4 +93,52 @@ body {
       color: #666;
     }
   }
+
+  .printable-section {
+    padding: 0;
+    margin: 0;
+  }
+
+  .printable-section .overflow-x-auto {
+    overflow: visible;
+  }
+
+  .printable-section .border {
+    border: none;
+  }
+
+  .printable-section table {
+    width: 100%;
+    font-size: 9pt;
+  }
+
+  .printable-section th, .printable-section td {
+    padding: 2px 4px;
+    border: 1px solid #ccc;
+  }
+
+  .printable-section th {
+    font-size: 8pt;
+  }
+
+  .printable-section .min-h-\[60px\] {
+    min-height: 40px;
+  }
+
+  .printable-section .text-xs {
+    font-size: 8pt;
+  }
+  
+  .printable-section .text-\[10px\] {
+    font-size: 7pt;
+  }
+
+  .printable-section .font-semibold {
+    font-weight: 500;
+  }
+
+  .printable-section .p-1 {
+    padding: 1px;
+  }
+
 }

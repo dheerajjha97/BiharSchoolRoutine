@@ -9,7 +9,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -30,8 +30,8 @@ interface RoutineControlsProps {
   timeSlots: string[];
   classRequirements: Record<string, string[]>;
   setClassRequirements: (value: Record<string, string[]>) => void;
-  subjectPriorities: Record<string, number>;
-  setSubjectPriorities: (value: Record<string, number>) => void;
+  subjectImportance: Record<string, number>;
+  setSubjectImportance: (value: Record<string, number>) => void;
   unavailability: Unavailability[];
   setUnavailability: (value: Unavailability[]) => void;
   teacherSubjects: Record<string, string[]>;
@@ -49,8 +49,8 @@ export default function RoutineControls({
   timeSlots,
   classRequirements,
   setClassRequirements,
-  subjectPriorities,
-  setSubjectPriorities,
+  subjectImportance,
+  setSubjectImportance,
   unavailability,
   setUnavailability,
   teacherSubjects,
@@ -177,22 +177,25 @@ export default function RoutineControls({
               ))}
             </AccordionContent>
           </AccordionItem>
-          <AccordionItem value="subject-priorities">
-            <AccordionTrigger>Subject Priorities</AccordionTrigger>
+          <AccordionItem value="subject-importance">
+            <AccordionTrigger>Subject Importance</AccordionTrigger>
             <AccordionContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Set the importance for each subject. The AI will prioritize scheduling subjects with higher importance.
+              </p>
               {subjects.map(s => (
                 <div key={s} className="grid grid-cols-4 items-center gap-4">
                   <Label className="col-span-1">{s}</Label>
                   <Slider
                     className="col-span-2"
-                    defaultValue={[subjectPriorities[s] || 5]}
+                    defaultValue={[subjectImportance[s] || 5]}
                     max={10}
                     step={1}
-                    onValueChange={([value]) => setSubjectPriorities({ ...subjectPriorities, [s]: value })}
+                    onValueChange={([value]) => setSubjectImportance({ ...subjectImportance, [s]: value })}
                   />
 
                   <span className="col-span-1 text-sm text-muted-foreground">
-                    Priority: {subjectPriorities[s] || 5}
+                    Importance: {subjectImportance[s] || 5}
                   </span>
                 </div>
               ))}

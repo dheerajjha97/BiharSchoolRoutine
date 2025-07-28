@@ -22,7 +22,7 @@ type Unavailability = {
 
 type SchoolConfig = {
   classRequirements: Record<string, string[]>;
-  subjectPriorities: Record<string, number>;
+  subjectImportance: Record<string, number>;
   unavailability: Unavailability[];
   teacherSubjects: Record<string, string[]>;
   teacherClasses: Record<string, string[]>;
@@ -44,7 +44,7 @@ export default function Home() {
   ]);
   
   const [classRequirements, setClassRequirements] = useState<Record<string, string[]>>({});
-  const [subjectPriorities, setSubjectPriorities] = useState<Record<string, number>>({});
+  const [subjectImportance, setSubjectImportance] = useState<Record<string, number>>({});
   const [unavailability, setUnavailability] = useState<Unavailability[]>([]);
   const [teacherSubjects, setTeacherSubjects] = useState<Record<string, string[]>>({});
   const [teacherClasses, setTeacherClasses] = useState<Record<string, string[]>>({});
@@ -69,7 +69,7 @@ export default function Home() {
         subjects,
         timeSlots,
         unavailability,
-        subjectPriorities,
+        subjectPriorities: subjectImportance,
         classRequirements,
         teacherSubjects,
         teacherClasses,
@@ -133,7 +133,7 @@ export default function Home() {
     try {
       const config: SchoolConfig = {
         classRequirements,
-        subjectPriorities,
+        subjectImportance,
         unavailability,
         teacherSubjects,
         teacherClasses,
@@ -170,7 +170,7 @@ export default function Home() {
       if (typeof config !== 'object' || config === null) throw new Error("Invalid config file format.");
 
       setClassRequirements(config.classRequirements || {});
-      setSubjectPriorities(config.subjectPriorities || {});
+      setSubjectImportance(config.subjectImportance || {});
       setUnavailability(config.unavailability || []);
       setTeacherSubjects(config.teacherSubjects || {});
       setTeacherClasses(config.teacherClasses || {});
@@ -262,8 +262,8 @@ export default function Home() {
                 timeSlots={timeSlots}
                 classRequirements={classRequirements}
                 setClassRequirements={setClassRequirements}
-                subjectPriorities={subjectPriorities}
-                setSubjectPriorities={setSubjectPriorities}
+                subjectImportance={subjectImportance}
+                setSubjectImportance={setSubjectImportance}
                 unavailability={unavailability}
                 setUnavailability={setUnavailability}
                 teacherSubjects={teacherSubjects}

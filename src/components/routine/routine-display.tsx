@@ -330,59 +330,67 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
 
   return (
     <>
-    <Card className="h-full flex flex-col">
-      <CardHeader>
-        <div className="flex justify-between items-start">
-            <div>
-                <CardTitle>School Routine</CardTitle>
-                <CardDescription>View, print, export, or edit your routine by clicking on a cell.</CardDescription>
-            </div>
-             <div className="flex gap-2 no-print">
-                  <Button onClick={handlePrint} size="sm" variant="outline">
-                      <Printer className="mr-2 h-4 w-4" /> Print
-                  </Button>
-                  <Button onClick={handleExport} size="sm" variant="outline">
-                      <Download className="mr-2 h-4 w-4" /> Export CSV
-                  </Button>
+      <Card className="h-full flex flex-col no-print">
+        <CardHeader>
+          <div className="flex justify-between items-start">
+              <div>
+                  <CardTitle>School Routine</CardTitle>
+                  <CardDescription>View, print, export, or edit your routine by clicking on a cell.</CardDescription>
               </div>
-        </div>
-        <div className="no-print space-y-4 pt-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="sm:col-span-1">
-                      <Label htmlFor="class-filter">Filter by Class</Label>
-                       <Select value={selectedClass} onValueChange={setSelectedClass}>
-                        <SelectTrigger id="class-filter" className="w-full">
-                          <SelectValue placeholder="Select a class" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Classes</SelectItem>
-                          {classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                  </div>
-                   <div>
-                      <Label htmlFor="print-header">Print Header</Label>
-                      <Input id="print-header" value={printHeader} onChange={(e) => setPrintHeader(e.target.value)} />
-                  </div>
-                  <div>
-                      <Label htmlFor="print-footer">Print Footer</Label>
-                      <Input id="print-footer" value={printFooter} onChange={(e) => setPrintFooter(e.target.value)} />
-                  </div>
-              </div>
+              <div className="flex gap-2">
+                    <Button onClick={handlePrint} size="sm" variant="outline">
+                        <Printer className="mr-2 h-4 w-4" /> Print
+                    </Button>
+                    <Button onClick={handleExport} size="sm" variant="outline">
+                        <Download className="mr-2 h-4 w-4" /> Export CSV
+                    </Button>
+                </div>
           </div>
-      </CardHeader>
-      <CardContent className="flex-grow flex flex-col gap-4">
-        <div className="printable-area flex-grow">
-            <h3 className="text-center font-bold text-lg mb-2 print-only">{printHeader}{selectedClass !== 'all' && ` - ${selectedClass}`}</h3>
-            <div className="space-y-6">
-                {renderScheduleTable("Secondary", secondaryClasses)}
-                {renderScheduleTable("Senior Secondary", seniorSecondaryClasses)}
+          <div className="space-y-4 pt-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="sm:col-span-1">
+                        <Label htmlFor="class-filter">Filter by Class</Label>
+                        <Select value={selectedClass} onValueChange={setSelectedClass}>
+                          <SelectTrigger id="class-filter" className="w-full">
+                            <SelectValue placeholder="Select a class" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Classes</SelectItem>
+                            {classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                    </div>
+                    <div>
+                        <Label htmlFor="print-header">Print Header</Label>
+                        <Input id="print-header" value={printHeader} onChange={(e) => setPrintHeader(e.target.value)} />
+                    </div>
+                    <div>
+                        <Label htmlFor="print-footer">Print Footer</Label>
+                        <Input id="print-footer" value={printFooter} onChange={(e) => setPrintFooter(e.target.value)} />
+                    </div>
+                </div>
             </div>
-            <p className="text-center text-xs text-muted-foreground mt-4 print-only">{printFooter}</p>
-        </div>
-      </CardContent>
-    </Card>
-     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        </CardHeader>
+        <CardContent className="flex-grow">
+          {renderScheduleTable("Secondary", secondaryClasses)}
+          {renderScheduleTable("Senior Secondary", seniorSecondaryClasses)}
+        </CardContent>
+      </Card>
+
+      <div className="printable-area">
+          <h2 className="text-center font-bold text-lg mb-4 print-only">
+              {printHeader}{selectedClass !== 'all' && ` - ${selectedClass}`}
+          </h2>
+          <div className="space-y-6">
+              {renderScheduleTable("Secondary", secondaryClasses)}
+              {renderScheduleTable("Senior Secondary", seniorSecondaryClasses)}
+          </div>
+          <p className="text-center text-xs text-muted-foreground mt-4 print-only">
+              {printFooter}
+          </p>
+      </div>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Schedule Slot</DialogTitle>

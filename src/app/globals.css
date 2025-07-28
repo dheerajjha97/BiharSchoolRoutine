@@ -65,10 +65,6 @@ body {
     @apply bg-background text-foreground;
   }
   
-  .printable-area {
-    /* Styles for the printable area */
-  }
-
   @page {
     size: A4 landscape;
     margin: 0.5in;
@@ -87,30 +83,38 @@ body {
   }
 
   @media print {
-    body, .printable-area {
-       background-color: white;
+    body > .no-print {
+      display: none;
     }
     body > :not(.printable-area) {
       display: none;
     }
-    .printable-area, .printable-area * {
-      visibility: visible;
-    }
     .printable-area {
-      position: static;
-      margin: 0;
-      padding: 0;
+      display: block !important;
+      visibility: visible !important;
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+    }
+  }
+  
+  .printable-area {
+    display: none;
+  }
+  
+  .print-only {
+    display: none;
+  }
+  
+  @media print {
+    .print-only {
+      display: block;
     }
     .no-print {
       display: none !important;
     }
-    .print-only {
-        display: block !important;
-        visibility: visible !important;
-    }
-  }
-
-  .print-only {
-    display: none;
   }
 }
+
+    

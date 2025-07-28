@@ -278,6 +278,7 @@ export default function Home() {
                 classes={classes}
                 subjects={subjects}
                 teachers={teachers}
+                teacherSubjects={teacherSubjects}
               />
         </div>
       </main>

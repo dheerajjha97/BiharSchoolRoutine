@@ -21,6 +21,16 @@ export type GenerateScheduleLogicInput = {
 
 const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
+// Helper function to shuffle an array
+const shuffleArray = <T>(array: T[]): T[] => {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+};
+
+
 export function generateScheduleLogic(input: GenerateScheduleLogicInput): GenerateScheduleOutput {
     const {
         teacherNames,
@@ -36,7 +46,7 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
 
     const schedule: ScheduleEntry[] = [];
     const teacherBookings: Record<string, Set<string>> = {}; // key: teacher, value: Set of "day-timeSlot"
-    const classBookings: Set<string> = new Set(); // key: "day-timeSlot-className"
+    const classBookings: Record<string, ScheduleEntry> = {}; // key: "day-timeSlot-className"
 
     // Helper to check if a teacher is booked
     const isTeacherBooked = (teacher: string, day: string, timeSlot: string): boolean => {
@@ -50,7 +60,7 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
     
     // Helper to check if a class slot is booked
     const isClassSlotBooked = (day: string, timeSlot: string, className: string): boolean => {
-        return classBookings.has(`${day}-${timeSlot}-${className}`);
+        return !!classBookings[`${day}-${timeSlot}-${className}`];
     }
 
     // Initialize bookings
@@ -68,8 +78,9 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
             if (prayerSubject && (timeSlot.includes("09:00") || timeSlot.includes("09:15") || timeSlot.includes("09:30"))) {
                 classes.forEach(className => {
                     if (!isClassSlotBooked(day, timeSlot, className)) {
-                        schedule.push({ day, timeSlot, className, subject: prayerSubject, teacher: "N/A" });
-                        classBookings.add(`${day}-${timeSlot}-${className}`);
+                        const entry = { day, timeSlot, className, subject: prayerSubject, teacher: "N/A" };
+                        schedule.push(entry);
+                        classBookings[`${day}-${timeSlot}-${className}`] = entry;
                     }
                 });
                  // Block all teachers during this time
@@ -80,8 +91,9 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
             if (lunchSubject && (timeSlot.includes("12:00") || timeSlot.includes("13:00"))) {
                 classes.forEach(className => {
                     if (!isClassSlotBooked(day, timeSlot, className)) {
-                        schedule.push({ day, timeSlot, className, subject: lunchSubject, teacher: "N/A" });
-                        classBookings.add(`${day}-${timeSlot}-${className}`);
+                        const entry = { day, timeSlot, className, subject: lunchSubject, teacher: "N/A" };
+                        schedule.push(entry);
+                        classBookings[`${day}-${timeSlot}-${className}`] = entry;
                     }
                 });
                 // Block all teachers during this time
@@ -98,6 +110,11 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
                 const availableSubjects = sortedSubjects.filter(s => requiredSubjects.includes(s) && s.toLowerCase() !== "prayer" && s.toLowerCase() !== "lunch");
                 
                 for (const subject of availableSubjects) {
+                     // Check again in case a subject was added in this loop
+                    if (isClassSlotBooked(day, timeSlot, className)) {
+                        break; 
+                    }
+
                     // Find an available teacher
                     const potentialTeachers = teacherNames.filter(t => 
                         (teacherSubjects[t]?.includes(subject)) &&
@@ -107,16 +124,20 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
                     );
 
                     if (potentialTeachers.length > 0) {
-                        const teacher = potentialTeachers[0]; // Simple selection, can be improved
-                        schedule.push({
+                        // Shuffle teachers to distribute workload more evenly
+                        const shuffledTeachers = shuffleArray(potentialTeachers);
+                        const teacher = shuffledTeachers[0]; 
+
+                        const entry = {
                             day,
                             timeSlot,
                             className,
                             subject,
                             teacher
-                        });
+                        };
+                        schedule.push(entry);
                         teacherBookings[teacher].add(`${day}-${timeSlot}`);
-                        classBookings.add(`${day}-${timeSlot}-${className}`);
+                        classBookings[`${day}-${timeSlot}-${className}`] = entry;
                         break; // Move to next class once a subject is scheduled
                     }
                 }

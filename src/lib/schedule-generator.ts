@@ -194,6 +194,7 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
                         break; // Subject found and scheduled, move to the next class
                     } else {
                         // If class requires subject, but no teacher is available/mapped, schedule with "N/A"
+                        // This handles cases where a teacher might be mapped but is already booked or unavailable.
                         if (classRequirements[className]?.includes(subject)) {
                              const entry = { day, timeSlot, className, subject, teacher: "N/A" };
                              

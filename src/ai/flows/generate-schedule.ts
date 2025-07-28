@@ -88,7 +88,7 @@ const generateScheduleFlow = ai.defineFlow(
 
     // Filter out any incomplete entries to prevent validation errors.
     const cleanSchedule = output.schedule.filter(entry => {
-      return entry.day && entry.timeSlot && entry.className && entry.subject && entry.teacher;
+      return !!entry.day && !!entry.timeSlot && !!entry.className && !!entry.subject && !!entry.teacher;
     });
 
     return { schedule: cleanSchedule };

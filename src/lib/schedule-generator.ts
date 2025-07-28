@@ -180,29 +180,26 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
                     );
 
                     const shuffledTeachers = shuffleArray(potentialTeachers);
+                    const teacher = shuffledTeachers[0]; // Will be undefined if array is empty
 
-                    if (shuffledTeachers.length > 0) {
-                        const teacher = shuffledTeachers[0];
+                    if (teacher) {
                         const entry = { day, timeSlot, className, subject, teacher };
-
                         schedule.push(entry);
                         teacherBookings[teacher].add(`${day}-${timeSlot}`);
                         classBookings[`${day}-${timeSlot}-${className}`] = entry;
                         classSubjectCount[className][subject]++;
                         dailyClassSubject[day][className].add(subject);
-                        
                         break; // Subject found and scheduled, move to the next class
                     } else {
-                        // If class requires subject, but no teacher is available/mapped, schedule with "N/A"
-                        // This handles cases where a teacher might be mapped but is already booked or unavailable.
-                        if (classRequirements[className]?.includes(subject)) {
+                        // If no mapped and available teacher is found, check if subject is still required.
+                        // If so, schedule it with "N/A" to ensure the class gets the subject.
+                        const isSubjectRequired = classRequirements[className]?.includes(subject);
+                        if (isSubjectRequired) {
                              const entry = { day, timeSlot, className, subject, teacher: "N/A" };
-                             
                              schedule.push(entry);
                              classBookings[`${day}-${timeSlot}-${className}`] = entry;
                              classSubjectCount[className][subject]++;
                              dailyClassSubject[day][className].add(subject);
-
                              break; // Subject scheduled without a teacher, move to next class
                         }
                     }

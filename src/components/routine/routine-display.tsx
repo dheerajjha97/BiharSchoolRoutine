@@ -330,7 +330,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="min-w-[100px] font-bold align-bottom">Day</TableHead>
+                <TableHead className="font-bold align-bottom">Day</TableHead>
                 <TableHead className="font-bold align-bottom">Class</TableHead>
                 {timeSlots.map(slot => (
                   <TableHead key={slot} className="text-center font-bold text-xs min-w-[100px] p-1 align-bottom">

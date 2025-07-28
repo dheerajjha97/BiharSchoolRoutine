@@ -47,7 +47,11 @@ export async function generateSchedule(input: GenerateScheduleInput): Promise<Ge
 
 const generateSchedulePrompt = ai.definePrompt({
   name: 'generateSchedulePrompt',
-  input: {schema: GenerateScheduleInputSchema},
+  input: {
+    schema: GenerateScheduleInputSchema.extend({
+      unavailabilityString: z.string(),
+    }),
+  },
   output: {
     // Loosen the output schema to allow the AI to occasionally fail.
     // We will manually filter for valid entries in the flow itself.
@@ -69,7 +73,7 @@ const generateSchedulePrompt = ai.definePrompt({
   Classes: {{classes}}
   Subjects: {{subjects}}
   Time Slots: {{timeSlots}}
-  Teacher Unavailability: {{jsonStringify unavailability}}
+  Teacher Unavailability: {{unavailabilityString}}
   Subject Priorities: {{subjectPriorities}}
   Class Requirements: {{classRequirements}}
   Teacher-Subject Mapping: {{teacherSubjects}}
@@ -99,7 +103,10 @@ const generateScheduleFlow = ai.defineFlow(
     outputSchema: GenerateScheduleOutputSchema,
   },
   async input => {
-    const {output} = await generateSchedulePrompt(input);
+    const {output} = await generateSchedulePrompt({
+      ...input,
+      unavailabilityString: JSON.stringify(input.unavailability, null, 2),
+    });
 
     if (!output || !output.schedule) {
       return { schedule: [] };

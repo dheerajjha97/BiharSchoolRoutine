@@ -6,7 +6,7 @@ import type { GenerateScheduleOutput, ScheduleEntry } from "@/ai/flows/generate-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Book, Download, Loader2, School, Upload, User, Wand2, Clock, Save, FolderOpen, Trash2 } from "lucide-react";
+import { Book, Download, Loader2, School, Upload, User, Wand2, Clock, Save, FolderOpen, Trash2, Printer } from "lucide-react";
 import { Logo } from "@/components/icons";
 import DataManager from "@/components/routine/data-manager";
 import RoutineControls from "@/components/routine/routine-controls";
@@ -59,6 +59,7 @@ export default function Home() {
 
   const csvInputRef = useRef<HTMLInputElement>(null);
   const jsonInputRef = useRef<HTMLInputElement>(null);
+  const routineDisplayRef = useRef<{ handlePrint: () => void }>(null);
 
   const handleGenerateRoutine = async () => {
     setIsLoading(true);
@@ -189,11 +190,14 @@ export default function Home() {
     // Reset file input
     if(jsonInputRef.current) jsonInputRef.current.value = "";
   };
-
+  
+  const handlePrintClick = () => {
+    routineDisplayRef.current?.handlePrint();
+  };
 
   return (
     <div className="min-h-screen flex flex-col p-4 sm:p-6 lg:p-8 bg-background font-sans">
-      <header className="flex items-center justify-between mb-6 flex-wrap gap-2">
+      <header className="flex items-center justify-between mb-6 flex-wrap gap-2 no-print">
         <div className="flex items-center gap-3">
           <Logo className="h-8 w-8 text-primary" />
           <h1 className="text-2xl font-bold text-foreground">BiharSchoolRoutine</h1>
@@ -225,11 +229,14 @@ export default function Home() {
           <Button variant="outline" size="sm" onClick={handleSaveConfig}>
             <Save className="mr-2 h-4 w-4" /> Save Config
           </Button>
+          <Button variant="outline" size="sm" onClick={handlePrintClick}>
+            <Printer className="mr-2 h-4 w-4" /> Print
+          </Button>
         </div>
       </header>
       
       <main className="flex-grow grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1 flex flex-col gap-6">
+        <div className="lg:col-span-1 flex flex-col gap-6 no-print">
           <Card>
             <CardContent className="p-6 flex flex-col items-center justify-center">
                 <Button
@@ -281,6 +288,7 @@ export default function Home() {
                 setLunchTimeSlot={setLunchTimeSlot}
               />
              <RoutineDisplay 
+                ref={routineDisplayRef}
                 scheduleData={routine}
                 onScheduleChange={handleScheduleChange}
                 timeSlots={timeSlots} 

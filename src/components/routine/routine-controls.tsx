@@ -109,7 +109,7 @@ export default function RoutineControls({
 
 
   return (
-    <Card>
+    <Card className="no-print">
       <CardHeader>
         <CardTitle>Advanced Configuration</CardTitle>
       </CardHeader>

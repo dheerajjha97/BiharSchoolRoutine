@@ -64,6 +64,25 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+@media print {
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .no-print {
+    display: none !important;
+  }
+
+  .printable-area {
+    display: block !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
   
   @page {
     size: A4 landscape;
@@ -81,40 +100,12 @@ body {
       color: #666;
     }
   }
-
-  @media print {
-    body > .no-print {
-      display: none;
-    }
-    body > :not(.printable-area) {
-      display: none;
-    }
-    .printable-area {
-      display: block !important;
-      visibility: visible !important;
-      position: absolute;
-      left: 0;
-      top: 0;
-      width: 100%;
-    }
-  }
-  
-  .printable-area {
-    display: none;
-  }
-  
-  .print-only {
-    display: none;
-  }
-  
-  @media print {
-    .print-only {
-      display: block;
-    }
-    .no-print {
-      display: none !important;
-    }
-  }
 }
 
-    
+.printable-area {
+  display: none;
+}
+
+.print-only {
+  display: none;
+}

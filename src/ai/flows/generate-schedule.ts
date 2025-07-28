@@ -67,8 +67,6 @@ const generateSchedulePrompt = ai.definePrompt({
 
   For common subjects like "Hindi", "English", "Computer", or "Sports", if a teacher teaches the same subject to multiple classes (e.g., "12th Arts" and "12th Science"), you can schedule these as a combined class. When this happens, create a single schedule entry with the className as a combined string (e.g., "12th Arts & 12th Science"). The assigned teacher teaches both classes together in that time slot.
 
-  Ensure that all class requirements are met and that higher priority subjects are scheduled appropriately.
-
   IMPORTANT: Your response MUST be a valid JSON object that strictly follows the provided output schema. Ensure every object in the 'schedule' array contains all the required fields: 'day', 'timeSlot', 'className', 'subject', and 'teacher'. Do not generate incomplete or partial entries. Every single entry must be a complete object.
   `,
 });

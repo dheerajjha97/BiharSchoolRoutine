@@ -39,14 +39,21 @@ type GridSchedule = {
 
 const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
+// Helper function to extract the base grade from a class name (e.g., "9th A" -> "9", "11th Arts" -> "11")
+const getGradeFromClassName = (className: string): string | null => {
+    const match = className.match(/^(\d+)/);
+    return match ? match[1] : null;
+};
+
 // Function to categorize classes
 const categorizeClasses = (classes: string[]) => {
     const secondary: string[] = [];
     const seniorSecondary: string[] = [];
     classes.forEach(c => {
-      if (c.includes('9') || c.includes('10')) {
+      const grade = getGradeFromClassName(c);
+      if (grade === '9' || grade === '10') {
         secondary.push(c);
-      } else if (c.includes('11') || c.includes('12')) {
+      } else if (grade === '11' || grade === '12') {
         seniorSecondary.push(c);
       }
     });
@@ -111,6 +118,25 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
     );
     return qualifiedTeachers.length > 0 ? qualifiedTeachers : teachers; // Fallback to all if none are mapped
   }, [cellData.subject, teachers, teacherSubjects]);
+
+  // Determine which classes are disabled in the edit dialog based on selection
+  const getDisabledClasses = useMemo(() => {
+    if (cellData.classNames.length === 0) {
+      return new Set(); // Nothing selected, nothing disabled
+    }
+    const firstSelectedGrade = getGradeFromClassName(cellData.classNames[0]);
+    if (!firstSelectedGrade) {
+      return new Set(classes); // Should not happen with valid data, but disable all as a fallback
+    }
+    
+    const disabled = new Set<string>();
+    classes.forEach(c => {
+      if (getGradeFromClassName(c) !== firstSelectedGrade) {
+        disabled.add(c);
+      }
+    });
+    return disabled;
+  }, [cellData.classNames, classes]);
 
   useEffect(() => {
     // When the subject changes, check if the current teacher is still valid
@@ -181,7 +207,7 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
   
     const newEntryData = {
         subject: cellData.subject,
-        className: cellData.classNames.join(' & '),
+        className: cellData.classNames.sort().join(' & '),
         teacher: cellData.teacher
     };
 
@@ -229,9 +255,12 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
         )
     }
 
+    // Use a Set to avoid rendering duplicate entries if a class is part of multiple combined groups in the same slot
+    const uniqueEntries = [...new Map(entries.map(e => [JSON.stringify(e), e])).values()];
+
     return (
         <div className="h-full min-h-[60px] cursor-pointer hover:bg-muted/50 rounded-md flex flex-col items-center justify-center p-1 space-y-1">
-            {entries.map((entry, index) => (
+            {uniqueEntries.map((entry, index) => (
                 <div
                     key={index}
                     className="w-full text-xs text-center p-1 bg-background rounded cursor-pointer hover:bg-accent hover:shadow-md"
@@ -383,6 +412,7 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
                         <Checkbox
                             id={`class-${c}`}
                             checked={cellData.classNames.includes(c)}
+                            disabled={getDisabledClasses.has(c)}
                             onCheckedChange={(checked) => {
                                 const newClassNames = checked
                                     ? [...cellData.classNames, c]
@@ -390,7 +420,7 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
                                 setCellData({...cellData, classNames: newClassNames});
                             }}
                         />
-                        <Label htmlFor={`class-${c}`}>{c}</Label>
+                        <Label htmlFor={`class-${c}`} className={getDisabledClasses.has(c) ? 'text-muted-foreground' : ''}>{c}</Label>
                     </div>
                   ))}
                 </div>

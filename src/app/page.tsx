@@ -202,99 +202,114 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col p-4 sm:p-6 lg:p-8 bg-background font-sans">
-      <header className="flex items-center justify-between mb-6 flex-wrap gap-2">
-        <div className="flex items-center gap-3">
-          <Logo className="h-8 w-8 text-primary" />
-          <h1 className="text-2xl font-bold text-foreground">BiharSchoolRoutine</h1>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-           <input
-            type="file"
-            ref={csvInputRef}
-            onChange={handleFileImportCsv}
-            className="hidden"
-            accept=".csv, text/csv"
-          />
-           <input
-            type="file"
-            ref={jsonInputRef}
-            onChange={handleFileLoadConfig}
-            className="hidden"
-            accept="application/json"
-          />
-          <Button variant="outline" size="sm" onClick={handleImportCsvClick}>
-            <Upload className="mr-2 h-4 w-4" /> Import Data
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleExportCsv}>
-            <Download className="mr-2 h-4 w-4" /> Export Data
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleLoadConfigClick}>
-            <FolderOpen className="mr-2 h-4 w-4" /> Load Config
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleSaveConfig}>
-            <Save className="mr-2 h-4 w-4" /> Save Config
-          </Button>
-          <Button variant="outline" size="sm" onClick={handlePrintClick}>
-            <Printer className="mr-2 h-4 w-4" /> Print
-          </Button>
-        </div>
-      </header>
-      
-      <main className="flex-grow grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1 flex flex-col gap-6">
-          <Card>
-            <CardContent className="p-6 flex flex-col items-center justify-center">
-                <Button
-                    size="lg"
-                    className="w-full text-lg py-8"
-                    onClick={handleGenerateRoutine}
-                    disabled={isLoading}
-                >
-                    {isLoading ? (
-                    <Loader2 className="mr-2 h-6 w-6 animate-spin" />
-                    ) : (
-                    <Wand2 className="mr-2 h-6 w-6" />
-                    )}
-                    Generate Routine
-                </Button>
-                <p className="text-xs text-muted-foreground mt-4 text-center">
-                    Generate the school routine using a logic-based algorithm. You can edit the result in the main display.
-                </p>
-            </CardContent>
-          </Card>
-           <Button variant="destructive" size="sm" onClick={() => setRoutine(null)}>
-              <Trash2 className="mr-2 h-4 w-4" /> Clear Routine
-            </Button>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-6">
-            <DataManager title="Teachers" icon={User} items={teachers} setItems={setTeachers} placeholder="New teacher name..." />
-            <DataManager title="Classes" icon={School} items={classes} setItems={setClasses} placeholder="New class name..." />
-            <DataManager title="Subjects" icon={Book} items={subjects} setItems={setSubjects} placeholder="New subject name..." />
-            <DataManager title="Time Slots" icon={Clock} items={timeSlots} setItems={setTimeSlots} placeholder="e.g. 09:00 - 10:00" />
+      <div className="no-print">
+        <header className="flex items-center justify-between mb-6 flex-wrap gap-2">
+          <div className="flex items-center gap-3">
+            <Logo className="h-8 w-8 text-primary" />
+            <h1 className="text-2xl font-bold text-foreground">BiharSchoolRoutine</h1>
           </div>
-        </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <input
+              type="file"
+              ref={csvInputRef}
+              onChange={handleFileImportCsv}
+              className="hidden"
+              accept=".csv, text/csv"
+            />
+            <input
+              type="file"
+              ref={jsonInputRef}
+              onChange={handleFileLoadConfig}
+              className="hidden"
+              accept="application/json"
+            />
+            <Button variant="outline" size="sm" onClick={handleImportCsvClick}>
+              <Upload className="mr-2 h-4 w-4" /> Import Data
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleExportCsv}>
+              <Download className="mr-2 h-4 w-4" /> Export Data
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleLoadConfigClick}>
+              <FolderOpen className="mr-2 h-4 w-4" /> Load Config
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleSaveConfig}>
+              <Save className="mr-2 h-4 w-4" /> Save Config
+            </Button>
+            <Button variant="outline" size="sm" onClick={handlePrintClick}>
+              <Printer className="mr-2 h-4 w-4" /> Print
+            </Button>
+          </div>
+        </header>
+        
+        <main className="flex-grow grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-1 flex flex-col gap-6">
+            <Card>
+              <CardContent className="p-6 flex flex-col items-center justify-center">
+                  <Button
+                      size="lg"
+                      className="w-full text-lg py-8"
+                      onClick={handleGenerateRoutine}
+                      disabled={isLoading}
+                  >
+                      {isLoading ? (
+                      <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+                      ) : (
+                      <Wand2 className="mr-2 h-6 w-6" />
+                      )}
+                      Generate Routine
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-4 text-center">
+                      Generate the school routine using a logic-based algorithm. You can edit the result in the main display.
+                  </p>
+              </CardContent>
+            </Card>
+            <Button variant="destructive" size="sm" onClick={() => setRoutine(null)}>
+                <Trash2 className="mr-2 h-4 w-4" /> Clear Routine
+              </Button>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-6">
+              <DataManager title="Teachers" icon={User} items={teachers} setItems={setTeachers} placeholder="New teacher name..." />
+              <DataManager title="Classes" icon={School} items={classes} setItems={setClasses} placeholder="New class name..." />
+              <DataManager title="Subjects" icon={Book} items={subjects} setItems={setSubjects} placeholder="New subject name..." />
+              <DataManager title="Time Slots" icon={Clock} items={timeSlots} setItems={setTimeSlots} placeholder="e.g. 09:00 - 10:00" />
+            </div>
+          </div>
 
-        <div className="lg:col-span-2 flex flex-col gap-6">
-             <RoutineControls
-                teachers={teachers}
-                classes={classes}
-                subjects={subjects}
-                timeSlots={timeSlots}
-                classRequirements={classRequirements}
-                setClassRequirements={setClassRequirements}
-                subjectPriorities={subjectPriorities}
-                setSubjectPriorities={setSubjectPriorities}
-                unavailability={unavailability}
-                setUnavailability={setUnavailability}
-                teacherSubjects={teacherSubjects}
-                setTeacherSubjects={setTeacherSubjects}
-                teacherClasses={teacherClasses}
-                setTeacherClasses={setTeacherClasses}
-                prayerTimeSlot={prayerTimeSlot}
-                setPrayerTimeSlot={setPrayerTimeSlot}
-                lunchTimeSlot={lunchTimeSlot}
-                setLunchTimeSlot={setLunchTimeSlot}
-              />
-             <RoutineDisplay 
+          <div className="lg:col-span-2 flex flex-col gap-6">
+              <RoutineControls
+                  teachers={teachers}
+                  classes={classes}
+                  subjects={subjects}
+                  timeSlots={timeSlots}
+                  classRequirements={classRequirements}
+                  setClassRequirements={setClassRequirements}
+                  subjectPriorities={subjectPriorities}
+                  setSubjectPriorities={setSubjectPriorities}
+                  unavailability={unavailability}
+                  setUnavailability={setUnavailability}
+                  teacherSubjects={teacherSubjects}
+                  setTeacherSubjects={setTeacherSubjects}
+                  teacherClasses={teacherClasses}
+                  setTeacherClasses={setTeacherClasses}
+                  prayerTimeSlot={prayerTimeSlot}
+                  setPrayerTimeSlot={setPrayerTimeSlot}
+                  lunchTimeSlot={lunchTimeSlot}
+                  setLunchTimeSlot={setLunchTimeSlot}
+                />
+              <RoutineDisplay 
+                  ref={routineDisplayRef}
+                  scheduleData={routine}
+                  onScheduleChange={handleScheduleChange}
+                  timeSlots={timeSlots} 
+                  classes={classes}
+                  subjects={subjects}
+                  teachers={teachers}
+                  teacherSubjects={teacherSubjects}
+                />
+          </div>
+        </main>
+      </div>
+       <div className="hidden print:block">
+           <RoutineDisplay 
                 ref={routineDisplayRef}
                 scheduleData={routine}
                 onScheduleChange={handleScheduleChange}
@@ -303,9 +318,9 @@ export default function Home() {
                 subjects={subjects}
                 teachers={teachers}
                 teacherSubjects={teacherSubjects}
-              />
-        </div>
-      </main>
+                isPrintView={true}
+            />
+       </div>
     </div>
   );
 }

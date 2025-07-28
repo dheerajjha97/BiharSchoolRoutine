@@ -143,7 +143,6 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
                 });
                 
                 for (const subject of sortedSubjectsForSlot) {
-                    // This check is redundant if the outer one works, but good for safety
                     if (isClassSlotBooked(day, timeSlot, className)) {
                         break; 
                     }
@@ -155,19 +154,34 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
                         !isTeacherUnavailable(t, day, timeSlot)
                     );
 
+                    let teacher = "N/A";
+                    let entry: ScheduleEntry | null = null;
+
                     if (potentialTeachers.length > 0) {
                         const shuffledTeachers = shuffleArray(potentialTeachers);
-                        const teacher = shuffledTeachers[0]; 
+                        teacher = shuffledTeachers[0];
+                        entry = { day, timeSlot, className, subject, teacher };
 
-                        const entry = { day, timeSlot, className, subject, teacher };
-                        
                         schedule.push(entry);
                         teacherBookings[teacher].add(`${day}-${timeSlot}`);
                         classBookings[`${day}-${timeSlot}-${className}`] = entry;
                         classSubjectCount[className][subject]++;
-                        dailyClassSubject[day][className].add(subject); // Mark subject as taught for this class today
+                        dailyClassSubject[day][className].add(subject);
                         
                         break; // Subject found and scheduled, move to the next class
+                    } else {
+                        // If class requires subject, but no teacher is available/mapped, schedule with "N/A"
+                        // Only do this if the subject is actually required
+                        if (classRequirements[className]?.includes(subject)) {
+                             entry = { day, timeSlot, className, subject, teacher: "N/A" };
+                             
+                             schedule.push(entry);
+                             classBookings[`${day}-${timeSlot}-${className}`] = entry;
+                             classSubjectCount[className][subject]++;
+                             dailyClassSubject[day][className].add(subject);
+
+                             break; // Subject scheduled without a teacher, move to next class
+                        }
                     }
                 }
             });

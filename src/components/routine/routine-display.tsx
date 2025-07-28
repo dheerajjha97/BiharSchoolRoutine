@@ -30,7 +30,9 @@ interface RoutineDisplayProps {
 
 type GridSchedule = {
   [day: string]: {
-    [timeSlot: string]: ScheduleEntry[]
+    [className: string]: {
+        [timeSlot: string]: ScheduleEntry[]
+    }
   }
 };
 
@@ -57,7 +59,7 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
   const [selectedClass, setSelectedClass] = useState<string>('all');
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [currentCell, setCurrentCell] = useState<{ day: string; timeSlot: string; entry: ScheduleEntry | null } | null>(null);
+  const [currentCell, setCurrentCell] = useState<{ day: string; timeSlot: string; className: string; entry: ScheduleEntry | null } | null>(null);
   const [cellData, setCellData] = useState<{ subject: string; classNames: string[]; teacher: string }>({
     subject: "",
     classNames: [],
@@ -71,21 +73,27 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
     
     daysOfWeek.forEach(day => {
         grid[day] = {};
-        timeSlots.forEach(slot => {
-            grid[day][slot] = [];
+        classes.forEach(c => {
+            grid[day][c] = {};
+            timeSlots.forEach(slot => {
+                grid[day][c][slot] = [];
+            })
         })
     });
 
     if (scheduleData?.schedule) {
       scheduleData.schedule.forEach(entry => {
-        if (grid[entry.day] && grid[entry.day][entry.timeSlot]) {
-          grid[entry.day][entry.timeSlot].push(entry);
-        }
+        const entryClasses = entry.className.split(' & ').map(c => c.trim());
+        entryClasses.forEach(className => {
+            if (grid[entry.day] && grid[entry.day][className] && grid[entry.day][className][entry.timeSlot]) {
+              grid[entry.day][className][entry.timeSlot].push(entry);
+            }
+        });
       });
     }
 
     return grid;
-  }, [scheduleData, timeSlots]);
+  }, [scheduleData, timeSlots, classes]);
 
 
   const handlePrint = () => {
@@ -127,8 +135,8 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
     document.body.removeChild(link);
   };
   
-  const handleCellClick = (day: string, timeSlot: string, entry: ScheduleEntry | null) => {
-    setCurrentCell({ day, timeSlot, entry });
+  const handleCellClick = (day: string, timeSlot: string, className: string, entry: ScheduleEntry | null) => {
+    setCurrentCell({ day, timeSlot, className, entry });
     if (entry) {
         setCellData({
             subject: entry.subject,
@@ -136,8 +144,7 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
             teacher: entry.teacher,
         });
     } else {
-        // When clicking an empty cell, we pre-fill the class if one is filtered
-        setCellData({ subject: "", classNames: selectedClass !== 'all' ? [selectedClass] : [], teacher: "" });
+        setCellData({ subject: "", classNames: [className], teacher: "" });
     }
     setIsDialogOpen(true);
   };
@@ -184,15 +191,17 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
       setCurrentCell(null);
   }
 
-  const renderCellContent = (day: string, timeSlot: string, displayClasses: string[]) => {
-    const entries = gridSchedule[day]?.[timeSlot] || [];
+  const renderCellContent = (day: string, className: string, timeSlot: string) => {
+    const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
+    
+    // If a specific class is selected for filtering, only show entries for that class.
+    if (selectedClass !== 'all' && className !== selectedClass) {
+        return <div className="h-full min-h-[60px]"></div>;
+    }
+
     const filteredEntries = entries.filter(entry => {
         const entryClasses = entry.className.split(' & ').map(c => c.trim());
-        const isInDisplayClasses = entryClasses.some(ec => displayClasses.includes(ec));
-        if (!isInDisplayClasses) return false;
-
-        if (selectedClass === 'all') return true;
-        return entryClasses.includes(selectedClass);
+        return entryClasses.includes(className);
     });
 
     return (
@@ -201,16 +210,15 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
                 <div
                     key={index}
                     className="w-full text-xs text-center p-1 bg-background rounded cursor-pointer hover:bg-accent hover:shadow-md"
-                    onClick={() => handleCellClick(day, timeSlot, entry)}
+                    onClick={() => handleCellClick(day, timeSlot, className, entry)}
                 >
                     <div className="font-semibold">{entry.subject}</div>
-                    <div className="text-muted-foreground">{entry.className}</div>
                     <div className="text-muted-foreground text-xs">{entry.teacher}</div>
                 </div>
             ))}
             <div
                 className="text-center cursor-pointer pt-1 flex-grow w-full flex items-center justify-center"
-                onClick={() => handleCellClick(day, timeSlot, null)}
+                onClick={() => handleCellClick(day, timeSlot, className, null)}
             >
                 <span className="text-muted-foreground text-xs hover:text-primary opacity-50 hover:opacity-100">+</span>
             </div>
@@ -219,7 +227,12 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
 };
 
   const renderScheduleTable = (title: string, displayClasses: string[]) => {
-    if (!scheduleData && displayClasses.length === 0) return null;
+    if (selectedClass !== 'all' && !displayClasses.includes(selectedClass)) {
+        return null;
+    }
+    const filteredDisplayClasses = selectedClass === 'all' ? displayClasses : [selectedClass];
+
+    if (filteredDisplayClasses.length === 0) return null;
   
     return (
       <div>
@@ -228,20 +241,28 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="min-w-[120px] font-bold">Day</TableHead>
-                {timeSlots.map(slot => <TableHead key={slot} className="text-center font-bold text-xs">{slot}</TableHead>)}
+                <TableHead className="min-w-[100px] font-bold">Day</TableHead>
+                <TableHead className="min-w-[120px] font-bold">Class</TableHead>
+                {timeSlots.map(slot => <TableHead key={slot} className="text-center font-bold text-xs min-w-[100px]">{slot}</TableHead>)}
               </TableRow>
             </TableHeader>
             <TableBody>
               {daysOfWeek.map(day => (
-                <TableRow key={day}>
-                  <TableCell className="font-medium align-top">{day}</TableCell>
-                  {timeSlots.map(slot => (
-                    <TableCell key={`${day}-${slot}`} className="p-1 align-top">
-                      {renderCellContent(day, slot, displayClasses)}
-                    </TableCell>
-                  ))}
-                </TableRow>
+                filteredDisplayClasses.map((className, classIndex) => (
+                    <TableRow key={`${day}-${className}`}>
+                        {classIndex === 0 && (
+                            <TableCell className="font-medium align-top" rowSpan={filteredDisplayClasses.length}>
+                                {day}
+                            </TableCell>
+                        )}
+                        <TableCell className="font-medium align-top">{className}</TableCell>
+                        {timeSlots.map(slot => (
+                            <TableCell key={`${day}-${className}-${slot}`} className="p-1 align-top">
+                            {renderCellContent(day, className, slot)}
+                            </TableCell>
+                        ))}
+                    </TableRow>
+                ))
               ))}
             </TableBody>
           </Table>

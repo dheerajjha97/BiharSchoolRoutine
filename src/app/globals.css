@@ -70,28 +70,47 @@ body {
   }
 
   @page {
-    size: A4;
-    margin-top: var(--print-margin-top, 1in);
-    margin-right: var(--print-margin-right, 0.5in);
-    margin-bottom: var(--print-margin-bottom, 1in);
-    margin-left: var(--print-margin-left, 0.5in);
+    size: A4 landscape;
+    margin: 0.5in;
+    
+    @top-center {
+      content: var(--print-header-content, "");
+      font-weight: bold;
+      font-size: 14pt;
+    }
+
+    @bottom-center {
+      content: var(--print-footer-content, "");
+      font-size: 9pt;
+      color: #666;
+    }
   }
 
   @media print {
-    body * {
-      visibility: hidden;
+    body, .printable-area {
+       background-color: white;
+    }
+    body > :not(.printable-area) {
+      display: none;
     }
     .printable-area, .printable-area * {
       visibility: visible;
     }
     .printable-area {
-      position: absolute;
-      left: 0;
-      top: 0;
-      width: 100%;
+      position: static;
+      margin: 0;
+      padding: 0;
     }
     .no-print {
       display: none !important;
     }
+    .print-only {
+        display: block !important;
+        visibility: visible !important;
+    }
+  }
+
+  .print-only {
+    display: none;
   }
 }

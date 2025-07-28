@@ -53,9 +53,9 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
     const secondary: string[] = [];
     const seniorSecondary: string[] = [];
     classes.forEach(c => {
-      if (/\b(9|10)\b/.test(c) || c.includes('9th') || c.includes('10th')) {
+      if (/\b(9|10)\b/i.test(c) || c.includes('9th') || c.includes('10th')) {
         secondary.push(c);
-      } else if (/\b(11|12)\b/.test(c) || c.includes('11th') || c.includes('12th')) {
+      } else if (/\b(11|12)\b/i.test(c) || c.includes('11th') || c.includes('12th')) {
         seniorSecondary.push(c);
       }
     });
@@ -182,8 +182,8 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
 
   const renderCellContent = (entries: ScheduleEntry[] | null, day: string, timeSlot: string, displayClasses: string[]) => {
     const filteredEntries = entries?.filter(e => {
-        const entryClasses = e.className.split(' & ');
-        const isInDisplayClasses = entryClasses.some(ec => displayClasses.some(dc => ec.trim() === dc.trim()));
+        const entryClasses = e.className.split(' & ').map(ec => ec.trim());
+        const isInDisplayClasses = entryClasses.some(ec => displayClasses.includes(ec));
         
         if (!isInDisplayClasses) return false;
 
@@ -241,7 +241,7 @@ export default function RoutineDisplay({ scheduleData, timeSlots, classes, subje
   )
 
   const renderScheduleTable = (title: string, displayClasses: string[]) => {
-    if (displayClasses.length === 0) return null;
+    if (displayClasses.length === 0 && (selectedClass === 'all' || !classes.some(c => c.startsWith(title.split(' ')[0])))) return null;
 
     return (
     <div>

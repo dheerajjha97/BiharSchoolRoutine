@@ -140,5 +140,9 @@ body {
   .printable-section .p-1 {
     padding: 1px;
   }
+  
+  .printable-section .bg-background {
+    background-color: transparent !important;
+  }
 
 }

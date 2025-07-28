@@ -211,12 +211,12 @@ export default function RoutineControls({
                 <p className="text-sm text-muted-foreground">
                     Select a time slot to be the designated lunch period. This will schedule a "Lunch" break for all classes at that time.
                 </p>
-                <Select value={lunchTimeSlot} onValueChange={setLunchTimeSlot}>
+                <Select value={lunchTimeSlot} onValueChange={(v) => setLunchTimeSlot(v === 'none' ? '' : v)}>
                     <SelectTrigger>
                         <SelectValue placeholder="Select Lunch Time Slot" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="none">None</SelectItem>
                         {timeSlots.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                     </SelectContent>
                 </Select>

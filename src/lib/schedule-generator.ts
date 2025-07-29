@@ -28,6 +28,7 @@ export type GenerateScheduleLogicInput = {
 type TeacherTask = {
     className: string;
     subject: string;
+    teacher: string;
 };
 
 type Booking = {
@@ -38,6 +39,7 @@ type Booking = {
 const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const secondarySubjects = ["Computer", "Sports", "Library"];
 
+// Helper to shuffle an array
 const shuffleArray = <T>(array: T[]): T[] => {
     const newArray = [...array];
     for (let i = newArray.length - 1; i > 0; i--) {
@@ -47,13 +49,10 @@ const shuffleArray = <T>(array: T[]): T[] => {
     return newArray;
 };
 
-const getGradeFromClassName = (className: string): string | null => {
-    const match = className.match(/^(\d+)/);
-    return match ? match[1] : null;
-};
-
+// Helper to get valid subjects for a class
 const getValidSubjectsForClass = (className: string, allSubjects: string[], classRequirements: Record<string, string[]>): string[] => {
     const required = classRequirements[className] || [];
+    // Ensure secondary subjects are only added if they exist in the master subject list
     const validSecondary = secondarySubjects.filter(s => allSubjects.includes(s));
     return [...new Set([...required, ...validSecondary])];
 };
@@ -64,26 +63,28 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
         teacherNames,
         classes,
         subjects,
+        timeSlots,
         unavailability,
+        subjectPriorities,
+        classRequirements,
         teacherSubjects,
         teacherClasses,
         prayerTimeSlot,
         lunchTimeSlot,
         enableCombinedClasses,
-        subjectPriorities,
-        classRequirements
     } = input;
 
     const schedule: ScheduleEntry[] = [];
-    
     const bookings: Booking = {
         teacherBookings: {},
         classBookings: {},
     };
 
+    // Initialize booking records
     teacherNames.forEach(t => { bookings.teacherBookings[t] = new Set(); });
     classes.forEach(c => { bookings.classBookings[c] = new Set(); });
-
+    
+    // --- Helper Functions ---
     const isTeacherBooked = (teacher: string, day: string, timeSlot: string): boolean => 
         bookings.teacherBookings[teacher]?.has(`${day}-${timeSlot}`);
 
@@ -95,7 +96,8 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
         
     const bookSlot = (entry: ScheduleEntry) => {
         if (entry.teacher !== "N/A" && isTeacherBooked(entry.teacher, entry.day, entry.timeSlot)) {
-            return;
+            console.warn(`Booking conflict for teacher ${entry.teacher} on ${entry.day} at ${entry.timeSlot}`);
+            return; // Prevent double booking
         }
 
         schedule.push(entry);
@@ -113,9 +115,8 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
         });
     };
     
-    const instructionalSlots = input.timeSlots.filter(slot => slot !== prayerTimeSlot && slot !== lunchTimeSlot);
-    const lunchIndex = lunchTimeSlot ? input.timeSlots.indexOf(lunchTimeSlot) : -1;
-
+    // --- Step 1: Schedule Fixed Periods (Prayer & Lunch) ---
+    const instructionalSlots = timeSlots.filter(slot => slot !== prayerTimeSlot && slot !== lunchTimeSlot);
     daysOfWeek.forEach(day => {
         classes.forEach(className => {
             if (prayerTimeSlot && !isClassBooked(className, day, prayerTimeSlot)) {
@@ -127,94 +128,93 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
         });
     });
 
-    const teacherTasks: Record<string, TeacherTask[]> = {};
-    teacherNames.forEach(teacher => {
-        teacherTasks[teacher] = [];
-        const assignedClasses = teacherClasses[teacher] || [];
-        const assignedSubjects = teacherSubjects[teacher] || [];
-        
-        assignedClasses.forEach(className => {
-            assignedSubjects.forEach(subject => {
-                const validSubjectsForClass = getValidSubjectsForClass(className, subjects, classRequirements);
-                if (validSubjectsForClass.includes(subject)) {
-                    teacherTasks[teacher].push({ className, subject });
-                }
-            });
-        });
-    });
+    // --- Step 2: Create a list of all required periods for the week ---
+    const weeklyTasks: TeacherTask[] = [];
+    const totalSlotsPerWeek = instructionalSlots.length * daysOfWeek.length;
+    
+    classes.forEach(className => {
+        const requiredSubjects = classRequirements[className] || [];
+        const periodsPerSubject = requiredSubjects.length > 0 ? Math.floor(totalSlotsPerWeek / requiredSubjects.length) : 0;
 
-    // Day-first, then Teacher-first scheduling
-    daysOfWeek.forEach(day => {
-        shuffleArray(teacherNames).forEach(teacher => {
-            const tasksForTeacher = shuffleArray(teacherTasks[teacher]);
-
-            tasksForTeacher.forEach(task => {
-                const availableSlots = shuffleArray(instructionalSlots)
-                    .filter(slot => {
-                        const priority = subjectPriorities[task.subject] || 'none';
-                        if (lunchIndex === -1) return true;
-                        const slotIndex = input.timeSlots.indexOf(slot);
-                        if (priority === 'before') return slotIndex < lunchIndex;
-                        if (priority === 'after') return slotIndex > lunchIndex;
-                        return true;
-                    });
-                
-                const slot = availableSlots.find(s => 
-                    !isTeacherBooked(teacher, day, s) &&
-                    !isClassBooked(task.className, day, s) &&
-                    !isTeacherUnavailable(teacher, day, s)
+        requiredSubjects.forEach(subject => {
+            for (let i = 0; i < periodsPerSubject; i++) {
+                // Find a teacher for this class/subject
+                const qualifiedTeachers = teacherNames.filter(t => 
+                    (teacherClasses[t] || []).includes(className) &&
+                    (teacherSubjects[t] || []).includes(subject)
                 );
-
-                if (slot) {
-                    let classNamesToBook = [task.className];
-                    if (enableCombinedClasses) {
-                        const grade = getGradeFromClassName(task.className);
-                        if (grade && !secondarySubjects.includes(task.subject)) {
-                           const partners = classes.filter(c => 
-                               c !== task.className &&
-                               getGradeFromClassName(c) === grade &&
-                               (teacherClasses[teacher] || []).includes(c) &&
-                               getValidSubjectsForClass(c, subjects, classRequirements).includes(task.subject) &&
-                               !isClassBooked(c, day, slot)
-                           );
-                           classNamesToBook.push(...partners);
-                        }
-                    }
-                    
-                    const allCanBeBooked = classNamesToBook.every(c => !isClassBooked(c, day, slot));
-                    if (allCanBeBooked) {
-                        bookSlot({
-                            day,
-                            timeSlot: slot,
-                            className: classNamesToBook.sort().join(' & '),
-                            subject: task.subject,
-                            teacher: teacher
-                        });
-                    }
+                if (qualifiedTeachers.length > 0) {
+                     weeklyTasks.push({ className, subject, teacher: qualifiedTeachers[0] }); // Simple assignment, could be improved
                 }
-            });
+            }
         });
     });
 
-    // Final pass to fill any remaining empty slots with "---"
+    // --- Step 3: Schedule all tasks from the weekly list ---
+    const shuffledTasks = shuffleArray(weeklyTasks);
+
+    shuffledTasks.forEach(task => {
+        const potentialSlots = shuffleArray(
+            daysOfWeek.flatMap(day => 
+                instructionalSlots.map(slot => ({day, slot}))
+            )
+        );
+
+        for (const {day, slot} of potentialSlots) {
+             if (!isClassBooked(task.className, day, slot) &&
+                 !isTeacherBooked(task.teacher, day, slot) &&
+                 !isTeacherUnavailable(task.teacher, day, slot)) 
+            {
+                bookSlot({
+                    day,
+                    timeSlot: slot,
+                    className: task.className,
+                    subject: task.subject,
+                    teacher: task.teacher
+                });
+                break; // Task scheduled, move to the next task
+            }
+        }
+    });
+
+    // --- Step 4: Fill any remaining empty slots ---
     daysOfWeek.forEach(day => {
         instructionalSlots.forEach(timeSlot => {
-            shuffleArray(classes).forEach(className => {
+            classes.forEach(className => {
                 if (!isClassBooked(className, day, timeSlot)) {
-                    bookSlot({ day, timeSlot, className, subject: "---", teacher: "N/A" });
+                    // Try to find a secondary subject with an available teacher
+                    const secondary = shuffleArray(secondarySubjects.filter(s => subjects.includes(s)));
+                    let filled = false;
+                    for (const subject of secondary) {
+                        const qualifiedTeachers = teacherNames.filter(t => 
+                            (teacherSubjects[t] || []).includes(subject) &&
+                            !isTeacherBooked(t, day, timeSlot) &&
+                            !isTeacherUnavailable(t, day, timeSlot)
+                        );
+                        if (qualifiedTeachers.length > 0) {
+                             bookSlot({ day, timeSlot, className, subject, teacher: qualifiedTeachers[0] });
+                             filled = true;
+                             break;
+                        }
+                    }
+
+                    if (!filled) {
+                         bookSlot({ day, timeSlot, className, subject: "---", teacher: "N/A" });
+                    }
                 }
             });
         });
     });
 
 
+    // --- Final Step: Sort the schedule for display ---
     schedule.sort((a, b) => {
         const dayIndexA = daysOfWeek.indexOf(a.day);
         const dayIndexB = daysOfWeek.indexOf(b.day);
         if (dayIndexA !== dayIndexB) return dayIndexA - dayIndexB;
 
-        const timeIndexA = input.timeSlots.indexOf(a.timeSlot);
-        const timeIndexB = input.timeSlots.indexOf(b.timeSlot);
+        const timeIndexA = timeSlots.indexOf(a.timeSlot);
+        const timeIndexB = timeSlots.indexOf(b.timeSlot);
         if (timeIndexA !== timeIndexB) return timeIndexA - timeIndexB;
 
         return a.className.localeCompare(b.className);

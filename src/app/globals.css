@@ -78,6 +78,11 @@ body {
     display: none !important;
   }
   
+  /* Reset flex/grid layouts that can interfere with page breaks */
+  body > div, main {
+    display: block !important;
+  }
+
   @page {
     size: A4 landscape;
     margin: 0.5in;
@@ -99,6 +104,8 @@ body {
     padding: 0;
     margin: 0;
     break-inside: avoid;
+    break-before: avoid; /* Prevent a page break before the section */
+    page-break-before: avoid; /* Older syntax for compatibility */
   }
 
   .printable-section .overflow-x-auto {

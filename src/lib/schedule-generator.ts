@@ -27,6 +27,7 @@ export type GenerateScheduleLogicInput = {
 type Booking = {
     teacherBookings: Record<string, Set<string>>; // teacher -> "day-timeSlot"
     classBookings: Record<string, Set<string>>;   // className -> "day-timeSlot"
+    classSubjectDayTracker: Record<string, Set<string>>; // "className-day" -> Set<subject>
 };
 
 const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -48,7 +49,6 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
         classes,
         subjects,
         unavailability,
-        subjectPriorities,
         classRequirements,
         teacherSubjects,
         teacherClasses,
@@ -63,9 +63,15 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
     const bookings: Booking = {
         teacherBookings: {},
         classBookings: {},
+        classSubjectDayTracker: {}
     };
     teacherNames.forEach(t => { bookings.teacherBookings[t] = new Set(); });
-    classes.forEach(c => { bookings.classBookings[c] = new Set(); });
+    classes.forEach(c => { 
+        bookings.classBookings[c] = new Set(); 
+        daysOfWeek.forEach(d => {
+            bookings.classSubjectDayTracker[`${c}-${d}`] = new Set();
+        });
+    });
 
     const isTeacherBooked = (teacher: string, day: string, timeSlot: string): boolean => 
         bookings.teacherBookings[teacher]?.has(`${day}-${timeSlot}`);
@@ -98,6 +104,10 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
             if (bookings.classBookings[className]) {
                 bookings.classBookings[className].add(`${entry.day}-${entry.timeSlot}`);
             }
+            const day = entry.day;
+            if (bookings.classSubjectDayTracker[`${className}-${day}`]) {
+                bookings.classSubjectDayTracker[`${className}-${day}`].add(entry.subject);
+            }
         });
     };
     
@@ -115,74 +125,65 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
         });
     });
 
-    // 2. Build a list of all required periods for the week for each class
-    const weeklyPeriods: Record<string, string[]> = {};
+    // 2. Build a list of all required periods for the week
+    const weeklyPeriods: { className: string; subject: string }[] = [];
     classes.forEach(className => {
         const required = classRequirements[className] || [];
-        if (required.length === 0) {
-            weeklyPeriods[className] = [];
-            return;
-        }
-        const totalSlots = instructionalSlots.length * daysOfWeek.length;
-        const periods: string[] = [];
-        
-        // Add required subjects
-        required.forEach(sub => periods.push(sub));
+        if (required.length === 0) return;
 
-        // Fill remaining slots by repeating required subjects
-        let i = 0;
-        while (periods.length < totalSlots) {
-            periods.push(required[i % required.length]);
-            i++;
+        const totalSlots = instructionalSlots.length * daysOfWeek.length;
+        const numRepeats = Math.ceil(totalSlots / required.length);
+
+        for (let i = 0; i < numRepeats; i++) {
+            required.forEach(subject => {
+                weeklyPeriods.push({ className, subject });
+            });
         }
-        weeklyPeriods[className] = shuffleArray(periods);
     });
 
-    // 3. Schedule required periods
+    shuffleArray(weeklyPeriods);
+    
+    // 3. Schedule all periods
     daysOfWeek.forEach(day => {
         instructionalSlots.forEach(timeSlot => {
             classes.forEach(className => {
                 if (isClassBooked(className, day, timeSlot)) return;
 
-                const periodsForClass = weeklyPeriods[className];
-                if (!periodsForClass || periodsForClass.length === 0) return;
+                let periodScheduled = false;
 
-                for (let i = 0; i < periodsForClass.length; i++) {
-                    const subject = periodsForClass[i];
-                    
+                // Try to find a required subject
+                for (let i = 0; i < weeklyPeriods.length; i++) {
+                    const period = weeklyPeriods[i];
+                    if (period.className !== className) continue;
+
                     const potentialTeachers = shuffleArray(teacherNames.filter(t => 
-                        (teacherSubjects[t]?.includes(subject)) &&
-                        (teacherClasses[t]?.includes(className)) &&
-                        !isTeacherBooked(t, day, timeSlot) && // This is the crucial check
+                        teacherSubjects[t]?.includes(period.subject) &&
+                        teacherClasses[t]?.includes(className) &&
+                        !isTeacherBooked(t, day, timeSlot) &&
                         !isTeacherUnavailable(t, day, timeSlot) &&
                         !hasTooManyConsecutiveClasses(t, day, timeSlot, timeSlots)
                     ));
 
                     if (potentialTeachers.length > 0) {
-                        bookSlot({ day, timeSlot, className, subject, teacher: potentialTeachers[0] });
-                        periodsForClass.splice(i, 1); // Remove scheduled period
-                        return; // Move to the next class/slot
+                        bookSlot({ day, timeSlot, className, subject: period.subject, teacher: potentialTeachers[0] });
+                        weeklyPeriods.splice(i, 1);
+                        periodScheduled = true;
+                        break;
                     }
                 }
-            });
-        });
-    });
 
-    // 4. Fill any remaining gaps with secondary subjects or repeated primary subjects
-    daysOfWeek.forEach(day => {
-        instructionalSlots.forEach(timeSlot => {
-            classes.forEach(className => {
-                if (isClassBooked(className, day, timeSlot)) return;
+                if(periodScheduled) return;
 
-                const possibleSubjects = shuffleArray([
-                    ...(classRequirements[className] || []),
-                    ...secondarySubjects
+                // If no required period was scheduled, try to fill with a secondary/common subject
+                const secondaryPlusRequirements = shuffleArray([
+                    ...secondarySubjects,
+                    ...(classRequirements[className] || [])
                 ]);
 
-                for (const subject of possibleSubjects) {
+                for (const subject of secondaryPlusRequirements) {
                      const potentialTeachers = shuffleArray(teacherNames.filter(t => 
-                        (teacherSubjects[t]?.includes(subject)) &&
-                        (teacherClasses[t]?.includes(className)) &&
+                        teacherSubjects[t]?.includes(subject) &&
+                        teacherClasses[t]?.includes(className) &&
                         !isTeacherBooked(t, day, timeSlot) &&
                         !isTeacherUnavailable(t, day, timeSlot) &&
                         !hasTooManyConsecutiveClasses(t, day, timeSlot, timeSlots)
@@ -190,12 +191,14 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
 
                     if (potentialTeachers.length > 0) {
                         bookSlot({ day, timeSlot, className, subject, teacher: potentialTeachers[0] });
-                        return;
+                        periodScheduled = true;
+                        break;
                     }
                 }
-                
-                // If still nothing, book as a generic empty slot to avoid crashes, though this shouldn't be reached.
-                if (!isClassBooked(className, day, timeSlot)) {
+                 if(periodScheduled) return;
+
+                // If still no period, book a placeholder
+                 if (!isClassBooked(className, day, timeSlot)) {
                     bookSlot({ day, timeSlot, className, subject: "---", teacher: "N/A" });
                 }
             });

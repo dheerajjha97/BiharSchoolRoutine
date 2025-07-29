@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, ChangeEvent, useRef } from "react";
+import { useState, useMemo, ChangeEvent, useRef, useEffect } from "react";
 import type { GenerateScheduleOutput, ScheduleEntry } from "@/ai/flows/generate-schedule";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -32,23 +32,32 @@ type SchoolConfig = {
   preventConsecutiveClasses?: boolean;
 };
 
-export default function Home() {
-  const [teachers, setTeachers] = useState<string[]>(["Mr. Sharma", "Mrs. Gupta", "Mr. Singh", "Ms. Verma", "Mr. Khan"]);
-  const [classes, setClasses] = useState<string[]>([
+type AppState = {
+  teachers: string[];
+  classes: string[];
+  subjects: string[];
+  timeSlots: string[];
+  config: SchoolConfig;
+  routine: GenerateScheduleOutput | null;
+}
+
+const DEFAULT_APP_STATE: AppState = {
+  teachers: ["Mr. Sharma", "Mrs. Gupta", "Mr. Singh", "Ms. Verma", "Mr. Khan"],
+  classes: [
     "Class 9A", 
     "Class 10B", 
     "Class 11 Science", 
     "Class 11 Commerce", 
     "Class 12 Science", 
     "Class 12 Arts"
-  ]);
-  const [subjects, setSubjects] = useState<string[]>([
+  ],
+  subjects: [
     "Math", "Science", "Social Science", "English", "Hindi", 
     "Physics", "Chemistry", "Biology", "Accountancy", "Business Studies", 
     "History", "Political Science", "Sanskrit", "Prayer", "Lunch", 
     "Library", "Sports", "Computer"
-  ]);
-  const [timeSlots, setTimeSlots] = useState<string[]>([
+  ],
+  timeSlots: [
     "09:00 - 09:15",
     "09:15 - 10:00",
     "10:00 - 11:00",
@@ -57,31 +66,96 @@ export default function Home() {
     "13:00 - 14:00",
     "14:00 - 15:00",
     "15:00 - 16:00",
-  ]);
-  
-  const [classRequirements, setClassRequirements] = useState<Record<string, string[]>>({
-    "Class 9A": ["Math", "Science", "Social Science", "English", "Hindi"],
-    "Class 10B": ["Math", "Science", "Social Science", "English", "Hindi"],
-    "Class 11 Science": ["Physics", "Chemistry", "Biology", "Math", "English"],
-    "Class 11 Commerce": ["Accountancy", "Business Studies", "Math", "English"],
-    "Class 12 Science": ["Physics", "Chemistry", "Biology", "Math", "English"],
-    "Class 12 Arts": ["History", "Political Science", "Hindi", "English"],
-  });
-  const [subjectPriorities, setSubjectPriorities] = useState<Record<string, SubjectPriority>>({});
-  const [unavailability, setUnavailability] = useState<Unavailability[]>([]);
-  const [teacherSubjects, setTeacherSubjects] = useState<Record<string, string[]>>({});
-  const [teacherClasses, setTeacherClasses] = useState<Record<string, string[]>>({});
-  const [prayerTimeSlot, setPrayerTimeSlot] = useState<string>("09:00 - 09:15");
-  const [lunchTimeSlot, setLunchTimeSlot] = useState<string>("12:00 - 13:00");
-  const [preventConsecutiveClasses, setPreventConsecutiveClasses] = useState(true);
+  ],
+  config: {
+    classRequirements: {
+      "Class 9A": ["Math", "Science", "Social Science", "English", "Hindi"],
+      "Class 10B": ["Math", "Science", "Social Science", "English", "Hindi"],
+      "Class 11 Science": ["Physics", "Chemistry", "Biology", "Math", "English"],
+      "Class 11 Commerce": ["Accountancy", "Business Studies", "Math", "English"],
+      "Class 12 Science": ["Physics", "Chemistry", "Biology", "Math", "English"],
+      "Class 12 Arts": ["History", "Political Science", "Hindi", "English"],
+    },
+    subjectPriorities: {},
+    unavailability: [],
+    teacherSubjects: {},
+    teacherClasses: {},
+    prayerTimeSlot: "09:00 - 09:15",
+    lunchTimeSlot: "12:00 - 13:00",
+    preventConsecutiveClasses: true,
+  },
+  routine: null,
+};
 
-  const [routine, setRoutine] = useState<GenerateScheduleOutput | null>(null);
+
+export default function Home() {
+  const [appState, setAppState] = useState<AppState>(DEFAULT_APP_STATE);
   const [isLoading, setIsLoading] = useState(false);
+  const [isStateLoaded, setIsStateLoaded] = useState(false);
   const { toast } = useToast();
 
   const csvInputRef = useRef<HTMLInputElement>(null);
   const jsonInputRef = useRef<HTMLInputElement>(null);
   const routineDisplayRef = useRef<{ handlePrint: () => void }>(null);
+
+  // Load state from localStorage on initial mount
+  useEffect(() => {
+    try {
+      const savedStateJSON = localStorage.getItem("biharSchoolRoutineState");
+      if (savedStateJSON) {
+        const savedState: AppState = JSON.parse(savedStateJSON);
+        // Basic validation to ensure the loaded data structure is what we expect
+        if (savedState && savedState.teachers && savedState.config) {
+          setAppState(savedState);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load state from localStorage:", error);
+      toast({
+        variant: "destructive",
+        title: "Could not load saved data",
+        description: "The saved data might be corrupted. Starting with default settings.",
+      });
+    }
+    setIsStateLoaded(true);
+  }, [toast]);
+
+  // Save state to localStorage whenever it changes
+  useEffect(() => {
+    if (isStateLoaded) {
+      try {
+        const appStateJSON = JSON.stringify(appState);
+        localStorage.setItem("biharSchoolRoutineState", appStateJSON);
+      } catch (error) {
+        console.error("Failed to save state to localStorage:", error);
+         toast({
+            variant: "destructive",
+            title: "Could not save progress",
+            description: "Your changes might not be saved.",
+        });
+      }
+    }
+  }, [appState, isStateLoaded, toast]);
+  
+  // Destructure state for easier access in the component
+  const { teachers, classes, subjects, timeSlots, config, routine } = appState;
+  const { 
+    classRequirements, subjectPriorities, unavailability, teacherSubjects, 
+    teacherClasses, prayerTimeSlot, lunchTimeSlot, preventConsecutiveClasses 
+  } = config;
+  
+  // Helper to update parts of the state
+  const updateState = <K extends keyof AppState>(key: K, value: AppState[K]) => {
+    setAppState(prevState => ({ ...prevState, [key]: value }));
+  };
+  
+  const updateConfig = <K extends keyof SchoolConfig>(key: K, value: SchoolConfig[K]) => {
+     setAppState(prevState => ({
+        ...prevState,
+        config: { ...prevState.config, [key]: value },
+    }));
+  };
+
 
   const handleGenerateRoutine = async () => {
     setIsLoading(true);
@@ -106,7 +180,7 @@ export default function Home() {
       };
 
       const result = generateScheduleLogic(input);
-      setRoutine(result);
+      updateState('routine', result);
       toast({
         title: "Routine Generated Successfully!",
         description: "Your new class routine is ready.",
@@ -118,14 +192,14 @@ export default function Home() {
         title: "Error Generating Routine",
         description: error instanceof Error ? error.message : "An unexpected error occurred.",
       });
-      setRoutine(null);
+      updateState('routine', null);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleScheduleChange = (newSchedule: ScheduleEntry[]) => {
-    setRoutine({ schedule: newSchedule });
+    updateState('routine', { schedule: newSchedule });
   };
   
   const handleExportCsv = () => {
@@ -147,31 +221,20 @@ export default function Home() {
 
     try {
       const data = await importFromCsv(file);
-      if (data.teachers) setTeachers(data.teachers);
-      if (data.classes) setClasses(data.classes);
-      if (data.subjects) setSubjects(data.subjects);
-      if (data.timeSlots) setTimeSlots(data.timeSlots);
+      if (data.teachers) updateState('teachers', data.teachers);
+      if (data.classes) updateState('classes', data.classes);
+      if (data.subjects) updateState('subjects', data.subjects);
+      if (data.timeSlots) updateState('timeSlots', data.timeSlots);
       toast({ title: "Data imported successfully!" });
     } catch (error) {
       toast({ variant: "destructive", title: "Import failed", description: "Could not parse the CSV file." });
     }
-    // Reset file input
     if(csvInputRef.current) csvInputRef.current.value = "";
   };
 
   const handleSaveConfig = () => {
     try {
-      const schoolConfig: SchoolConfig = {
-        classRequirements,
-        subjectPriorities: subjectPriorities,
-        unavailability,
-        teacherSubjects,
-        teacherClasses,
-        prayerTimeSlot,
-        lunchTimeSlot,
-        preventConsecutiveClasses,
-      };
-      const jsonString = JSON.stringify(schoolConfig, null, 2);
+      const jsonString = JSON.stringify(config, null, 2);
       const blob = new Blob([jsonString], { type: "application/json" });
       const link = document.createElement("a");
       const url = URL.createObjectURL(blob);
@@ -197,26 +260,15 @@ export default function Home() {
 
     try {
       const text = await file.text();
-      const config: SchoolConfig = JSON.parse(text);
+      const loadedConfig: SchoolConfig = JSON.parse(text);
       
-      // Basic validation
-      if (typeof config !== 'object' || config === null) throw new Error("Invalid config file format.");
+      if (typeof loadedConfig !== 'object' || loadedConfig === null) throw new Error("Invalid config file format.");
 
-      setClassRequirements(config.classRequirements || {});
-      setSubjectPriorities(config.subjectPriorities || {});
-      setUnavailability(config.unavailability || []);
-      setTeacherSubjects(config.teacherSubjects || {});
-      setTeacherClasses(config.teacherClasses || {});
-      setPrayerTimeSlot(config.prayerTimeSlot || "");
-      setLunchTimeSlot(config.lunchTimeSlot || "");
-      setPreventConsecutiveClasses(config.preventConsecutiveClasses === undefined ? true : config.preventConsecutiveClasses);
-
-
+      updateState('config', loadedConfig);
       toast({ title: "Configuration loaded successfully!" });
     } catch (error) {
       toast({ variant: "destructive", title: "Load failed", description: "Could not parse the configuration file." });
     }
-    // Reset file input
     if(jsonInputRef.current) jsonInputRef.current.value = "";
   };
   
@@ -283,14 +335,14 @@ export default function Home() {
                 </Button>
             </CardContent>
           </Card>
-          <Button variant="destructive" size="sm" onClick={() => setRoutine(null)}>
+          <Button variant="destructive" size="sm" onClick={() => updateState('routine', null)}>
               <Trash2 className="mr-2 h-4 w-4" /> Clear Routine
             </Button>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-6">
-            <DataManager title="Teachers" icon={User} items={teachers} setItems={setTeachers} placeholder="New teacher name..." />
-            <DataManager title="Classes" icon={School} items={classes} setItems={setClasses} placeholder="New class name..." />
-            <DataManager title="Subjects" icon={Book} items={subjects} setItems={setSubjects} placeholder="New subject name..." />
-            <DataManager title="Time Slots" icon={Clock} items={timeSlots} setItems={setTimeSlots} placeholder="e.g. 09:00 - 10:00" />
+            <DataManager title="Teachers" icon={User} items={teachers} setItems={(newItems) => updateState('teachers', newItems)} placeholder="New teacher name..." />
+            <DataManager title="Classes" icon={School} items={classes} setItems={(newItems) => updateState('classes', newItems)} placeholder="New class name..." />
+            <DataManager title="Subjects" icon={Book} items={subjects} setItems={(newItems) => updateState('subjects', newItems)} placeholder="New subject name..." />
+            <DataManager title="Time Slots" icon={Clock} items={timeSlots} setItems={(newItems) => updateState('timeSlots', newItems)} placeholder="e.g. 09:00 - 10:00" />
           </div>
         </div>
 
@@ -301,21 +353,21 @@ export default function Home() {
                 subjects={subjects}
                 timeSlots={timeSlots}
                 classRequirements={classRequirements}
-                setClassRequirements={setClassRequirements}
+                setClassRequirements={(value) => updateConfig('classRequirements', value)}
                 subjectPriorities={subjectPriorities}
-                setSubjectPriorities={setSubjectPriorities}
+                setSubjectPriorities={(value) => updateConfig('subjectPriorities', value)}
                 unavailability={unavailability}
-                setUnavailability={setUnavailability}
+                setUnavailability={(value) => updateConfig('unavailability', value)}
                 teacherSubjects={teacherSubjects}
-                setTeacherSubjects={setTeacherSubjects}
+                setTeacherSubjects={(value) => updateConfig('teacherSubjects', value)}
                 teacherClasses={teacherClasses}
-                setTeacherClasses={setTeacherClasses}
+                setTeacherClasses={(value) => updateConfig('teacherClasses', value)}
                 prayerTimeSlot={prayerTimeSlot}
-                setPrayerTimeSlot={setPrayerTimeSlot}
+                setPrayerTimeSlot={(value) => updateConfig('prayerTimeSlot', value)}
                 lunchTimeSlot={lunchTimeSlot}
-                setLunchTimeSlot={setLunchTimeSlot}
-                preventConsecutiveClasses={preventConsecutiveClasses}
-                setPreventConsecutiveClasses={setPreventConsecutiveClasses}
+                setLunchTimeSlot={(value) => updateConfig('lunchTimeSlot', value)}
+                preventConsecutiveClasses={preventConsecutiveClasses ?? true}
+                setPreventConsecutiveClasses={(value) => updateConfig('preventConsecutiveClasses', value)}
               />
         </div>
         <div className="lg:col-span-3">
@@ -334,3 +386,5 @@ export default function Home() {
     </div>
   );
 }
+
+    

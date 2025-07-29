@@ -39,9 +39,9 @@ interface RoutineControlsProps {
   setTeacherSubjects: (value: Record<string, string[]>) => void;
   teacherClasses: Record<string, string[]>;
   setTeacherClasses: (value: Record<string, string[]>) => void;
-  prayerTimeSlot: string;
+  prayerTimeSlot?: string;
   setPrayerTimeSlot: (value: string) => void;
-  lunchTimeSlot: string;
+  lunchTimeSlot?: string;
   setLunchTimeSlot: (value: string) => void;
   preventConsecutiveClasses: boolean;
   setPreventConsecutiveClasses: (value: boolean) => void;
@@ -338,3 +338,5 @@ export default function RoutineControls({
     </Card>
   );
 }
+
+    

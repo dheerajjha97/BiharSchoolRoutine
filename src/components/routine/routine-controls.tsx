@@ -43,6 +43,8 @@ interface RoutineControlsProps {
   setPrayerTimeSlot: (value: string) => void;
   lunchTimeSlot: string;
   setLunchTimeSlot: (value: string) => void;
+  preventConsecutiveClasses: boolean;
+  setPreventConsecutiveClasses: (value: boolean) => void;
 }
 
 const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -66,6 +68,8 @@ export default function RoutineControls({
   setPrayerTimeSlot,
   lunchTimeSlot,
   setLunchTimeSlot,
+  preventConsecutiveClasses,
+  setPreventConsecutiveClasses
 }: RoutineControlsProps) {
   
   const [newUnavailability, setNewUnavailability] = useState<Omit<Unavailability, ''>>({ teacher: '', day: '', timeSlot: '' });
@@ -120,6 +124,21 @@ export default function RoutineControls({
       </CardHeader>
       <CardContent>
         <Accordion type="multiple" className="w-full">
+          <AccordionItem value="scheduling-rules">
+            <AccordionTrigger>Scheduling Rules</AccordionTrigger>
+            <AccordionContent>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="prevent-consecutive"
+                  checked={preventConsecutiveClasses}
+                  onCheckedChange={(checked) => setPreventConsecutiveClasses(!!checked)}
+                />
+                <Label htmlFor="prevent-consecutive">
+                  Prevent teachers from having 3 or more consecutive periods
+                </Label>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
           <AccordionItem value="class-requirements">
             <AccordionTrigger>Class Requirements</AccordionTrigger>
             <AccordionContent className="grid grid-cols-1 md:grid-cols-2 gap-4">

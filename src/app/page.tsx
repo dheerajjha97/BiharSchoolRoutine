@@ -54,6 +54,7 @@ export default function Home() {
   const [teacherClasses, setTeacherClasses] = useState<Record<string, string[]>>({});
   const [prayerTimeSlot, setPrayerTimeSlot] = useState<string>("09:00 - 09:15");
   const [lunchTimeSlot, setLunchTimeSlot] = useState<string>("12:00 - 13:00");
+  const [preventConsecutiveClasses, setPreventConsecutiveClasses] = useState(true);
 
   const [routine, setRoutine] = useState<GenerateScheduleOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -82,6 +83,7 @@ export default function Home() {
         teacherClasses,
         prayerTimeSlot,
         lunchTimeSlot,
+        preventConsecutiveClasses,
       };
 
       const result = generateScheduleLogic(input);
@@ -293,6 +295,8 @@ export default function Home() {
                 setPrayerTimeSlot={setPrayerTimeSlot}
                 lunchTimeSlot={lunchTimeSlot}
                 setLunchTimeSlot={setLunchTimeSlot}
+                preventConsecutiveClasses={preventConsecutiveClasses}
+                setPreventConsecutiveClasses={setPreventConsecutiveClasses}
               />
         </div>
         <div className="lg:col-span-3">

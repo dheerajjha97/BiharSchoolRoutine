@@ -33,11 +33,9 @@ type TeacherTask = {
 type Booking = {
     teacherBookings: Record<string, Set<string>>; // teacher -> "day-timeSlot"
     classBookings: Record<string, Set<string>>;   // className -> "day-timeSlot"
-    classSubjectCount: Record<string, Record<string, number>>; // className -> subject -> count
 };
 
 const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const secondarySubjects = ["Library", "Sports", "Computer"];
 
 const shuffleArray = <T>(array: T[]): T[] => {
     const newArray = [...array];
@@ -48,15 +46,6 @@ const shuffleArray = <T>(array: T[]): T[] => {
     return newArray;
 };
 
-// New helper function to get valid subjects for a class
-const getValidSubjectsForClass = (className: string, classRequirements: Record<string, string[]>): string[] => {
-    const required = classRequirements[className] || [];
-    // A subject is valid if it's required OR it's a generic secondary subject.
-    // This prevents "Main Subject 2" from being assigned to "9th".
-    const validSubjects = [...new Set([...required, ...secondarySubjects])];
-    return validSubjects;
-};
-
 
 export function generateScheduleLogic(input: GenerateScheduleLogicInput): GenerateScheduleOutput {
     const {
@@ -65,10 +54,8 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
         unavailability,
         teacherSubjects,
         teacherClasses,
-        classRequirements,
         prayerTimeSlot,
         lunchTimeSlot,
-        preventConsecutiveClasses = true,
     } = input;
 
     const timeSlots = [...input.timeSlots];
@@ -77,17 +64,10 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
     const bookings: Booking = {
         teacherBookings: {},
         classBookings: {},
-        classSubjectCount: {},
     };
 
     teacherNames.forEach(t => { bookings.teacherBookings[t] = new Set(); });
-    classes.forEach(c => {
-        bookings.classBookings[c] = new Set();
-        bookings.classSubjectCount[c] = {};
-        input.subjects.forEach(s => {
-            bookings.classSubjectCount[c][s] = 0;
-        });
-    });
+    classes.forEach(c => { bookings.classBookings[c] = new Set(); });
 
     const isTeacherBooked = (teacher: string, day: string, timeSlot: string): boolean => 
         bookings.teacherBookings[teacher]?.has(`${day}-${timeSlot}`);
@@ -97,22 +77,10 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
 
     const isTeacherUnavailable = (teacher: string, day: string, timeSlot: string): boolean => 
         unavailability.some(u => u.teacher === teacher && u.day === day && u.timeSlot === timeSlot);
-    
-    const hasTooManyConsecutiveClasses = (teacher: string, day: string, timeSlot: string, allTimeSlots: string[]): boolean => {
-        if (!preventConsecutiveClasses) return false;
-        
-        const slotIndex = allTimeSlots.indexOf(timeSlot);
-        if (slotIndex < 2) return false;
-
-        const prevSlot = allTimeSlots[slotIndex - 1];
-        const prevPrevSlot = allTimeSlots[slotIndex - 2];
-        
-        return isTeacherBooked(teacher, day, prevSlot) && isTeacherBooked(teacher, day, prevPrevSlot);
-    };
 
     const bookSlot = (entry: ScheduleEntry) => {
         schedule.push(entry);
-        const { teacher, day, timeSlot, className, subject } = entry;
+        const { teacher, day, timeSlot, className } = entry;
         
         if (teacher !== "N/A" && bookings.teacherBookings[teacher]) {
             bookings.teacherBookings[teacher].add(`${day}-${timeSlot}`);
@@ -122,9 +90,6 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
         entryClasses.forEach(c => {
             if (bookings.classBookings[c]) {
                 bookings.classBookings[c].add(`${day}-${timeSlot}`);
-            }
-            if (bookings.classSubjectCount[c] && subject !== "---" && subject !== "Prayer" && subject !== "Lunch") {
-                bookings.classSubjectCount[c][subject] = (bookings.classSubjectCount[c][subject] || 0) + 1;
             }
         });
     };
@@ -143,81 +108,55 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
         });
     });
 
-    // 2. Build a list of all required periods for the week
-    const allRequiredTasks: TeacherTask[] = [];
-    classes.forEach(className => {
-        const requirements = classRequirements[className] || [];
-        const periodsPerDay = instructionalSlots.length;
-        const totalPeriods = daysOfWeek.length * periodsPerDay;
-        const periodsPerSubject = Math.max(1, Math.floor(totalPeriods / (requirements.length || 1)));
+    // 2. Create daily tasks for each teacher based on their assigned classes and subjects.
+    const teacherDailyTasks: Record<string, TeacherTask[]> = {};
+    teacherNames.forEach(teacher => {
+        teacherDailyTasks[teacher] = [];
+        const assignedClasses = teacherClasses[teacher] || [];
+        const assignedSubjects = teacherSubjects[teacher] || [];
 
-        requirements.forEach(subject => {
-            for(let i=0; i < periodsPerSubject; i++) {
-                 const teachersForSubject = teacherNames.filter(t => 
-                    teacherSubjects[t]?.includes(subject) && teacherClasses[t]?.includes(className)
+        assignedClasses.forEach(className => {
+            assignedSubjects.forEach(subject => {
+                // Add this task only if the teacher is actually assigned this subject for this class
+                 if ((input.classRequirements[className] || []).includes(subject) || ["Computer", "Sports", "Library"].includes(subject)) {
+                    teacherDailyTasks[teacher].push({ teacher, className, subject });
+                }
+            });
+        });
+    });
+
+
+    // 3. Schedule based on daily teacher tasks
+    daysOfWeek.forEach(day => {
+        shuffleArray(teacherNames).forEach(teacher => {
+            const tasksForDay = shuffleArray(teacherDailyTasks[teacher] || []);
+            
+            tasksForDay.forEach(task => {
+                const availableSlots = shuffleArray(instructionalSlots).filter(slot => 
+                    !isClassBooked(task.className, day, slot) &&
+                    !isTeacherBooked(task.teacher, day, slot) &&
+                    !isTeacherUnavailable(task.teacher, day, slot)
                 );
-                if(teachersForSubject.length > 0) {
-                     allRequiredTasks.push({
-                        teacher: teachersForSubject[Math.floor(Math.random() * teachersForSubject.length)],
-                        className,
-                        subject
+
+                if (availableSlots.length > 0) {
+                    bookSlot({
+                        day,
+                        timeSlot: availableSlots[0],
+                        className: task.className,
+                        subject: task.subject,
+                        teacher: task.teacher
                     });
                 }
-            }
+            });
         });
     });
 
-    // 3. Schedule the required periods
-    const shuffledTasks = shuffleArray(allRequiredTasks);
-    daysOfWeek.forEach(day => {
-        shuffleArray(instructionalSlots).forEach(timeSlot => {
-             shuffleArray(classes).forEach(className => {
-                if(isClassBooked(className, day, timeSlot)) return;
-
-                const taskIndex = shuffledTasks.findIndex(task => task.className === className && !isTeacherBooked(task.teacher, day, timeSlot) && !isTeacherUnavailable(task.teacher, day, timeSlot) && !hasTooManyConsecutiveClasses(task.teacher, day, timeSlot, timeSlots));
-
-                if(taskIndex !== -1) {
-                    const [task] = shuffledTasks.splice(taskIndex, 1);
-                    bookSlot({ day, timeSlot, ...task });
-                }
-             });
-        });
-    });
-
-    // 4. Fill remaining empty slots with valid subjects
-    daysOfWeek.forEach(day => {
+    // 4. Fill any remaining empty slots
+     daysOfWeek.forEach(day => {
         instructionalSlots.forEach(timeSlot => {
             classes.forEach(className => {
                 if (!isClassBooked(className, day, timeSlot)) {
-                    let filled = false;
-                    // Use the new helper function to get a list of valid subjects
-                    const validSubjects = getValidSubjectsForClass(className, classRequirements);
-
-                    for (const subject of shuffleArray(validSubjects)) {
-                         const potentialTeachers = shuffleArray(teacherNames.filter(t =>
-                            teacherSubjects[t]?.includes(subject) &&
-                            teacherClasses[t]?.includes(className) &&
-                            !isTeacherBooked(t, day, timeSlot) &&
-                            !isTeacherUnavailable(t, day, timeSlot) &&
-                            !hasTooManyConsecutiveClasses(t, day, timeSlot, timeSlots)
-                        ));
-
-                        if (potentialTeachers.length > 0) {
-                            bookSlot({
-                                day,
-                                timeSlot,
-                                className,
-                                subject,
-                                teacher: potentialTeachers[0]
-                            });
-                            filled = true;
-                            break;
-                        }
-                    }
-
-                    if (!filled) {
-                         bookSlot({ day, timeSlot, className, subject: "---", teacher: "N/A" });
-                    }
+                     bookSlot({ day, timeSlot, className, subject: "---", teacher: "N/A" });
                 }
             });
         });

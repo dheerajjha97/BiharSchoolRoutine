@@ -11,6 +11,7 @@ import { Logo } from "@/components/icons";
 import DataManager from "@/components/routine/data-manager";
 import RoutineControls from "@/components/routine/routine-controls";
 import RoutineDisplay from "@/components/routine/routine-display";
+import TeacherLoad from "@/components/routine/teacher-load";
 import { exportToCsv, importFromCsv } from "@/lib/csv-helpers";
 import { generateScheduleLogic } from "@/lib/schedule-generator";
 import type { GenerateScheduleLogicInput, SubjectPriority } from "@/lib/schedule-generator";
@@ -143,6 +144,26 @@ export default function Home() {
     classRequirements, subjectPriorities, unavailability, teacherSubjects, 
     teacherClasses, prayerTimeSlot, lunchTimeSlot, preventConsecutiveClasses 
   } = config;
+
+  const teacherLoad = useMemo(() => {
+    const load: Record<string, Record<string, number>> = {};
+    if (!routine?.schedule) return load;
+
+    teachers.forEach(teacher => {
+        load[teacher] = { Monday: 0, Tuesday: 0, Wednesday: 0, Thursday: 0, Friday: 0, Saturday: 0, Total: 0 };
+    });
+
+    routine.schedule.forEach(entry => {
+        if (entry.teacher && entry.teacher !== "N/A" && load[entry.teacher]) {
+            if (load[entry.teacher][entry.day] !== undefined) {
+              load[entry.teacher][entry.day]++;
+            }
+            load[entry.teacher].Total++;
+        }
+    });
+
+    return load;
+  }, [routine, teachers]);
   
   // Helper to update parts of the state
   const updateState = <K extends keyof AppState>(key: K, value: AppState[K]) => {
@@ -335,6 +356,9 @@ export default function Home() {
                 </Button>
             </CardContent>
           </Card>
+
+          <TeacherLoad teacherLoad={teacherLoad} />
+          
           <Button variant="destructive" size="sm" onClick={() => updateState('routine', null)}>
               <Trash2 className="mr-2 h-4 w-4" /> Clear Routine
             </Button>

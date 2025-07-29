@@ -45,6 +45,8 @@ interface RoutineControlsProps {
   setLunchTimeSlot: (value: string) => void;
   preventConsecutiveClasses: boolean;
   setPreventConsecutiveClasses: (value: boolean) => void;
+  enableCombinedClasses: boolean;
+  setEnableCombinedClasses: (value: boolean) => void;
 }
 
 const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -69,7 +71,9 @@ export default function RoutineControls({
   lunchTimeSlot,
   setLunchTimeSlot,
   preventConsecutiveClasses,
-  setPreventConsecutiveClasses
+  setPreventConsecutiveClasses,
+  enableCombinedClasses,
+  setEnableCombinedClasses
 }: RoutineControlsProps) {
   
   const [newUnavailability, setNewUnavailability] = useState<Omit<Unavailability, ''>>({ teacher: '', day: '', timeSlot: '' });
@@ -126,7 +130,7 @@ export default function RoutineControls({
         <Accordion type="multiple" className="w-full">
           <AccordionItem value="scheduling-rules">
             <AccordionTrigger>Scheduling Rules</AccordionTrigger>
-            <AccordionContent>
+            <AccordionContent className="space-y-4">
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="prevent-consecutive"
@@ -135,6 +139,16 @@ export default function RoutineControls({
                 />
                 <Label htmlFor="prevent-consecutive">
                   Prevent teachers from having 3 or more consecutive periods
+                </Label>
+              </div>
+               <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="enable-combined-classes"
+                  checked={enableCombinedClasses}
+                  onCheckedChange={(checked) => setEnableCombinedClasses(!!checked)}
+                />
+                <Label htmlFor="enable-combined-classes">
+                  Enable combined classes for the same subject/grade
                 </Label>
               </div>
             </AccordionContent>
@@ -338,5 +352,3 @@ export default function RoutineControls({
     </Card>
   );
 }
-
-    

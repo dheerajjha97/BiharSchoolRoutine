@@ -104,8 +104,8 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
             if (bookings.classBookings[className]) {
                 bookings.classBookings[className].add(`${entry.day}-${entry.timeSlot}`);
             }
-            if (bookings.classSubjectDayTracker[`${className}-${day}`]) {
-                bookings.classSubjectDayTracker[`${className}-${day}`].add(entry.subject);
+            if (bookings.classSubjectDayTracker[`${className}-${entry.day}`]) {
+                bookings.classSubjectDayTracker[`${className}-${entry.day}`].add(entry.subject);
             }
         });
     };
@@ -130,12 +130,18 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
     classes.forEach(className => {
         const requiredSubjects = classRequirements[className] || [];
         requiredSubjects.forEach(subject => {
-            requiredPeriods.push({ className, subject });
+            // Assuming 1 period per subject per day for now. Can be adjusted.
+            daysOfWeek.forEach(() => { // This will be handled by the daily check below
+                 requiredPeriods.push({ className, subject });
+            })
         });
     });
 
     const shuffledPeriods = shuffleArray(requiredPeriods);
     
+    // Track what's been scheduled to avoid duplicates
+    const dailyClassSubjectScheduled: Record<string, Set<string>> = {}; // "day-className" -> Set<subject>
+
     for (const { className, subject } of shuffledPeriods) {
         let isScheduled = false;
 
@@ -158,6 +164,15 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
         });
         
         for (const day of shuffleArray(daysOfWeek)) {
+             const dayClassKey = `${day}-${className}`;
+            if (!dailyClassSubjectScheduled[dayClassKey]) {
+                dailyClassSubjectScheduled[dayClassKey] = new Set();
+            }
+
+            if (dailyClassSubjectScheduled[dayClassKey].has(subject)) {
+                continue; // Already scheduled this subject for this class on this day
+            }
+            
             if (bookings.classSubjectDayTracker[`${className}-${day}`]?.has(subject)) {
                 continue;
             }
@@ -177,16 +192,18 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
 
                 if (potentialTeachers.length > 0) {
                     bookSlot({ day, timeSlot, className, subject, teacher: potentialTeachers[0] });
+                    dailyClassSubjectScheduled[dayClassKey].add(subject);
                     isScheduled = true;
-                    break;
+                    break; 
                 }
             }
             if (isScheduled) {
-                break;
+                break; // Move to the next required period
             }
         }
     }
     
+    // Fill remaining slots with non-essential subjects
     daysOfWeek.forEach(day => {
         classes.forEach(className => {
             instructionalSlots.forEach(timeSlot => {
@@ -216,6 +233,7 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
                     }
 
                     if (!filled) {
+                         // Only mark as Free Period if no other subject could be placed
                          bookSlot({ day, timeSlot, className, subject: 'Free Period', teacher: 'N/A' });
                     }
                 }
@@ -237,5 +255,3 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
     
     return { schedule };
 }
-
-    

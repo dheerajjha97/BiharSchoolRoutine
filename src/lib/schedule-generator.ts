@@ -215,18 +215,19 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
                         return ['sports', 'library', 'computer'].includes(lower_s);
                     };
 
+                    const requiredForThisClass = classRequirements[className] || [];
+                    
+                    // Prioritize generic subjects first, then repeat core subjects.
                     const applicableSubjects = subjects.filter(s =>
-                        (isGenericSubject(s) || (classRequirements[className]?.includes(s))) &&
-                        !s.toLowerCase().includes('prayer') &&
-                        !s.toLowerCase().includes('lunch')
+                        isGenericSubject(s) || requiredForThisClass.includes(s)
                     );
                     
                     const potentialSubjects = shuffleArray(applicableSubjects);
                     
                     let filled = false;
                     for (const subject of potentialSubjects) {
-                        // For generic subjects, we don't need to check if it's already scheduled today
-                        // as a class can have multiple such periods.
+                        // For generic subjects, allow multiple periods per day.
+                        // For core subjects, only allow if not already scheduled today.
                         if (!isGenericSubject(subject)) {
                             if (bookings.classSubjectDayTracker[`${className}-${day}`]?.has(subject)) {
                                 continue;
@@ -248,7 +249,7 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
                         }
                     }
                     
-                    // If still not filled, mark as Free Period (should be rare)
+                    // If still not filled (highly unlikely now), mark as Free Period as a last resort.
                     if (!filled) {
                          bookSlot({ day, timeSlot, className, subject: 'Free Period', teacher: 'N/A' });
                     }

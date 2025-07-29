@@ -89,13 +89,16 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
         
     const getValidSubjectsForClass = (className: string): string[] => {
         const required = input.classRequirements[className] || [];
+        // Ensure secondary subjects are only added if they exist in the main subjects list
         const validSecondary = secondarySubjects.filter(s => subjects.includes(s));
+        // Using a Set to automatically handle duplicates
         return [...new Set([...required, ...validSecondary])];
     };
-
+    
     const bookSlot = (entry: ScheduleEntry) => {
+        // This is a critical check to prevent double booking.
         if (entry.teacher !== "N/A" && isTeacherBooked(entry.teacher, entry.day, entry.timeSlot)) {
-            console.warn(`Attempted to double-book teacher: ${entry.teacher} on ${entry.day} at ${entry.timeSlot}`);
+            // console.warn(`Attempted to double-book teacher: ${entry.teacher} on ${entry.day} at ${entry.timeSlot}`);
             return;
         }
 
@@ -116,9 +119,8 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
     
     const instructionalSlots = input.timeSlots.filter(slot => slot !== prayerTimeSlot && slot !== lunchTimeSlot);
     const lunchIndex = lunchTimeSlot ? input.timeSlots.indexOf(lunchTimeSlot) : -1;
-    const preLunchSlots = lunchIndex !== -1 ? instructionalSlots.filter(slot => input.timeSlots.indexOf(slot) < lunchIndex) : instructionalSlots;
-    const postLunchSlots = lunchIndex !== -1 ? instructionalSlots.filter(slot => input.timeSlots.indexOf(slot) > lunchIndex) : [];
 
+    // Pre-assign Prayer and Lunch for all classes on all days
     daysOfWeek.forEach(day => {
         classes.forEach(className => {
             if (prayerTimeSlot && !isClassBooked(className, day, prayerTimeSlot)) {
@@ -130,80 +132,99 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
         });
     });
 
-    const allTeacherTasks: TeacherTask[] = [];
+    // Create a list of all tasks a teacher is assigned to. This is their daily workload.
+    const teacherTasks: Record<string, TeacherTask[]> = {};
     teacherNames.forEach(teacher => {
+        teacherTasks[teacher] = [];
         const assignedClasses = teacherClasses[teacher] || [];
         const assignedSubjects = teacherSubjects[teacher] || [];
-
         assignedClasses.forEach(className => {
-            const validSubjectsForClass = getValidSubjectsForClass(className);
+            const validSubjects = getValidSubjectsForClass(className);
             assignedSubjects.forEach(subject => {
-                if (validSubjectsForClass.includes(subject)) {
-                    allTeacherTasks.push({ teacher, className, subject });
+                if(validSubjects.includes(subject)) {
+                    teacherTasks[teacher].push({ teacher, className, subject });
                 }
             });
         });
     });
 
-    const scheduleTasks = (day: string, tasks: TeacherTask[], availableSlots: string[]) => {
-        let tasksScheduledToday: TeacherTask[] = [];
-        shuffleArray(tasks).forEach(task => {
-            if (tasksScheduledToday.some(t => t.teacher === task.teacher && t.className === task.className && t.subject === task.subject)) {
-                return;
-            }
+    // New Day-First, Teacher-First Scheduling Logic
+    daysOfWeek.forEach(day => {
+        shuffleArray(teacherNames).forEach(teacher => {
+            const tasksForTeacherToday = shuffleArray(teacherTasks[teacher]);
 
-            const slot = shuffleArray(availableSlots).find(s => 
-                !isClassBooked(task.className, day, s) &&
-                !isTeacherBooked(task.teacher, day, s) &&
-                !isTeacherUnavailable(task.teacher, day, s)
-            );
+            tasksForTeacherToday.forEach(task => {
+                const availableSlots = shuffleArray(instructionalSlots)
+                    .filter(slot => {
+                        const priority = subjectPriorities[task.subject] || 'none';
+                        if (lunchIndex === -1) return true; // No lunch, all slots are fair game
+                        const slotIndex = input.timeSlots.indexOf(slot);
+                        if (priority === 'before') return slotIndex < lunchIndex;
+                        if (priority === 'after') return slotIndex > lunchIndex;
+                        return true;
+                    });
+                
+                const slot = availableSlots.find(s => 
+                    !isTeacherBooked(task.teacher, day, s) &&
+                    !isClassBooked(task.className, day, s) &&
+                    !isTeacherUnavailable(task.teacher, day, s)
+                );
 
-            if (slot) {
-                let classNamesToBook = [task.className];
-                if (enableCombinedClasses && !secondarySubjects.includes(task.subject)) {
-                    const grade = getGradeFromClassName(task.className);
-                    if (grade) {
-                        const partners = classes.filter(c => 
-                            c !== task.className &&
-                            getGradeFromClassName(c) === grade &&
-                            (teacherClasses[task.teacher] || []).includes(c) &&
-                            getValidSubjectsForClass(c).includes(task.subject) &&
-                            !isClassBooked(c, day, slot)
-                        );
-                        classNamesToBook.push(...partners);
+                if (slot) {
+                    let classNamesToBook = [task.className];
+                    if (enableCombinedClasses) {
+                        const grade = getGradeFromClassName(task.className);
+                        if (grade && !secondarySubjects.includes(task.subject)) {
+                           const partners = classes.filter(c => 
+                               c !== task.className &&
+                               getGradeFromClassName(c) === grade &&
+                               (teacherClasses[task.teacher] || []).includes(c) &&
+                               getValidSubjectsForClass(c).includes(task.subject) &&
+                               !isClassBooked(c, day, slot)
+                           );
+                           classNamesToBook.push(...partners);
+                        }
+                    }
+                    
+                    const allCanBeBooked = classNamesToBook.every(c => !isClassBooked(c, day, slot));
+                    if (allCanBeBooked) {
+                        bookSlot({
+                            day,
+                            timeSlot: slot,
+                            className: classNamesToBook.sort().join(' & '),
+                            subject: task.subject,
+                            teacher: task.teacher
+                        });
                     }
                 }
-                const allCanBeBooked = classNamesToBook.every(c => !isClassBooked(c, day, slot));
-                if (allCanBeBooked) {
-                    bookSlot({
-                        day,
-                        timeSlot: slot,
-                        className: classNamesToBook.sort().join(' & '),
-                        subject: task.subject,
-                        teacher: task.teacher
-                    });
-                    tasksScheduledToday.push(task);
-                }
-            }
+            });
         });
-    };
-
-    daysOfWeek.forEach(day => {
-        const beforeLunchTasks = allTeacherTasks.filter(t => subjectPriorities[t.subject] === 'before');
-        const afterLunchTasks = allTeacherTasks.filter(t => subjectPriorities[t.subject] === 'after');
-        const noPreferenceTasks = allTeacherTasks.filter(t => !subjectPriorities[t.subject] || subjectPriorities[t.subject] === 'none');
-
-        scheduleTasks(day, beforeLunchTasks, preLunchSlots);
-        scheduleTasks(day, noPreferenceTasks, preLunchSlots); // Try to fill remaining pre-lunch with normal tasks
-        scheduleTasks(day, afterLunchTasks, postLunchSlots);
-        scheduleTasks(day, noPreferenceTasks, postLunchSlots); // Fill post-lunch with remaining normal tasks
     });
 
-     daysOfWeek.forEach(day => {
+    // Final pass to fill any remaining empty slots with secondary subjects or repeated main subjects
+    daysOfWeek.forEach(day => {
         instructionalSlots.forEach(timeSlot => {
             shuffleArray(classes).forEach(className => {
                 if (!isClassBooked(className, day, timeSlot)) {
-                     bookSlot({ day, timeSlot, className, subject: "---", teacher: "N/A" });
+                    // Find a teacher who is free and can teach something to this class
+                    const availableTeacher = shuffleArray(teacherNames).find(t => 
+                        !isTeacherBooked(t, day, timeSlot) && 
+                        !isTeacherUnavailable(t, day, timeSlot) &&
+                        (teacherClasses[t] || []).includes(className)
+                    );
+
+                    if(availableTeacher) {
+                        const possibleSubjects = shuffleArray(getValidSubjectsForClass(className))
+                            .filter(s => (teacherSubjects[availableTeacher] || []).includes(s));
+                        
+                        const subjectToAssign = possibleSubjects.find(s => s) || "---";
+
+                         bookSlot({ day, timeSlot, className, subject: subjectToAssign, teacher: availableTeacher });
+
+                    } else {
+                        // If no teacher is available, mark as free period
+                        bookSlot({ day, timeSlot, className, subject: "---", teacher: "N/A" });
+                    }
                 }
             });
         });

@@ -145,7 +145,7 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
         });
     });
 
-    const scheduleTasks = (tasks: TeacherTask[], availableSlots: string[]) => {
+    const scheduleTasks = (day: string, tasks: TeacherTask[], availableSlots: string[]) => {
         let tasksScheduledToday: TeacherTask[] = [];
         shuffleArray(tasks).forEach(task => {
             if (tasksScheduledToday.some(t => t.teacher === task.teacher && t.className === task.className && t.subject === task.subject)) {
@@ -193,10 +193,10 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
         const afterLunchTasks = allTeacherTasks.filter(t => subjectPriorities[t.subject] === 'after');
         const noPreferenceTasks = allTeacherTasks.filter(t => !subjectPriorities[t.subject] || subjectPriorities[t.subject] === 'none');
 
-        scheduleTasks(beforeLunchTasks, preLunchSlots);
-        scheduleTasks(noPreferenceTasks, preLunchSlots); // Try to fill remaining pre-lunch with normal tasks
-        scheduleTasks(afterLunchTasks, postLunchSlots);
-        scheduleTasks(noPreferenceTasks, postLunchSlots); // Fill post-lunch with remaining normal tasks
+        scheduleTasks(day, beforeLunchTasks, preLunchSlots);
+        scheduleTasks(day, noPreferenceTasks, preLunchSlots); // Try to fill remaining pre-lunch with normal tasks
+        scheduleTasks(day, afterLunchTasks, postLunchSlots);
+        scheduleTasks(day, noPreferenceTasks, postLunchSlots); // Fill post-lunch with remaining normal tasks
     });
 
      daysOfWeek.forEach(day => {

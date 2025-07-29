@@ -33,9 +33,21 @@ type SchoolConfig = {
 };
 
 export default function Home() {
-  const [teachers, setTeachers] = useState<string[]>(["Mr. Sharma", "Mrs. Gupta", "Mr. Singh"]);
-  const [classes, setClasses] = useState<string[]>(["Class 9A", "Class 10B", "Class 11A", "Class 12B"]);
-  const [subjects, setSubjects] = useState<string[]>(["Math", "Science", "History", "English", "Sanskrit", "Prayer", "Lunch", "Library", "Sports", "Computer"]);
+  const [teachers, setTeachers] = useState<string[]>(["Mr. Sharma", "Mrs. Gupta", "Mr. Singh", "Ms. Verma", "Mr. Khan"]);
+  const [classes, setClasses] = useState<string[]>([
+    "Class 9A", 
+    "Class 10B", 
+    "Class 11 Science", 
+    "Class 11 Commerce", 
+    "Class 12 Science", 
+    "Class 12 Arts"
+  ]);
+  const [subjects, setSubjects] = useState<string[]>([
+    "Math", "Science", "Social Science", "English", "Hindi", 
+    "Physics", "Chemistry", "Biology", "Accountancy", "Business Studies", 
+    "History", "Political Science", "Sanskrit", "Prayer", "Lunch", 
+    "Library", "Sports", "Computer"
+  ]);
   const [timeSlots, setTimeSlots] = useState<string[]>([
     "09:00 - 09:15",
     "09:15 - 10:00",
@@ -48,10 +60,12 @@ export default function Home() {
   ]);
   
   const [classRequirements, setClassRequirements] = useState<Record<string, string[]>>({
-    "Class 9A": ["Math", "Science", "History", "English", "Sanskrit"],
-    "Class 10B": ["Math", "Science", "History", "English", "Sanskrit"],
-    "Class 11A": ["Math", "Science", "History", "English"],
-    "Class 12B": ["Math", "Science", "History", "English"],
+    "Class 9A": ["Math", "Science", "Social Science", "English", "Hindi"],
+    "Class 10B": ["Math", "Science", "Social Science", "English", "Hindi"],
+    "Class 11 Science": ["Physics", "Chemistry", "Biology", "Math", "English"],
+    "Class 11 Commerce": ["Accountancy", "Business Studies", "Math", "English"],
+    "Class 12 Science": ["Physics", "Chemistry", "Biology", "Math", "English"],
+    "Class 12 Arts": ["History", "Political Science", "Hindi", "English"],
   });
   const [subjectPriorities, setSubjectPriorities] = useState<Record<string, SubjectPriority>>({});
   const [unavailability, setUnavailability] = useState<Unavailability[]>([]);
@@ -320,5 +334,3 @@ export default function Home() {
     </div>
   );
 }
-
-    

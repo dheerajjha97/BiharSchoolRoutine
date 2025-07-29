@@ -5,11 +5,8 @@ import { useState, useMemo, ChangeEvent, useRef } from "react";
 import type { GenerateScheduleOutput, ScheduleEntry } from "@/ai/flows/generate-schedule";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Book, Download, Loader2, School, Upload, User, Wand2, Clock, Save, FolderOpen, Trash2, Printer, Bot } from "lucide-react";
+import { Book, Download, Loader2, School, Upload, User, Wand2, Clock, Save, FolderOpen, Trash2, Printer } from "lucide-react";
 import { Logo } from "@/components/icons";
 import DataManager from "@/components/routine/data-manager";
 import RoutineControls from "@/components/routine/routine-controls";
@@ -17,8 +14,6 @@ import RoutineDisplay from "@/components/routine/routine-display";
 import { exportToCsv, importFromCsv } from "@/lib/csv-helpers";
 import { generateScheduleLogic } from "@/lib/schedule-generator";
 import type { GenerateScheduleLogicInput, SubjectPriority } from "@/lib/schedule-generator";
-import { optimizeSchedule } from "@/ai/flows/optimize-schedule";
-
 
 type Unavailability = {
   teacher: string;
@@ -34,6 +29,7 @@ type SchoolConfig = {
   teacherClasses: Record<string, string[]>;
   prayerTimeSlot?: string;
   lunchTimeSlot?: string;
+  preventConsecutiveClasses?: boolean;
 };
 
 export default function Home() {
@@ -67,8 +63,6 @@ export default function Home() {
 
   const [routine, setRoutine] = useState<GenerateScheduleOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isOptimizing, setIsOptimizing] = useState(false);
-  const [feedback, setFeedback] = useState("");
   const { toast } = useToast();
 
   const csvInputRef = useRef<HTMLInputElement>(null);
@@ -116,44 +110,6 @@ export default function Home() {
     }
   };
 
-  const handleOptimizeRoutine = async () => {
-    if (!routine || !feedback) {
-        toast({
-            variant: "destructive",
-            title: "Missing Information",
-            description: "Please generate a routine and provide feedback first.",
-        });
-        return;
-    }
-    setIsOptimizing(true);
-    try {
-        const result = await optimizeSchedule({
-            scheduleData: JSON.stringify(routine.schedule),
-            teacherFeedback: feedback,
-            constraints: `Prevent teachers from having 3 or more consecutive periods: ${preventConsecutiveClasses}. Unavailability: ${JSON.stringify(unavailability)}`,
-        });
-
-        const optimizedScheduleData = JSON.parse(result.optimizedSchedule);
-        setRoutine({ schedule: optimizedScheduleData });
-
-        toast({
-            title: "Routine Optimized by AI!",
-            description: result.summary,
-        });
-    } catch (error) {
-        console.error("Error optimizing schedule:", error);
-        toast({
-            variant: "destructive",
-            title: "Error Optimizing Routine",
-            description: "The AI could not optimize the schedule. Please try again.",
-        });
-    } finally {
-        setIsOptimizing(false);
-        setFeedback(""); // Clear feedback for next use
-    }
-  };
-
-
   const handleScheduleChange = (newSchedule: ScheduleEntry[]) => {
     setRoutine({ schedule: newSchedule });
   };
@@ -191,7 +147,7 @@ export default function Home() {
 
   const handleSaveConfig = () => {
     try {
-      const config: SchoolConfig = {
+      const schoolConfig: SchoolConfig = {
         classRequirements,
         subjectPriorities: subjectPriorities,
         unavailability,
@@ -199,8 +155,9 @@ export default function Home() {
         teacherClasses,
         prayerTimeSlot,
         lunchTimeSlot,
+        preventConsecutiveClasses,
       };
-      const jsonString = JSON.stringify(config, null, 2);
+      const jsonString = JSON.stringify(schoolConfig, null, 2);
       const blob = new Blob([jsonString], { type: "application/json" });
       const link = document.createElement("a");
       const url = URL.createObjectURL(blob);
@@ -238,6 +195,8 @@ export default function Home() {
       setTeacherClasses(config.teacherClasses || {});
       setPrayerTimeSlot(config.prayerTimeSlot || "");
       setLunchTimeSlot(config.lunchTimeSlot || "");
+      setPreventConsecutiveClasses(config.preventConsecutiveClasses === undefined ? true : config.preventConsecutiveClasses);
+
 
       toast({ title: "Configuration loaded successfully!" });
     } catch (error) {
@@ -308,43 +267,6 @@ export default function Home() {
                     )}
                     Generate Routine
                 </Button>
-                 <Dialog>
-                    <DialogTrigger asChild>
-                         <Button
-                            size="lg"
-                            className="w-full text-lg py-8"
-                            variant="secondary"
-                            disabled={!routine}
-                        >
-                            <Bot className="mr-2 h-6 w-6" />
-                            Optimize with AI
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Optimize Schedule with AI</DialogTitle>
-                            <DialogDescription>
-                                Provide feedback or instructions for the AI in natural language. For example: "Mr. Singh prefers morning classes" or "Avoid math right after lunch."
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="grid gap-4 py-4">
-                            <Label htmlFor="feedback">Your Feedback</Label>
-                            <Textarea 
-                                id="feedback"
-                                value={feedback}
-                                onChange={(e) => setFeedback(e.target.value)}
-                                placeholder="Type your feedback here..."
-                                rows={4}
-                            />
-                        </div>
-                        <DialogFooter>
-                            <Button onClick={handleOptimizeRoutine} disabled={isOptimizing}>
-                                {isOptimizing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Optimize
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
             </CardContent>
           </Card>
           <Button variant="destructive" size="sm" onClick={() => setRoutine(null)}>
@@ -398,3 +320,5 @@ export default function Home() {
     </div>
   );
 }
+
+    

@@ -60,7 +60,6 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
     const timeSlots = [...input.timeSlots];
     const schedule: ScheduleEntry[] = [];
     
-    // 1. INITIALIZE BOOKING STRUCTURES
     const bookings: Booking = {
         teacherBookings: {},
         classBookings: {},
@@ -74,7 +73,6 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
         });
     });
 
-    // 2. HELPER FUNCTIONS
     const isTeacherBooked = (teacher: string, day: string, timeSlot: string): boolean => 
         bookings.teacherBookings[teacher]?.has(`${day}-${timeSlot}`);
 
@@ -106,13 +104,12 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
             if (bookings.classBookings[className]) {
                 bookings.classBookings[className].add(`${entry.day}-${entry.timeSlot}`);
             }
-            if (bookings.classSubjectDayTracker[`${className}-${entry.day}`]) {
-                bookings.classSubjectDayTracker[`${className}-${entry.day}`].add(entry.subject);
+            if (bookings.classSubjectDayTracker[`${className}-${day}`]) {
+                bookings.classSubjectDayTracker[`${className}-${day}`].add(entry.subject);
             }
         });
     };
 
-    // 3. PRE-BOOK SPECIAL PERIODS (PRAYER & LUNCH)
     const instructionalSlots = timeSlots.filter(slot => slot !== prayerTimeSlot && slot !== lunchTimeSlot);
     daysOfWeek.forEach(day => {
         if (prayerTimeSlot) {
@@ -129,38 +126,19 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
         }
     });
     
-    // 4. GENERATE A POOL OF ALL REQUIRED PERIODS FOR THE WEEK
     const requiredPeriods: { className: string, subject: string }[] = [];
-    const secondarySubjects = subjects.filter(s => s.toLowerCase() !== 'prayer' && s.toLowerCase() !== 'lunch');
-
     classes.forEach(className => {
-        const primarySubjects = classRequirements[className] || [];
-        // Add primary subjects to the pool
-        primarySubjects.forEach(subject => {
+        const requiredSubjects = classRequirements[className] || [];
+        requiredSubjects.forEach(subject => {
             requiredPeriods.push({ className, subject });
         });
-
-        // Calculate remaining slots to be filled by secondary subjects
-        const totalSlotsPerWeek = instructionalSlots.length * daysOfWeek.length;
-        const slotsToFill = totalSlotsPerWeek - primarySubjects.length;
-
-        // Add secondary subjects to the pool to fill the remaining slots
-        for(let i=0; i<slotsToFill; i++) {
-            // Cycle through secondary subjects to ensure variety
-            const subject = secondarySubjects[i % secondarySubjects.length];
-            if(subject && !primarySubjects.includes(subject)) {
-                 requiredPeriods.push({ className, subject });
-            }
-        }
     });
 
     const shuffledPeriods = shuffleArray(requiredPeriods);
     
-    // 5. SCHEDULE ALL PERIODS FROM THE POOL
     for (const { className, subject } of shuffledPeriods) {
         let isScheduled = false;
 
-        // Prioritize based on subject preference
         const sortedTimeSlots = shuffleArray(instructionalSlots).sort((a, b) => {
             const priority = subjectPriorities[subject] || 'none';
             const lunchSlotIndex = lunchTimeSlot ? timeSlots.indexOf(lunchTimeSlot) : -1;
@@ -180,7 +158,6 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
         });
         
         for (const day of shuffleArray(daysOfWeek)) {
-            // Don't schedule a subject if it's already scheduled for that class on that day
             if (bookings.classSubjectDayTracker[`${className}-${day}`]?.has(subject)) {
                 continue;
             }
@@ -201,27 +178,51 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
                 if (potentialTeachers.length > 0) {
                     bookSlot({ day, timeSlot, className, subject, teacher: potentialTeachers[0] });
                     isScheduled = true;
-                    break; // break from timeSlot loop
+                    break;
                 }
             }
             if (isScheduled) {
-                break; // break from day loop
+                break;
             }
         }
     }
     
-    // 6. FILL ANY REMAINING GAPS (SHOULD BE RARE)
     daysOfWeek.forEach(day => {
         classes.forEach(className => {
             instructionalSlots.forEach(timeSlot => {
                 if (!isClassBooked(className, day, timeSlot)) {
-                    bookSlot({ day, timeSlot, className, subject: 'Free Period', teacher: 'N/A' });
+                    const secondarySubjects = shuffleArray(subjects.filter(s => 
+                        s.toLowerCase() !== 'prayer' && 
+                        s.toLowerCase() !== 'lunch' &&
+                        !(classRequirements[className] || []).includes(s) &&
+                        !bookings.classSubjectDayTracker[`${className}-${day}`]?.has(s)
+                    ));
+
+                    let filled = false;
+                    for (const subject of secondarySubjects) {
+                        const potentialTeachers = shuffleArray(teacherNames.filter(t => 
+                            (teacherSubjects[t]?.includes(subject)) &&
+                            (teacherClasses[t]?.includes(className)) &&
+                            !isTeacherBooked(t, day, timeSlot) &&
+                            !isTeacherUnavailable(t, day, timeSlot) &&
+                            !hasTooManyConsecutiveClasses(t, day, timeSlot, timeSlots)
+                        ));
+
+                        if (potentialTeachers.length > 0) {
+                            bookSlot({ day, timeSlot, className, subject, teacher: potentialTeachers[0] });
+                            filled = true;
+                            break;
+                        }
+                    }
+
+                    if (!filled) {
+                         bookSlot({ day, timeSlot, className, subject: 'Free Period', teacher: 'N/A' });
+                    }
                 }
             });
         });
     });
 
-    // 7. SORT THE FINAL SCHEDULE FOR DISPLAY
     schedule.sort((a, b) => {
         const dayIndexA = daysOfWeek.indexOf(a.day);
         const dayIndexB = daysOfWeek.indexOf(b.day);
@@ -236,3 +237,5 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
     
     return { schedule };
 }
+
+    

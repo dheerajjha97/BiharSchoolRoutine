@@ -173,8 +173,8 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
                 if (indexA < lunchSlotIndex && indexB >= lunchSlotIndex) return -1;
                 if (indexA >= lunchSlotIndex && indexB < lunchSlotIndex) return 1;
             } else if (priority === 'after') {
-                if (indexA > lunchSlotIndex && indexB <= lunchSlotIndex) return -1;
-                if (indexA <= lunchSlotIndex && indexB > lunchSlotIndex) return 1;
+                if (indexA > lunchSlotIndex && indexB <= lunchSlotIndex) return 1;
+                if (indexA <= lunchSlotIndex && indexB > lunchSlotIndex) return -1;
             }
             return 0;
         });
@@ -215,18 +215,24 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
                         return ['sports', 'library', 'computer'].includes(lower_s);
                     };
 
-                    // Find subjects that are either generic OR required for this class but not yet scheduled today
                     const applicableSubjects = subjects.filter(s =>
                         (isGenericSubject(s) || (classRequirements[className]?.includes(s))) &&
                         !s.toLowerCase().includes('prayer') &&
-                        !s.toLowerCase().includes('lunch') &&
-                        !bookings.classSubjectDayTracker[`${className}-${day}`]?.has(s)
+                        !s.toLowerCase().includes('lunch')
                     );
                     
                     const potentialSubjects = shuffleArray(applicableSubjects);
                     
                     let filled = false;
                     for (const subject of potentialSubjects) {
+                        // For generic subjects, we don't need to check if it's already scheduled today
+                        // as a class can have multiple such periods.
+                        if (!isGenericSubject(subject)) {
+                            if (bookings.classSubjectDayTracker[`${className}-${day}`]?.has(subject)) {
+                                continue;
+                            }
+                        }
+
                         const potentialTeachers = shuffleArray(teacherNames.filter(t => 
                             teacherSubjects[t]?.includes(subject) &&
                             teacherClasses[t]?.includes(className) &&

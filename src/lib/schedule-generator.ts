@@ -117,14 +117,16 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
     
     // 2. Create a pool of all required classes to be scheduled for the week
     const weeklySchedulingPool: { className: string, subject: string }[] = [];
-    daysOfWeek.forEach(_ => {
-        classes.forEach(className => {
-            const requirements = classRequirements[className] || [];
-            requirements.forEach(subject => {
-                if (subject.toLowerCase() !== 'prayer' && subject.toLowerCase() !== 'lunch') {
+    classes.forEach(className => {
+        const requirements = classRequirements[className] || [];
+        requirements.forEach(subject => {
+            if (subject.toLowerCase() !== 'prayer' && subject.toLowerCase() !== 'lunch') {
+                // Determine how many times this subject should be taught per week
+                // For simplicity, let's assume once per day for 6 days. This can be made more complex.
+                for (let i = 0; i < daysOfWeek.length; i++) {
                     weeklySchedulingPool.push({ className, subject });
                 }
-            });
+            }
         });
     });
 
@@ -146,10 +148,10 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
                 if (indexA < lunchSlotIndex && indexB >= lunchSlotIndex) return -1;
                 if (indexA >= lunchSlotIndex && indexB < lunchSlotIndex) return 1;
             } else if (priority === 'after' && lunchSlotIndex !== -1) {
-                if (indexA > lunchSlotIndex && indexB <= lunchSlotIndex) return -1;
-                if (indexA <= lunchSlotIndex && indexB > lunchSlotIndex) return 1;
+                if (indexA > lunchSlotIndex && indexB <= lunchSlotIndex) return 1;
+                if (indexA <= lunchSlotIndex && indexB > lunchSlotIndex) return -1;
             }
-            return Math.random() - 0.5;
+            return Math.random() - 0.5; // Fallback to random shuffle
         });
 
         const potentialTeachers = shuffleArray(teacherNames.filter(t => 
@@ -183,7 +185,7 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
         }
     });
 
-    // 4. Fill remaining empty slots with any available required or non-essential subject
+    // 4. Fill remaining empty slots with any available non-essential subject
     const nonEssentialSubjects = subjects.filter(s => {
         const sLower = s.toLowerCase();
         return sLower !== 'prayer' && sLower !== 'lunch' && !Object.values(classRequirements).flat().includes(s);
@@ -198,7 +200,6 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
                         .map(e => e.subject);
 
                     const allPossibleSubjects = shuffleArray([
-                        ...(classRequirements[className] || []),
                         ...nonEssentialSubjects
                     ]);
                     
@@ -222,15 +223,10 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
                         }
                     }
 
-                    // If still not filled (e.g., no teacher available), assign N/A
+                    // If still not filled (e.g., no teacher available), assign N/A with a placeholder subject
                     if (!filled) {
-                         for (const subject of allPossibleSubjects) {
-                            if (subjectsTaughtToday.includes(subject) || subject.toLowerCase() === 'prayer' || subject.toLowerCase() === 'lunch') {
-                                continue;
-                            }
-                            bookSlot({ day, timeSlot, className, subject, teacher: 'N/A' });
-                            break;
-                        }
+                        const placeholderSubject = nonEssentialSubjects.find(s => !subjectsTaughtToday.includes(s)) || "Free Period";
+                        bookSlot({ day, timeSlot, className, subject: placeholderSubject, teacher: 'N/A' });
                     }
                 }
             });

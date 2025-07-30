@@ -243,31 +243,73 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
   }));
 
   const handleExport = () => {
-    const csvRows = [];
-    const headers = ['Day', 'Time Slot', 'Class', 'Subject', 'Teacher'];
+    const csvRows: string[] = [];
+
+    // Header Row
+    const headers = ['Day', 'Class', ...timeSlots.map(slot => {
+        const period = instructionalSlotMap[slot] ? ` (${toRoman(instructionalSlotMap[slot])})` : '';
+        return `"${slot}${period}"`;
+    })];
     csvRows.push(headers.join(','));
 
-    if (scheduleData?.schedule) {
-      for (const entry of scheduleData.schedule) {
-          if(selectedClass === 'all' || entry.className.includes(selectedClass)) {
-              const row = [
-                  entry.day,
-                  entry.timeSlot,
-                  `"${entry.className}"`,
-                  entry.subject,
-                  `"${entry.teacher}"`,
-              ].map(v => `${v.replace(/"/g, '""')}`);
-              csvRows.push(row.join(','));
-          }
-      }
-    }
+    const processClassesForExport = (displayClasses: string[]) => {
+        if (displayClasses.length === 0) return;
+
+        const filteredClasses = selectedClass === 'all' 
+          ? displayClasses 
+          : displayClasses.filter(c => c === selectedClass);
+        
+        if (filteredClasses.length === 0) return;
+
+        daysOfWeek.forEach(day => {
+            filteredClasses.forEach((className, classIndex) => {
+                const row: string[] = [];
+                row.push(classIndex === 0 ? `"${day}"` : '""');
+                row.push(`"${className}"`);
+
+                timeSlots.forEach(slot => {
+                    const entries = gridSchedule[day]?.[className]?.[slot] || [];
+                    if (entries.length > 0) {
+                        const cellContent = entries.map(entry => {
+                          const teacherDisplay = entry.teacher === 'N/A' ? '' : `(${entry.teacher})`;
+                          return `${entry.subject} ${teacherDisplay}`;
+                        }).join(' / ');
+                        row.push(`"${cellContent.replace(/"/g, '""')}"`);
+                    } else {
+                        row.push('""'); // Empty cell
+                    }
+                });
+                csvRows.push(row.join(','));
+            });
+             // Add an empty row for spacing between days for better readability
+            if (filteredClasses.length > 0) {
+                csvRows.push(Array(headers.length).fill('""').join(','));
+            }
+        });
+    };
     
+    const visibleSections: {title: string, classes: string[]}[] = [];
+    if (secondaryClasses.some(c => selectedClass === 'all' || selectedClass === c)) {
+        visibleSections.push({title: "Secondary", classes: secondaryClasses});
+    }
+    if (seniorSecondaryClasses.some(c => selectedClass === 'all' || selectedClass === c)) {
+        visibleSections.push({title: "Senior Secondary", classes: seniorSecondaryClasses});
+    }
+
+    visibleSections.forEach((section, sectionIndex) => {
+        csvRows.push(`"${section.title}",${Array(headers.length - 1).fill('""').join(',')}`);
+        processClassesForExport(section.classes);
+        if (sectionIndex < visibleSections.length - 1) {
+            csvRows.push(Array(headers.length).fill('""').join(',')); // Extra space between sections
+        }
+    });
+
     const csvString = csvRows.join('\n');
     const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
-    link.setAttribute("download", `school-routine${selectedClass === 'all' ? '' : `-${selectedClass}`}.csv`);
+    link.setAttribute("download", `school-routine-grid.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -563,4 +605,5 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
 RoutineDisplay.displayName = 'RoutineDisplay';
 
 export default RoutineDisplay;
+
 

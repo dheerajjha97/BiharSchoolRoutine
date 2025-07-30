@@ -278,7 +278,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
   };
 
   const renderCellContent = (day: string, className: string, timeSlot: string) => {
-    const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
+    const entries = gridSchedule[day]?.[className]?.[slot] || [];
     const isClashed = entries.some(entry => 
         entry.teacher.split(' & ').some(t => clashSet.has(`teacher-${day}-${timeSlot}-${t}`)) ||
         clashSet.has(`class-${day}-${timeSlot}-${className}`)
@@ -319,8 +319,8 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="font-bold min-w-[100px]">Day</TableHead>
-                <TableHead className="font-bold min-w-[120px]">Class</TableHead>
+                <TableHead className="font-bold min-w-[100px] sticky left-0 bg-card z-10">Day</TableHead>
+                <TableHead className="font-bold min-w-[120px] sticky left-[100px] bg-card z-10">Class</TableHead>
                 {timeSlots.map(slot => (
                   <TableHead key={slot} className="text-center font-bold text-xs min-w-[110px] p-1">
                       <div>{slot}</div>
@@ -334,8 +334,8 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
                 <React.Fragment key={day}>
                   {filteredClasses.map((className, classIndex) => (
                     <TableRow key={`${day}-${className}`}>
-                      {classIndex === 0 && <TableCell className="font-semibold align-top" rowSpan={filteredClasses.length}>{day}</TableCell>}
-                      <TableCell className="font-medium align-top">{className}</TableCell>
+                      {classIndex === 0 && <TableCell className="font-semibold align-top sticky left-0 bg-card z-10" rowSpan={filteredClasses.length}>{day}</TableCell>}
+                      <TableCell className="font-medium align-top sticky left-[100px] bg-card z-10">{className}</TableCell>
                       {timeSlots.map(slot => (
                         <TableCell key={`${day}-${className}-${slot}`} className="p-0 align-top">{renderCellContent(day, className, slot)}</TableCell>
                       ))}
@@ -406,19 +406,19 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
               <DialogTitle>Edit Schedule Slot</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="subject" className="text-right">Subject</Label>
+              <div className="grid grid-cols-1 md:grid-cols-4 items-center gap-4">
+                <Label htmlFor="subject" className="md:text-right">Subject</Label>
                 <Select value={cellData.subject} onValueChange={(value) => setCellData({ ...cellData, subject: value === '---' ? '---' : value, teacher: '' })}>
-                  <SelectTrigger className="col-span-3"><SelectValue placeholder="Select subject" /></SelectTrigger>
+                  <SelectTrigger className="md:col-span-3"><SelectValue placeholder="Select subject" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="---">--- (Clear Slot)</SelectItem>
                     {subjects.map((s) => (<SelectItem key={s} value={s}>{s}</SelectItem>))}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-4 items-start gap-4">
-                <Label className="text-right pt-2">Class(es)</Label>
-                 <div className="col-span-3 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 items-start gap-4">
+                <Label className="md:text-right pt-2">Class(es)</Label>
+                 <div className="md:col-span-3 space-y-4">
                     {secondaryClasses.length > 0 && (
                       <div>
                         <Label className="text-sm font-medium">Secondary</Label>
@@ -435,11 +435,11 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
                     )}
                   </div>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right">Teacher(s)</Label>
+              <div className="grid grid-cols-1 md:grid-cols-4 items-center gap-4">
+                <Label className="md:text-right">Teacher(s)</Label>
                 <Popover>
                   <PopoverTrigger asChild>
-                      <Button variant="outline" className="col-span-3 justify-start font-normal">{selectedTeachers.length > 0 ? selectedTeachers.join(', ') : "Select teachers"}</Button>
+                      <Button variant="outline" className="md:col-span-3 justify-start font-normal truncate">{selectedTeachers.length > 0 ? selectedTeachers.join(', ') : "Select teachers"}</Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[300px] p-0">
                       <Command>
@@ -460,9 +460,9 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
                 </Popover>
               </div>
             </div>
-            <DialogFooter className="sm:justify-between">
+            <DialogFooter className="sm:justify-between flex-col-reverse sm:flex-row gap-2">
                {currentCell.entry ? (<Button type="button" variant="destructive" onClick={handleDelete}><Trash2 className="mr-2 h-4 w-4" /> Delete</Button>) : <div />}
-              <div className="flex gap-2">
+              <div className="flex gap-2 justify-end">
                   <Button type="button" variant="secondary" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
                   <Button type="submit" onClick={handleSave}>Save Changes</Button>
               </div>

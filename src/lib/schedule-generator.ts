@@ -85,7 +85,7 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
         bookings.classBookings[className]?.has(`${day}-${timeSlot}`);
 
     const isClassSubjectBookedForDay = (className: string, day: string, subject: string): boolean =>
-        bookings.classSubjectBookings[className]?.has(`${day}-${subject}`);
+        subjectCategories[subject] === 'main' && bookings.classSubjectBookings[className]?.has(`${day}-${subject}`);
     
     const isTeacherUnavailable = (teacher: string, day: string, timeSlot: string): boolean => 
         unavailability.some(u => u.teacher === teacher && u.day === day && u.timeSlot === timeSlot);
@@ -113,84 +113,77 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
     };
     
     const getValidSubjectsForClass = (className: string): string[] => {
-        const primary = classRequirements[className] || [];
-        const secondary = ["Computer", "Sports", "Library"]; // Subjects that can be taught to any class
-        return [...new Set([...primary, ...secondary])];
+        const required = classRequirements[className] || [];
+        // All subjects are potentially valid, priority is handled by scheduling order.
+        return [...new Set([...required, ...Object.keys(input.subjects)])];
     };
 
     const instructionalSlots = timeSlots.filter(slot => slot !== prayerTimeSlot && slot !== lunchTimeSlot);
-    const beforeLunchSlots = instructionalSlots.filter(slot => subjectPriorities[slot] === 'before' || timeSlots.indexOf(slot) < timeSlots.indexOf(lunchTimeSlot || ''));
-    const afterLunchSlots = instructionalSlots.filter(slot => !beforeLunchSlots.includes(slot));
+    const lunchIndex = lunchTimeSlot ? timeSlots.indexOf(lunchTimeSlot) : Math.floor(timeSlots.length / 2);
+    const beforeLunchSlots = instructionalSlots.filter(slot => timeSlots.indexOf(slot) < lunchIndex);
+    const afterLunchSlots = instructionalSlots.filter(slot => timeSlots.indexOf(slot) >= lunchIndex);
 
 
     // Step 1: Schedule fixed periods (Prayer & Lunch)
     daysOfWeek.forEach(day => {
         classes.forEach(className => {
-            if (prayerTimeSlot) {
+            if (prayerTimeSlot && timeSlots.includes(prayerTimeSlot)) {
                 bookSlot({ day, timeSlot: prayerTimeSlot, classNames: [className], subject: "Prayer", teacher: "N/A" });
             }
-            if (lunchTimeSlot) {
+            if (lunchTimeSlot && timeSlots.includes(lunchTimeSlot)) {
                 bookSlot({ day, timeSlot: lunchTimeSlot, classNames: [className], subject: "Lunch", teacher: "N/A" });
             }
         });
     });
 
     daysOfWeek.forEach(day => {
-        const daySlots = shuffleArray([...beforeLunchSlots, ...afterLunchSlots]);
+        const daySlots = shuffleArray([...instructionalSlots]);
 
-        // Prioritize "Before Lunch" subjects
-        const mainSubjectsBeforeLunch = Object.keys(subjectPriorities).filter(s => subjectCategories[s] === 'main' && subjectPriorities[s] === 'before');
-        const mainSubjectsAfterLunch = Object.keys(subjectPriorities).filter(s => subjectCategories[s] === 'main' && subjectPriorities[s] === 'after');
-        const mainSubjectsNoPreference = Object.keys(subjectCategories).filter(s => subjectCategories[s] === 'main' && !subjectPriorities[s]);
+        // Prioritize Main subjects first
+        const mainSubjects = shuffleArray(Object.keys(subjectCategories).filter(s => subjectCategories[s] === 'main'));
         
-        const scheduleSubjectType = (subjectList: string[], slotList: string[]) => {
-            shuffleArray(classes).forEach(className => {
-                shuffleArray(subjectList).forEach(subject => {
-                    if (isClassSubjectBookedForDay(className, day, subject)) return;
-                    if (!getValidSubjectsForClass(className).includes(subject)) return;
+        classes.forEach(className => {
+            mainSubjects.forEach(subject => {
+                if (!classRequirements[className]?.includes(subject)) return;
+                if (isClassSubjectBookedForDay(className, day, subject)) return;
 
-                    const qualifiedTeachers = shuffleArray(teacherNames.filter(t =>
-                        (teacherSubjects[t] || []).includes(subject) &&
-                        (teacherClasses[t] || []).includes(className)
-                    ));
+                const qualifiedTeachers = shuffleArray(teacherNames.filter(t =>
+                    (teacherSubjects[t] || []).includes(subject) &&
+                    (teacherClasses[t] || []).includes(className)
+                ));
 
-                    if (qualifiedTeachers.length > 0) {
-                        const availableTeacher = qualifiedTeachers.find(t => 
-                            (Array.from(bookings.teacherBookings[t]).filter(b => b.startsWith(day)).length) < dailyPeriodQuota
-                        );
-                        
-                        if (availableTeacher) {
-                            const availableSlot = slotList.find(slot =>
-                                !isTeacherBooked(availableTeacher, day, slot) &&
-                                !isClassBooked(className, day, slot) &&
-                                !isTeacherUnavailable(availableTeacher, day, slot)
-                            );
-                            if (availableSlot) {
-                                bookSlot({ day, timeSlot: availableSlot, classNames: [className], subject, teacher: availableTeacher });
-                            }
-                        }
+                const teacher = qualifiedTeachers.find(t => 
+                    (Array.from(bookings.teacherBookings[t]).filter(b => b.startsWith(day)).length) < dailyPeriodQuota
+                );
+
+                if (teacher) {
+                    const priority = subjectPriorities[subject];
+                    const preferredSlots = priority === 'before' ? beforeLunchSlots : (priority === 'after' ? afterLunchSlots : daySlots);
+                    
+                    const availableSlot = shuffleArray(preferredSlots).find(slot =>
+                        !isTeacherBooked(teacher, day, slot) &&
+                        !isClassBooked(className, day, slot) &&
+                        !isTeacherUnavailable(teacher, day, slot)
+                    );
+                    
+                    if (availableSlot) {
+                        bookSlot({ day, timeSlot: availableSlot, classNames: [className], subject, teacher });
                     }
-                });
+                }
             });
-        };
-
-        // Schedule main subjects based on priority
-        scheduleSubjectType(mainSubjectsBeforeLunch, beforeLunchSlots);
-        scheduleSubjectType(mainSubjectsAfterLunch, afterLunchSlots);
-        scheduleSubjectType(mainSubjectsNoPreference, daySlots);
+        });
 
         // Fill remaining slots with additional subjects to meet teacher quota
-        shuffleArray(teacherNames).forEach(teacher => {
+        teacherNames.forEach(teacher => {
             let periodsToday = Array.from(bookings.teacherBookings[teacher]).filter(b => b.startsWith(day)).length;
+            const assignedClasses = shuffleArray(teacherClasses[teacher] || []);
             const additionalSubjects = shuffleArray((teacherSubjects[teacher] || []).filter(s => subjectCategories[s] === 'additional'));
 
             while (periodsToday < dailyPeriodQuota) {
-                let filledPeriod = false;
-                const teacherClassesForDay = shuffleArray(teacherClasses[teacher] || []);
-                
-                for (const subject of additionalSubjects) {
-                     for (const className of teacherClassesForDay) {
-                         if (!getValidSubjectsForClass(className).includes(subject)) continue;
+                let periodFilled = false;
+                for (const className of assignedClasses) {
+                    for (const subject of additionalSubjects) {
+                         if (!classRequirements[className]?.includes(subject)) continue;
 
                          const availableSlot = daySlots.find(slot =>
                             !isTeacherBooked(teacher, day, slot) &&
@@ -204,23 +197,25 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
                                 const otherClassesInGrade = classes.filter(c =>
                                     c !== className &&
                                     getGradeFromClassName(c) === grade &&
-                                    getValidSubjectsForClass(c).includes(subject) &&
+                                    (classRequirements[c] || []).includes(subject) &&
                                     (teacherClasses[teacher] || []).includes(c) &&
                                     !isClassBooked(c, day, availableSlot)
                                 );
-                                const combinedClasses = [className, ...otherClassesInGrade];
+                                const combinedClasses = [className, ...otherClassesInGrade].slice(0, 2); // Limit combined classes for simplicity
                                 bookSlot({ day, timeSlot: availableSlot, classNames: combinedClasses, subject, teacher });
                             } else {
                                 bookSlot({ day, timeSlot: availableSlot, classNames: [className], subject, teacher });
                             }
                             periodsToday++;
-                            filledPeriod = true;
+                            periodFilled = true;
                             break;
                          }
-                     }
-                     if(filledPeriod) break;
+                    }
+                    if (periodFilled) break;
                 }
-                if (!filledPeriod) break; // Cannot find any more slots for this teacher
+                if (!periodFilled) {
+                    break; // No more slots can be filled for this teacher today
+                }
             }
         });
     });

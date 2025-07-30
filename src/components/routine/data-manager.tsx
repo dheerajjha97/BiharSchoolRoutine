@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
+import { sortTimeSlots } from "@/lib/utils";
 
 interface DataManagerProps {
   title: string;
@@ -24,7 +25,12 @@ export default function DataManager({ title, icon: Icon, items, setItems, placeh
 
   const handleAddItem = () => {
     if (newItem.trim() && !items.includes(newItem.trim())) {
-      setItems([...items, newItem.trim()].sort());
+      const newItems = [...items, newItem.trim()];
+      if (title === 'Time Slots') {
+        setItems(sortTimeSlots(newItems));
+      } else {
+        setItems(newItems.sort());
+      }
       setNewItem("");
     }
   };

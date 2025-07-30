@@ -5,6 +5,7 @@ import { createContext, useState, useEffect, useMemo, useRef, useCallback, Chang
 import { useToast } from "@/hooks/use-toast";
 import type { GenerateScheduleOutput } from "@/ai/flows/generate-schedule";
 import type { SubjectCategory, SubjectPriority } from "@/lib/schedule-generator";
+import { sortTimeSlots } from "@/lib/utils";
 
 type Unavailability = {
   teacher: string;
@@ -114,6 +115,9 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
           // Merge saved state with defaults to prevent missing properties on update
           const mergedConfig = { ...DEFAULT_APP_STATE.config, ...savedState.config };
           const mergedState = { ...DEFAULT_APP_STATE, ...savedState, config: mergedConfig };
+          if(mergedState.timeSlots) {
+            mergedState.timeSlots = sortTimeSlots(mergedState.timeSlots);
+          }
           setAppState(mergedState);
         }
       }
@@ -146,7 +150,13 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   }, [appState, isStateLoaded, toast]);
   
   const updateState = useCallback(<K extends keyof AppState>(key: K, value: AppState[K]) => {
-    setAppState(prevState => ({ ...prevState, [key]: value }));
+    setAppState(prevState => {
+      const newState = { ...prevState, [key]: value };
+      if (key === 'timeSlots') {
+        newState.timeSlots = sortTimeSlots(value as string[]);
+      }
+      return newState;
+    });
   }, []);
   
   const updateConfig = useCallback(<K extends keyof SchoolConfig>(key: K, value: SchoolConfig[K]) => {
@@ -198,6 +208,9 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   }, []);
   
   const handlePrint = useCallback(() => {
+    // This function is now handled inside RoutineDisplay component
+    // We can call it via a ref if needed, but for now we just trigger window.print
+    // A more robust solution could use a ref to call a specific print handler in the child component.
     window.print();
   }, []);
   

@@ -1,3 +1,4 @@
+import { sortTimeSlots } from "./utils";
 
 type SchoolData = {
   teachers: string[];
@@ -74,7 +75,7 @@ export const importFromCsv = (file: File): Promise<SchoolData> => {
         data.classes = [...new Set(data.classes)].sort();
         data.subjects = [...new Set(data.subjects)].sort();
         if (data.timeSlots) {
-          data.timeSlots = [...new Set(data.timeSlots)].sort();
+          data.timeSlots = sortTimeSlots([...new Set(data.timeSlots)]);
         }
         
         resolve(data);

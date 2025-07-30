@@ -21,6 +21,7 @@ import { Download, Trash2, CheckIcon } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from '../ui/checkbox';
 import { cn } from '@/lib/utils';
+import { Separator } from '../ui/separator';
 
 interface RoutineDisplayProps {
   scheduleData: GenerateScheduleOutput | null;
@@ -401,14 +402,14 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
     return (
         <div
             className={cn(
-                "h-full min-h-[60px] flex flex-col items-center justify-center p-1 space-y-1",
+                "h-full min-h-[60px] flex flex-col items-center justify-center p-1 space-y-1 cursor-pointer",
                 isClashed && "bg-destructive/20"
             )}
             onClick={() => handleCellClick(day, timeSlot, className, entries[0] || null)}
         >
             {entries.length === 0 && (
                 <div className="flex-grow w-full flex items-center justify-center">
-                    <span className="text-muted-foreground text-xs hover:text-primary opacity-50 hover:opacity-100 no-print">+</span>
+                    <span className="text-muted-foreground text-xs hover:text-primary opacity-0 hover:opacity-100 no-print transition-opacity">+</span>
                 </div>
             )}
             {[...new Map(entries.map(e => [JSON.stringify(e), e])).values()].map((entry, index) => {
@@ -416,7 +417,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
                 return (
                     <div
                         key={index}
-                        className="w-full text-xs text-center p-1 bg-background rounded cursor-pointer hover:bg-accent hover:shadow-md no-print:shadow-sm"
+                        className="w-full text-xs text-center p-1 bg-background rounded no-print:shadow-sm"
                     >
                         <div className="font-semibold">{entry.subject}</div>
                         <div className="text-muted-foreground text-xs">
@@ -497,6 +498,23 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
 
   const selectedTeachers = cellData.teacher.split(' और ').map(t => t.trim()).filter(Boolean);
 
+  const ClassCheckbox = ({ className }: { className: string }) => (
+    <div className="flex items-center space-x-2">
+        <Checkbox
+            id={`class-${className}`}
+            checked={cellData.classNames.includes(className)}
+            disabled={getDisabledClasses.has(className)}
+            onCheckedChange={(checked) => {
+                const newClassNames = checked
+                    ? [...cellData.classNames, className]
+                    : cellData.classNames.filter(name => name !== className);
+                setCellData({...cellData, classNames: newClassNames});
+            }}
+        />
+        <Label htmlFor={`class-${className}`} className={cn("font-normal", getDisabledClasses.has(className) && 'text-muted-foreground')}>{className}</Label>
+    </div>
+  );
+
   return (
     <>
       <Card className="h-full flex flex-col">
@@ -546,7 +564,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Edit Schedule Slot</DialogTitle>
           </DialogHeader>
@@ -569,30 +587,35 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
             </div>
             <div className="grid grid-cols-4 items-start gap-4">
               <Label className="text-right pt-2">Class</Label>
-               <div className="col-span-3 grid grid-cols-2 gap-2">
-                  {classes.map((c) => (
-                    <div key={c} className="flex items-center space-x-2">
-                        <Checkbox
-                            id={`class-${c}`}
-                            checked={cellData.classNames.includes(c)}
-                            disabled={getDisabledClasses.has(c)}
-                            onCheckedChange={(checked) => {
-                                const newClassNames = checked
-                                    ? [...cellData.classNames, c]
-                                    : cellData.classNames.filter(name => name !== c);
-                                setCellData({...cellData, classNames: newClassNames});
-                            }}
-                        />
-                        <Label htmlFor={`class-${c}`} className={getDisabledClasses.has(c) ? 'text-muted-foreground' : ''}>{c}</Label>
+               <div className="col-span-3 space-y-4">
+                  
+                  {secondaryClasses.length > 0 && (
+                    <div>
+                      <Label className="text-sm font-medium">Secondary</Label>
+                      <Separator className="my-2" />
+                      <div className="grid grid-cols-2 gap-2">
+                        {secondaryClasses.map(c => <ClassCheckbox key={c} className={c} />)}
+                      </div>
                     </div>
-                  ))}
+                  )}
+
+                  {seniorSecondaryClasses.length > 0 && (
+                     <div>
+                      <Label className="text-sm font-medium">Senior Secondary</Label>
+                      <Separator className="my-2" />
+                      <div className="grid grid-cols-2 gap-2">
+                        {seniorSecondaryClasses.map(c => <ClassCheckbox key={c} className={c} />)}
+                      </div>
+                    </div>
+                  )}
+                  
                 </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="teacher" className="text-right">Teacher(s)</Label>
               <Popover>
                 <PopoverTrigger asChild>
-                    <Button variant="outline" className="col-span-3 justify-start">
+                    <Button variant="outline" className="col-span-3 justify-start font-normal">
                         {selectedTeachers.length > 0 ? selectedTeachers.join(', ') : "Select teachers"}
                     </Button>
                 </PopoverTrigger>
@@ -606,6 +629,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
                                     <CommandItem
                                         key={teacher}
                                         onSelect={() => handleMultiSelectTeacher(teacher)}
+                                        value={teacher}
                                     >
                                         <div className={cn(
                                             "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
@@ -648,3 +672,5 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
 RoutineDisplay.displayName = 'RoutineDisplay';
 
 export default RoutineDisplay;
+
+    

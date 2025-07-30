@@ -17,7 +17,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, Trash2, CheckIcon } from "lucide-react";
+import { Download, Trash2, Check } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from '../ui/checkbox';
 import { cn } from '@/lib/utils';
@@ -49,13 +49,11 @@ type CellData = {
 
 const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-// Helper function to extract the base grade from a class name (e.g., "Class 9A" -> "9", "11 Arts" -> "11")
 const getGradeFromClassName = (className: string): string | null => {
     const match = className.match(/(\d+)/);
     return match ? match[1] : null;
 };
 
-// Custom sort function for classes
 const sortClasses = (a: string, b: string): number => {
   const gradeA = parseInt(getGradeFromClassName(a) || '0', 10);
   const gradeB = parseInt(getGradeFromClassName(b) || '0', 10);
@@ -63,11 +61,9 @@ const sortClasses = (a: string, b: string): number => {
   if (gradeA !== gradeB) {
     return gradeA - gradeB;
   }
-  // If grades are the same, sort alphabetically by the rest of the name
   return a.localeCompare(b);
 };
 
-// Function to categorize classes
 const categorizeClasses = (classes: string[]) => {
     const secondary: string[] = [];
     const seniorSecondary: string[] = [];
@@ -116,18 +112,15 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
   const sortedClasses = useMemo(() => [...classes].sort(sortClasses), [classes]);
   const { secondaryClasses, seniorSecondaryClasses } = useMemo(() => categorizeClasses(sortedClasses), [sortedClasses]);
 
-  const { instructionalSlots, instructionalSlotMap } = useMemo(() => {
-    const instructionalSlots: string[] = [];
-    const instructionalSlotMap: { [timeSlot: string]: number } = {};
+  const { instructionalSlotMap } = useMemo(() => {
+    const map: { [timeSlot: string]: number } = {};
     let periodCounter = 1;
     timeSlots.forEach(slot => {
-        // Exclude slots typically for Prayer and Lunch
         if (!slot.includes('09:00') && !slot.includes('09:15') && !slot.includes('12:00') && !slot.includes('13:00')) {
-            instructionalSlots.push(slot);
-            instructionalSlotMap[slot] = periodCounter++;
+            map[slot] = periodCounter++;
         }
     });
-    return { instructionalSlots, instructionalSlotMap };
+    return { instructionalSlotMap: map };
   }, [timeSlots]);
 
   const clashSet = useMemo(() => {
@@ -145,7 +138,6 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
         const entryClasses = entry.className.split(' & ').map(c => c.trim());
         const entryTeachers = entry.teacher.split(' और ').map(t => t.trim()).filter(t => t !== "N/A" && t !== "");
 
-        // Check for teacher clashes
         entryTeachers.forEach(teacher => {
             if (bookings[key].teachers.includes(teacher)) {
                 clashes.add(`teacher-${key}-${teacher}`);
@@ -153,7 +145,6 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
             bookings[key].teachers.push(teacher);
         });
 
-        // Check for class clashes
         entryClasses.forEach(c => {
              if (bookings[key].classes.includes(c)) {
                  clashes.add(`class-${key}-${c}`);
@@ -162,7 +153,6 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
         });
     });
 
-    // Go back through and mark all participants in a clash
     scheduleData.schedule.forEach(entry => {
         const key = `${entry.day}-${entry.timeSlot}`;
         const entryClasses = entry.className.split(' & ').map(c => c.trim());
@@ -170,13 +160,13 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
 
         entryTeachers.forEach(teacher => {
             if (clashes.has(`teacher-${key}-${teacher}`)) {
-                clashes.add(`{key}-${entry.className}-${teacher}`);
+                clashes.add(`${key}-${entry.className}-${teacher}`);
             }
         });
 
         entryClasses.forEach(c => {
             if (clashes.has(`class-${key}-${c}`)) {
-              clashes.add(`{key}-${c}-${entry.teacher}`);
+              clashes.add(`${key}-${c}-${entry.teacher}`);
             }
         });
     });
@@ -188,7 +178,6 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
   const gridSchedule = useMemo<GridSchedule>(() => {
     const grid: GridSchedule = {};
     
-    // Initialize the grid structure
     daysOfWeek.forEach(day => {
         grid[day] = {};
         classes.forEach(c => {
@@ -199,43 +188,36 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
         });
     });
 
-    // Populate the grid with schedule entries
     if (scheduleData?.schedule) {
       scheduleData.schedule.forEach(entry => {
-        // Handle combined and single class names
         const entryClasses = entry.className.split(' & ').map(c => c.trim());
-        
         entryClasses.forEach(className => {
-            // Ensure the class from the entry exists in the grid to avoid errors
             if (grid[entry.day]?.[className]?.[entry.timeSlot]) {
-              // Push a reference to the original entry
               grid[entry.day][className][entry.timeSlot].push(entry);
             }
         });
       });
     }
-
     return grid;
   }, [scheduleData, timeSlots, classes]);
 
   const availableTeachers = useMemo(() => {
     if (!cellData.subject) {
-      return teachers; // No subject selected, show all teachers
+      return teachers;
     }
     const qualifiedTeachers = teachers.filter(teacher => 
       teacherSubjects[teacher]?.includes(cellData.subject)
     );
-    return qualifiedTeachers.length > 0 ? qualifiedTeachers : teachers; // Fallback to all if none are mapped
+    return qualifiedTeachers.length > 0 ? qualifiedTeachers : teachers;
   }, [cellData.subject, teachers, teacherSubjects]);
 
-  // Determine which classes are disabled in the edit dialog based on selection
   const getDisabledClasses = useMemo(() => {
     if (cellData.classNames.length === 0) {
-      return new Set(); // Nothing selected, nothing disabled
+      return new Set();
     }
     const firstSelectedGrade = getGradeFromClassName(cellData.classNames[0]);
     if (!firstSelectedGrade) {
-      return new Set(classes); // Should not happen with valid data, but disable all as a fallback
+      return new Set(classes);
     }
     
     const disabled = new Set<string>();
@@ -248,10 +230,8 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
   }, [cellData.classNames, classes]);
 
   useEffect(() => {
-    // When the subject changes, check if the current teacher is still valid
     const currentTeachers = cellData.teacher.split(' और ').map(t => t.trim()).filter(Boolean);
     if (cellData.subject && currentTeachers.some(t => !availableTeachers.includes(t) && t !== 'N/A')) {
-        // If not, reset the teacher selection
         setCellData(prev => ({ ...prev, teacher: '' }));
     }
   }, [cellData.subject, availableTeachers, cellData.teacher]);
@@ -267,8 +247,6 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
 
   const handleExport = () => {
     const csvRows: string[] = [];
-
-    // Header Row
     const headers = ['Day', 'Class', ...timeSlots.map(slot => {
         const period = instructionalSlotMap[slot] ? ` (${toRoman(instructionalSlotMap[slot])})` : '';
         return `"${slot}${period}"`;
@@ -299,12 +277,11 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
                         }).join(' / ');
                         row.push(`"${cellContent.replace(/"/g, '""')}"`);
                     } else {
-                        row.push('""'); // Empty cell
+                        row.push('""');
                     }
                 });
                 csvRows.push(row.join(','));
             });
-             // Add an empty row for spacing between days for better readability
             if (filteredClasses.length > 0) {
                 csvRows.push(Array(headers.length).fill('""').join(','));
             }
@@ -323,7 +300,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
         csvRows.push(`"${section.title}",${Array(headers.length - 1).fill('""').join(',')}`);
         processClassesForExport(section.classes);
         if (sectionIndex < visibleSections.length - 1) {
-            csvRows.push(Array(headers.length).fill('""').join(',')); // Extra space between sections
+            csvRows.push(Array(headers.length).fill('""').join(','));
         }
     });
 
@@ -365,14 +342,12 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
         teacher: cellData.teacher
     };
 
-    // Find all original entries that need to be removed or updated
     const originalEntries = currentCell.entry ? (currentSchedule.filter(e => 
       e.day === currentCell.day &&
       e.timeSlot === currentCell.timeSlot &&
       e.className.split(' & ').map(c => c.trim()).some(c => cellData.classNames.includes(c))
     )) : [];
 
-    // Filter out the old entries
     newSchedule = currentSchedule.filter(e => !originalEntries.includes(e));
 
     if (cellData.subject && cellData.subject !== '---') {
@@ -397,7 +372,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
       onScheduleChange(newSchedule);
       setIsDialogOpen(false);
       setCurrentCell(null);
-  }
+  };
   
   const handleMultiSelectTeacher = (selectedTeacher: string) => {
     const currentTeachers = cellData.teacher.split(' और ').map(t => t.trim()).filter(Boolean);
@@ -406,7 +381,6 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
       : [...currentTeachers, selectedTeacher];
     setCellData({ ...cellData, teacher: newTeachers.join(' और ') });
   };
-
 
   const renderCellContent = (day: string, className: string, timeSlot: string) => {
     const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
@@ -452,8 +426,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
             })}
         </div>
     );
-};
-
+  };
 
   const renderScheduleTable = (title: string, displayClasses: string[]) => {
     if (selectedClass !== 'all' && !displayClasses.some(c => c === selectedClass)) {
@@ -580,6 +553,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
           </div>
         </CardContent>
       </Card>
+      
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -604,9 +578,8 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
               </Select>
             </div>
             <div className="grid grid-cols-4 items-start gap-4">
-              <Label className="text-right pt-2">Class</Label>
+              <Label className="text-right pt-2">Class(es)</Label>
                <div className="col-span-3 space-y-4">
-                  
                   {secondaryClasses.length > 0 && (
                     <div>
                       <Label className="text-sm font-medium">Secondary</Label>
@@ -616,7 +589,6 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
                       </div>
                     </div>
                   )}
-
                   {seniorSecondaryClasses.length > 0 && (
                      <div>
                       <Label className="text-sm font-medium">Senior Secondary</Label>
@@ -626,7 +598,6 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
                       </div>
                     </div>
                   )}
-                  
                 </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
@@ -655,7 +626,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
                                                 ? "bg-primary text-primary-foreground"
                                                 : "opacity-50 [&_svg]:invisible"
                                         )}>
-                                            <CheckIcon className={cn("h-4 w-4")} />
+                                            <Check className={cn("h-4 w-4")} />
                                         </div>
                                         <span>{teacher}</span>
                                     </CommandItem>
@@ -690,3 +661,5 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
 RoutineDisplay.displayName = 'RoutineDisplay';
 
 export default RoutineDisplay;
+
+    

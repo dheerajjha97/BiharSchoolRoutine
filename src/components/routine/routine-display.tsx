@@ -49,9 +49,9 @@ type CellData = {
 
 const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-// Helper function to extract the base grade from a class name (e.g., "9th A" -> "9", "11th Arts" -> "11")
+// Helper function to extract the base grade from a class name (e.g., "Class 9A" -> "9", "11 Arts" -> "11")
 const getGradeFromClassName = (className: string): string | null => {
-    const match = className.match(/^(\d+)/);
+    const match = className.match(/(\d+)/);
     return match ? match[1] : null;
 };
 
@@ -113,7 +113,9 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
     teacher: "",
   });
 
+  const sortedClasses = useMemo(() => [...classes].sort(sortClasses), [classes]);
   const { secondaryClasses, seniorSecondaryClasses } = useMemo(() => categorizeClasses(classes), [classes]);
+
   const { instructionalSlots, instructionalSlotMap } = useMemo(() => {
     const instructionalSlots: string[] = [];
     const instructionalSlotMap: { [timeSlot: string]: number } = {};
@@ -359,23 +361,27 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
   
     const newEntryData = {
         subject: cellData.subject,
-        className: cellData.classNames.sort().join(' & '),
+        className: cellData.classNames.sort(sortClasses).join(' & '),
         teacher: cellData.teacher
     };
 
-    if (currentCell.entry) {
-      // Update existing entry
-      newSchedule = currentSchedule.map(e =>
-        e === currentCell.entry ? { ...e, ...newEntryData } : e
-      );
-    } else {
-      // Add new entry
-      const newEntry: ScheduleEntry = {
-        day: currentCell.day,
-        timeSlot: currentCell.timeSlot,
-        ...newEntryData,
-      };
-      newSchedule = [...currentSchedule, newEntry];
+    // Find all original entries that need to be removed or updated
+    const originalEntries = currentCell.entry ? (currentSchedule.filter(e => 
+      e.day === currentCell.day &&
+      e.timeSlot === currentCell.timeSlot &&
+      e.className.split(' & ').map(c => c.trim()).some(c => cellData.classNames.includes(c))
+    )) : [];
+
+    // Filter out the old entries
+    newSchedule = currentSchedule.filter(e => !originalEntries.includes(e));
+
+    if (cellData.subject && cellData.subject !== '---') {
+        const newEntry: ScheduleEntry = {
+            day: currentCell.day,
+            timeSlot: currentCell.timeSlot,
+            ...newEntryData,
+        };
+        newSchedule.push(newEntry);
     }
     
     onScheduleChange(newSchedule);
@@ -405,10 +411,9 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
   const renderCellContent = (day: string, className: string, timeSlot: string) => {
     const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
     const isClashed = entries.some(entry => {
-        const entryClasses = entry.className.split(' & ').map(c => c.trim());
         const entryTeachers = (entry.teacher || "").split(' और ').map(t => t.trim()).filter(t => t !== "N/A" && t !== "");
         return entryTeachers.some(t => clashSet.has(`teacher-${day}-${timeSlot}-${t}`)) ||
-               entryClasses.some(c => clashSet.has(`class-${day}-${timeSlot}-${c}`));
+               clashSet.has(`class-${day}-${timeSlot}-${className}`);
     });
 
     return (
@@ -459,7 +464,11 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
       ? displayClasses 
       : displayClasses.filter(c => c === selectedClass);
 
-    if (filteredDisplayClasses.length === 0 && selectedClass !== 'all') {
+    if (filteredDisplayClasses.length === 0 && selectedClass === 'all') {
+      // Don't render the section if there are no classes for it at all
+      return null;
+    }
+     if (filteredDisplayClasses.length === 0 && selectedClass !== 'all') {
       // If a class is selected but doesn't belong to this section, don't render anything.
       return null;
     }
@@ -552,7 +561,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="all">All Classes</SelectItem>
-                            {classes.sort(sortClasses).map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                            {sortedClasses.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                           </SelectContent>
                         </Select>
                     </div>
@@ -585,12 +594,13 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
               <Label htmlFor="subject" className="text-right">Subject</Label>
               <Select
                 value={cellData.subject}
-                onValueChange={(value) => setCellData({ ...cellData, subject: value, teacher: '' })}
+                onValueChange={(value) => setCellData({ ...cellData, subject: value === '---' ? '---' : value, teacher: '' })}
               >
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Select subject" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="---">--- (Clear Slot)</SelectItem>
                   {subjects.map((s) => (
                     <SelectItem key={s} value={s}>{s}</SelectItem>
                   ))}
@@ -684,3 +694,5 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
 RoutineDisplay.displayName = 'RoutineDisplay';
 
 export default RoutineDisplay;
+
+    

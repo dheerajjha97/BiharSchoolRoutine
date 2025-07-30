@@ -33,6 +33,7 @@ type SchoolConfig = {
   preventConsecutiveClasses?: boolean;
   enableCombinedClasses?: boolean;
   subjectCategories: Record<string, SubjectCategory>;
+  dailyPeriodQuota: number;
 };
 
 type AppState = {
@@ -88,6 +89,7 @@ const DEFAULT_APP_STATE: AppState = {
     lunchTimeSlot: "12:00 - 13:00",
     preventConsecutiveClasses: true,
     enableCombinedClasses: false,
+    dailyPeriodQuota: 6,
   },
   routine: null,
 };
@@ -111,10 +113,12 @@ export default function Home() {
         const savedState: AppState = JSON.parse(savedStateJSON);
         // Basic validation to ensure the loaded data structure is what we expect
         if (savedState && savedState.teachers && savedState.config) {
-          // Ensure subjectCategories exists, if not, initialize it from old data or default
+          // Ensure subjectCategories and dailyPeriodQuota exists, if not, initialize it
           if (!savedState.config.subjectCategories) {
             savedState.config.subjectCategories = {};
-            // You can add logic here to auto-categorize based on subject names if needed
+          }
+          if (savedState.config.dailyPeriodQuota === undefined) {
+             savedState.config.dailyPeriodQuota = 6; // Default to 6 if not present
           }
           setAppState(savedState);
         }
@@ -152,7 +156,7 @@ export default function Home() {
   const { 
     classRequirements, subjectPriorities, unavailability, teacherSubjects, 
     teacherClasses, prayerTimeSlot, lunchTimeSlot, preventConsecutiveClasses,
-    enableCombinedClasses, subjectCategories
+    enableCombinedClasses, subjectCategories, dailyPeriodQuota
   } = config;
 
   const teacherLoad = useMemo(() => {
@@ -210,6 +214,7 @@ export default function Home() {
         preventConsecutiveClasses,
         enableCombinedClasses,
         subjectCategories,
+        dailyPeriodQuota,
       };
 
       const result = generateScheduleLogic(input);
@@ -408,6 +413,8 @@ export default function Home() {
                 setEnableCombinedClasses={(value) => updateConfig('enableCombinedClasses', value)}
                 subjectCategories={subjectCategories}
                 setSubjectCategories={(value) => updateConfig('subjectCategories', value)}
+                dailyPeriodQuota={dailyPeriodQuota}
+                setDailyPeriodQuota={(value) => updateConfig('dailyPeriodQuota', value)}
               />
         </div>
         <div className="lg:col-span-3">

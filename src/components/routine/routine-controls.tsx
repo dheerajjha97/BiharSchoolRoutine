@@ -49,6 +49,8 @@ interface RoutineControlsProps {
   setEnableCombinedClasses: (value: boolean) => void;
   subjectCategories: Record<string, SubjectCategory>;
   setSubjectCategories: (value: Record<string, SubjectCategory>) => void;
+  dailyPeriodQuota: number;
+  setDailyPeriodQuota: (value: number) => void;
 }
 
 const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -78,6 +80,8 @@ export default function RoutineControls({
   setEnableCombinedClasses,
   subjectCategories,
   setSubjectCategories,
+  dailyPeriodQuota,
+  setDailyPeriodQuota,
 }: RoutineControlsProps) {
   
   const [newUnavailability, setNewUnavailability] = useState<Omit<Unavailability, ''>>({ teacher: '', day: '', timeSlot: '' });
@@ -134,7 +138,27 @@ export default function RoutineControls({
         <Accordion type="multiple" className="w-full">
           <AccordionItem value="scheduling-rules">
             <AccordionTrigger>Scheduling Rules</AccordionTrigger>
-            <AccordionContent className="space-y-4">
+            <AccordionContent className="space-y-4 pt-4">
+               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="daily-period-quota">Periods Per Teacher Per Day</Label>
+                    <Select
+                      value={String(dailyPeriodQuota)}
+                      onValueChange={(value) => setDailyPeriodQuota(Number(value))}
+                    >
+                      <SelectTrigger id="daily-period-quota">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="4">4</SelectItem>
+                        <SelectItem value="5">5</SelectItem>
+                        <SelectItem value="6">6</SelectItem>
+                        <SelectItem value="7">7</SelectItem>
+                        <SelectItem value="8">8</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+              </div>
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="prevent-consecutive"

@@ -83,10 +83,10 @@ const categorizeClasses = (classes: string[]) => {
 };
 
 const toRoman = (num: number): string => {
+    if (num < 1) return "";
     const romanMap: { [key: number]: string } = {
-        1: 'I', 4: 'IV', 5: 'V', 9: 'IX', 10: 'X',
-        40: 'XL', 50: 'L', 90: 'XC', 100: 'C',
-        400: 'CD', 500: 'D', 900: 'CM', 1000: 'M'
+        1000: 'M', 900: 'CM', 500: 'D', 400: 'CD', 100: 'C',
+        90: 'XC', 50: 'L', 40: 'XL', 10: 'X', 9: 'IX', 5: 'V', 4: 'IV', 1: 'I'
     };
     let result = '';
     const sortedKeys = Object.keys(romanMap).map(Number).sort((a, b) => b - a);
@@ -170,13 +170,13 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
 
         entryTeachers.forEach(teacher => {
             if (clashes.has(`teacher-${key}-${teacher}`)) {
-                clashes.add(`${key}-${entry.className}-${teacher}`);
+                clashes.add(`{key}-${entry.className}-${teacher}`);
             }
         });
 
         entryClasses.forEach(c => {
             if (clashes.has(`class-${key}-${c}`)) {
-              clashes.add(`${key}-${c}-${entry.teacher}`);
+              clashes.add(`{key}-${c}-${entry.teacher}`);
             }
         });
     });
@@ -464,12 +464,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
       ? displayClasses 
       : displayClasses.filter(c => c === selectedClass);
 
-    if (filteredDisplayClasses.length === 0 && selectedClass === 'all') {
-      // Don't render the section if there are no classes for it at all
-      return null;
-    }
-     if (filteredDisplayClasses.length === 0 && selectedClass !== 'all') {
-      // If a class is selected but doesn't belong to this section, don't render anything.
+    if (filteredDisplayClasses.length === 0) {
       return null;
     }
   
@@ -496,11 +491,11 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
               {daysOfWeek.map(day => 
                 filteredDisplayClasses.map((className, classIndex) => (
                     <TableRow key={`${day}-${className}`}>
-                        {classIndex === 0 ? (
+                        {classIndex === 0 && (
                           <TableCell className="font-medium align-top" rowSpan={filteredDisplayClasses.length}>
                               {day}
                           </TableCell>
-                        ) : null}
+                        )}
                         <TableCell className="font-medium align-top">{className}</TableCell>
                         {timeSlots.map(slot => (
                             <TableCell key={`${day}-${className}-${slot}`} className="p-0 align-top">
@@ -583,7 +578,6 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
           </div>
         </CardContent>
       </Card>
-
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -694,3 +688,5 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
 RoutineDisplay.displayName = 'RoutineDisplay';
 
 export default RoutineDisplay;
+
+    

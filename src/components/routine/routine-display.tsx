@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useEffect, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, useMemo, useEffect, forwardRef, useImperativeHandle } from 'react';
 import type { GenerateScheduleOutput, ScheduleEntry } from "@/ai/flows/generate-schedule";
 import { Button } from "@/components/ui/button";
 import {
@@ -488,23 +488,25 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
               </TableRow>
             </TableHeader>
             <TableBody>
-              {daysOfWeek.map(day => 
-                filteredDisplayClasses.map((className, classIndex) => (
+              {daysOfWeek.map((day, dayIndex) => (
+                <React.Fragment key={day}>
+                  {filteredDisplayClasses.map((className, classIndex) => (
                     <TableRow key={`${day}-${className}`}>
-                        {classIndex === 0 && (
-                          <TableCell className="font-medium align-top" rowSpan={filteredDisplayClasses.length}>
-                              {day}
-                          </TableCell>
-                        )}
-                        <TableCell className="font-medium align-top">{className}</TableCell>
-                        {timeSlots.map(slot => (
-                            <TableCell key={`${day}-${className}-${slot}`} className="p-0 align-top">
-                            {renderCellContent(day, className, slot)}
-                            </TableCell>
-                        ))}
+                      {classIndex === 0 && (
+                        <TableCell className="font-medium align-top" rowSpan={filteredDisplayClasses.length}>
+                          {day}
+                        </TableCell>
+                      )}
+                      <TableCell className="font-medium align-top">{className}</TableCell>
+                      {timeSlots.map(slot => (
+                        <TableCell key={`${day}-${className}-${slot}`} className="p-0 align-top">
+                          {renderCellContent(day, className, slot)}
+                        </TableCell>
+                      ))}
                     </TableRow>
-                ))
-              )}
+                  ))}
+                </React.Fragment>
+              ))}
             </TableBody>
           </Table>
         </div>
@@ -688,5 +690,3 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
 RoutineDisplay.displayName = 'RoutineDisplay';
 
 export default RoutineDisplay;
-
-    

@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Trash2 } from "lucide-react";
-import type { SubjectPriority } from "@/lib/schedule-generator";
+import type { SubjectPriority, SubjectCategory } from "@/lib/schedule-generator";
 
 type Unavailability = {
   teacher: string;
@@ -47,6 +47,8 @@ interface RoutineControlsProps {
   setPreventConsecutiveClasses: (value: boolean) => void;
   enableCombinedClasses: boolean;
   setEnableCombinedClasses: (value: boolean) => void;
+  subjectCategories: Record<string, SubjectCategory>;
+  setSubjectCategories: (value: Record<string, SubjectCategory>) => void;
 }
 
 const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -73,7 +75,9 @@ export default function RoutineControls({
   preventConsecutiveClasses,
   setPreventConsecutiveClasses,
   enableCombinedClasses,
-  setEnableCombinedClasses
+  setEnableCombinedClasses,
+  subjectCategories,
+  setSubjectCategories,
 }: RoutineControlsProps) {
   
   const [newUnavailability, setNewUnavailability] = useState<Omit<Unavailability, ''>>({ teacher: '', day: '', timeSlot: '' });
@@ -219,11 +223,51 @@ export default function RoutineControls({
               ))}
             </AccordionContent>
           </AccordionItem>
+          <AccordionItem value="subject-categories">
+            <AccordionTrigger>Subject Categories</AccordionTrigger>
+            <AccordionContent className="space-y-4">
+               <p className="text-sm text-muted-foreground">
+                Categorize subjects as Main (prioritized, no daily repeats) or Additional (fills remaining slots).
+              </p>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Subject</TableHead>
+                    <TableHead className="text-center">Main Subject</TableHead>
+                    <TableHead className="text-center">Additional Subject</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {subjects
+                    .filter(s => !['Prayer', 'Lunch'].includes(s))
+                    .map(s => (
+                    <TableRow key={s}>
+                      <TableCell><Label>{s}</Label></TableCell>
+                      <TableCell colSpan={2}>
+                        <RadioGroup
+                          value={subjectCategories[s] || 'additional'}
+                          onValueChange={(value: SubjectCategory) => setSubjectCategories({ ...subjectCategories, [s]: value })}
+                          className="grid grid-cols-2"
+                        >
+                          <div className="flex items-center justify-center space-x-2">
+                            <RadioGroupItem value="main" id={`${s}-main`} />
+                          </div>
+                          <div className="flex items-center justify-center space-x-2">
+                            <RadioGroupItem value="additional" id={`${s}-additional`} />
+                          </div>
+                        </RadioGroup>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </AccordionContent>
+          </AccordionItem>
           <AccordionItem value="subject-priority">
-            <AccordionTrigger>Subject Priority</AccordionTrigger>
+            <AccordionTrigger>Subject Priority (Time of Day)</AccordionTrigger>
             <AccordionContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Set when subjects should be prioritized. This helps in scheduling important subjects before lunch.
+                Optionally, set when subjects should be prioritized. This helps in scheduling important subjects before lunch.
               </p>
               <Table>
                 <TableHeader>
@@ -236,7 +280,7 @@ export default function RoutineControls({
                 </TableHeader>
                 <TableBody>
                   {subjects
-                    .filter(s => s.toLowerCase() !== 'prayer' && s.toLowerCase() !== 'lunch')
+                    .filter(s => !['Prayer', 'Lunch'].includes(s))
                     .map(s => (
                     <TableRow key={s}>
                       <TableCell><Label>{s}</Label></TableCell>

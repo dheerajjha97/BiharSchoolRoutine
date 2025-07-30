@@ -14,7 +14,7 @@ import RoutineDisplay from "@/components/routine/routine-display";
 import TeacherLoad from "@/components/routine/teacher-load";
 import { exportToCsv, importFromCsv } from "@/lib/csv-helpers";
 import { generateScheduleLogic } from "@/lib/schedule-generator";
-import type { GenerateScheduleLogicInput, SubjectPriority } from "@/lib/schedule-generator";
+import type { GenerateScheduleLogicInput, SubjectCategory, SubjectPriority } from "@/lib/schedule-generator";
 
 type Unavailability = {
   teacher: string;
@@ -32,6 +32,7 @@ type SchoolConfig = {
   lunchTimeSlot?: string;
   preventConsecutiveClasses?: boolean;
   enableCombinedClasses?: boolean;
+  subjectCategories: Record<string, SubjectCategory>;
 };
 
 type AppState = {
@@ -82,6 +83,7 @@ const DEFAULT_APP_STATE: AppState = {
     unavailability: [],
     teacherSubjects: {},
     teacherClasses: {},
+    subjectCategories: {},
     prayerTimeSlot: "09:00 - 09:15",
     lunchTimeSlot: "12:00 - 13:00",
     preventConsecutiveClasses: true,
@@ -109,6 +111,11 @@ export default function Home() {
         const savedState: AppState = JSON.parse(savedStateJSON);
         // Basic validation to ensure the loaded data structure is what we expect
         if (savedState && savedState.teachers && savedState.config) {
+          // Ensure subjectCategories exists, if not, initialize it from old data or default
+          if (!savedState.config.subjectCategories) {
+            savedState.config.subjectCategories = {};
+            // You can add logic here to auto-categorize based on subject names if needed
+          }
           setAppState(savedState);
         }
       }
@@ -145,7 +152,7 @@ export default function Home() {
   const { 
     classRequirements, subjectPriorities, unavailability, teacherSubjects, 
     teacherClasses, prayerTimeSlot, lunchTimeSlot, preventConsecutiveClasses,
-    enableCombinedClasses,
+    enableCombinedClasses, subjectCategories
   } = config;
 
   const teacherLoad = useMemo(() => {
@@ -202,6 +209,7 @@ export default function Home() {
         lunchTimeSlot,
         preventConsecutiveClasses,
         enableCombinedClasses,
+        subjectCategories,
       };
 
       const result = generateScheduleLogic(input);
@@ -398,6 +406,8 @@ export default function Home() {
                 setPreventConsecutiveClasses={(value) => updateConfig('preventConsecutiveClasses', value)}
                 enableCombinedClasses={enableCombinedClasses ?? false}
                 setEnableCombinedClasses={(value) => updateConfig('enableCombinedClasses', value)}
+                subjectCategories={subjectCategories}
+                setSubjectCategories={(value) => updateConfig('subjectCategories', value)}
               />
         </div>
         <div className="lg:col-span-3">

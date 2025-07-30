@@ -111,47 +111,51 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
     const clashes = new Set<string>();
     if (!scheduleData?.schedule) return clashes;
 
-    const bookings: Record<string, string[]> = {}; // Key: "day-timeSlot", Value: [teacher1, teacher2, class1, class2]
+    const bookings: Record<string, { teachers: string[]; classes: string[] }> = {};
 
     scheduleData.schedule.forEach(entry => {
         const key = `${entry.day}-${entry.timeSlot}`;
         if (!bookings[key]) {
-            bookings[key] = [];
+            bookings[key] = { teachers: [], classes: [] };
         }
 
         const entryClasses = entry.className.split(' & ').map(c => c.trim());
-        
+        const entryTeachers = entry.teacher.split(' और ').map(t => t.trim()).filter(t => t !== "N/A");
+
         // Check for teacher clashes
-        if (entry.teacher !== "N/A") {
-            if (bookings[key].includes(`teacher-${entry.teacher}`)) {
-                clashes.add(`teacher-${key}-${entry.teacher}`);
+        entryTeachers.forEach(teacher => {
+            if (bookings[key].teachers.includes(teacher)) {
+                clashes.add(`teacher-${key}-${teacher}`);
             }
-            bookings[key].push(`teacher-${entry.teacher}`);
-        }
+            bookings[key].teachers.push(teacher);
+        });
 
         // Check for class clashes
         entryClasses.forEach(c => {
-             if (bookings[key].includes(`class-${c}`)) {
+             if (bookings[key].classes.includes(c)) {
                  clashes.add(`class-${key}-${c}`);
              }
-             bookings[key].push(`class-${c}`);
+             bookings[key].classes.push(c);
         });
     });
 
     // Go back through and mark all participants in a clash
     scheduleData.schedule.forEach(entry => {
-      const key = `${entry.day}-${entry.timeSlot}`;
-      const entryClasses = entry.className.split(' & ').map(c => c.trim());
-      
-      if (clashes.has(`teacher-${key}-${entry.teacher}`)) {
-        clashes.add(`${key}-${entry.className}-${entry.teacher}`);
-      }
+        const key = `${entry.day}-${entry.timeSlot}`;
+        const entryClasses = entry.className.split(' & ').map(c => c.trim());
+        const entryTeachers = entry.teacher.split(' और ').map(t => t.trim()).filter(t => t !== "N/A");
 
-      entryClasses.forEach(c => {
-        if (clashes.has(`class-${key}-${c}`)) {
-          clashes.add(`${key}-${c}-${entry.teacher}`);
-        }
-      });
+        entryTeachers.forEach(teacher => {
+            if (clashes.has(`teacher-${key}-${teacher}`)) {
+                clashes.add(`${key}-${entry.className}-${teacher}`);
+            }
+        });
+
+        entryClasses.forEach(c => {
+            if (clashes.has(`class-${key}-${c}`)) {
+              clashes.add(`${key}-${c}-${entry.teacher}`);
+            }
+        });
     });
 
     return clashes;
@@ -222,7 +226,8 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
 
   useEffect(() => {
     // When the subject changes, check if the current teacher is still valid
-    if (cellData.subject && !availableTeachers.includes(cellData.teacher)) {
+    const currentTeachers = cellData.teacher.split(' और ').map(t => t.trim());
+    if (cellData.subject && currentTeachers.some(t => !availableTeachers.includes(t) && t !== 'N/A')) {
         // If not, reset the teacher selection
         setCellData(prev => ({ ...prev, teacher: '' }));
     }
@@ -248,10 +253,10 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
               const row = [
                   entry.day,
                   entry.timeSlot,
-                  entry.className,
+                  `"${entry.className}"`,
                   entry.subject,
-                  entry.teacher,
-              ].map(v => `"${v.replace(/"/g, '""')}"`);
+                  `"${entry.teacher}"`,
+              ].map(v => `${v.replace(/"/g, '""')}`);
               csvRows.push(row.join(','));
           }
       }
@@ -329,7 +334,8 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
     const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
     const isClashed = entries.some(entry => {
         const entryClasses = entry.className.split(' & ').map(c => c.trim());
-        return clashSet.has(`teacher-${day}-${timeSlot}-${entry.teacher}`) ||
+        const entryTeachers = entry.teacher.split(' और ').map(t => t.trim()).filter(t => t !== "N/A");
+        return entryTeachers.some(t => clashSet.has(`teacher-${day}-${timeSlot}-${t}`)) ||
                entryClasses.some(c => clashSet.has(`class-${day}-${timeSlot}-${c}`));
     });
 
@@ -346,18 +352,27 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
                     <span className="text-muted-foreground text-xs hover:text-primary opacity-50 hover:opacity-100 no-print">+</span>
                 </div>
             )}
-            {[...new Map(entries.map(e => [JSON.stringify(e), e])).values()].map((entry, index) => (
-                <div
-                    key={index}
-                    className="w-full text-xs text-center p-1 bg-background rounded cursor-pointer hover:bg-accent hover:shadow-md no-print:shadow-sm"
-                >
-                    <div className="font-semibold">{entry.subject}</div>
-                    <div className="text-muted-foreground text-xs">{entry.teacher}</div>
-                    {entry.className.includes('&') && (
-                        <div className="text-muted-foreground text-[10px] italic">(Combined)</div>
-                    )}
-                </div>
-            ))}
+            {[...new Map(entries.map(e => [JSON.stringify(e), e])).values()].map((entry, index) => {
+                const teachersList = entry.teacher.split(' और ').map(t => t.trim());
+                return (
+                    <div
+                        key={index}
+                        className="w-full text-xs text-center p-1 bg-background rounded cursor-pointer hover:bg-accent hover:shadow-md no-print:shadow-sm"
+                    >
+                        <div className="font-semibold">{entry.subject}</div>
+                        <div className="text-muted-foreground text-xs">
+                           {teachersList.length > 1 ? (
+                                teachersList.map((t, i) => <div key={i}>{t}</div>)
+                           ) : (
+                                entry.teacher
+                           )}
+                        </div>
+                        {entry.className.includes('&') && (
+                            <div className="text-muted-foreground text-[10px] italic">(Combined)</div>
+                        )}
+                    </div>
+                )
+            })}
         </div>
     );
 };
@@ -479,7 +494,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
               <Label htmlFor="subject" className="text-right">Subject</Label>
               <Select
                 value={cellData.subject}
-                onValueChange={(value) => setCellData({ ...cellData, subject: value })}
+                onValueChange={(value) => setCellData({ ...cellData, subject: value, teacher: '' })}
               >
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Select subject" />
@@ -513,22 +528,20 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
                 </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="teacher" className="text-right">Teacher</Label>
-              <Select
-                value={cellData.teacher}
-                onValueChange={(value) => setCellData({ ...cellData, teacher: value })}
-              >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select teacher" />
-                </SelectTrigger>
-                <SelectContent>
-                   <SelectItem value="N/A">N/A</SelectItem>
-                  {availableTeachers.map((t) => (
-                    <SelectItem key={t} value={t}>{t}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="teacher" className="text-right">Teacher(s)</Label>
+               <Input
+                  id="teacher"
+                  value={cellData.teacher}
+                  onChange={(e) => setCellData({ ...cellData, teacher: e.target.value })}
+                  className="col-span-3"
+                  placeholder="e.g. Teacher 1 और Teacher 2"
+                />
             </div>
+             <div className="col-span-4 text-xs text-muted-foreground text-center">
+                For multiple teachers, use " और " as a separator.
+                <br />
+                Available for {cellData.subject || "any subject"}: {availableTeachers.join(', ')}
+             </div>
           </div>
           <DialogFooter className="sm:justify-between">
              {currentCell?.entry ? (
@@ -550,3 +563,4 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
 RoutineDisplay.displayName = 'RoutineDisplay';
 
 export default RoutineDisplay;
+

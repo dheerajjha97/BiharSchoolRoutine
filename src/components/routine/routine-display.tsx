@@ -73,7 +73,6 @@ const toRoman = (num: number): string => {
 
 const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects, teachers, teacherSubjects, onScheduleChange }: RoutineDisplayProps, ref) => {
   const [printHeader, setPrintHeader] = useState("Class Routine – Session 2025–26");
-  const [selectedClass, setSelectedClass] = useState<string>('all');
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [currentCell, setCurrentCell] = useState<{ day: string; timeSlot: string; className: string; entry: ScheduleEntry | null } | null>(null);
@@ -184,11 +183,8 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
     csvRows.push(headers.join(','));
 
     const processClassesForExport = (displayClasses: string[]) => {
-        const filteredClasses = selectedClass === 'all' ? displayClasses : displayClasses.filter(c => c === selectedClass);
-        if (filteredClasses.length === 0) return;
-
         daysOfWeek.forEach(day => {
-            filteredClasses.forEach((className, classIndex) => {
+            displayClasses.forEach((className, classIndex) => {
                 const row = [(classIndex === 0 ? `"${day}"` : '""'), `"${className}"`];
                 timeSlots.forEach(slot => {
                     const entries = gridSchedule[day]?.[className]?.[slot] || [];
@@ -197,19 +193,20 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
                 });
                 csvRows.push(row.join(','));
             });
-            if (filteredClasses.length > 0) csvRows.push(Array(headers.length).fill('""').join(','));
+            if (displayClasses.length > 0) csvRows.push(Array(headers.length).fill('""').join(','));
         });
     };
     
     const visibleSections = [
         {title: "Secondary", classes: secondaryClasses},
         {title: "Senior Secondary", classes: seniorSecondaryClasses}
-    ].filter(section => section.classes.some(c => selectedClass === 'all' || selectedClass === c));
+    ];
 
     visibleSections.forEach((section, sectionIndex) => {
+        if(section.classes.length === 0) return;
         csvRows.push(`"${section.title}"`);
         processClassesForExport(section.classes);
-        if (sectionIndex < visibleSections.length - 1) csvRows.push(Array(headers.length).fill('""').join(','));
+        if (sectionIndex < visibleSections.length - 1 && visibleSections[sectionIndex + 1].classes.length > 0) csvRows.push(Array(headers.length).fill('""').join(','));
     });
 
     const csvString = csvRows.join('\n');
@@ -278,7 +275,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
   };
 
   const renderCellContent = (day: string, className: string, timeSlot: string) => {
-    const entries = gridSchedule[day]?.[className]?.[slot] || [];
+    const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
     const isClashed = entries.some(entry => 
         entry.teacher.split(' & ').some(t => clashSet.has(`teacher-${day}-${timeSlot}-${t}`)) ||
         clashSet.has(`class-${day}-${timeSlot}-${className}`)
@@ -309,8 +306,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
   };
 
   const renderScheduleTable = (title: string, displayClasses: string[]) => {
-    const filteredClasses = selectedClass === 'all' ? displayClasses : displayClasses.filter(c => c === selectedClass);
-    if (filteredClasses.length === 0) return null;
+    if (displayClasses.length === 0) return null;
   
     return (
       <div className="printable-section">
@@ -332,9 +328,9 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
             <TableBody>
               {daysOfWeek.map((day) => (
                 <React.Fragment key={day}>
-                  {filteredClasses.map((className, classIndex) => (
+                  {displayClasses.map((className, classIndex) => (
                     <TableRow key={`${day}-${className}`}>
-                      {classIndex === 0 && <TableCell className="font-semibold align-top sticky left-0 bg-card z-10" rowSpan={filteredClasses.length}>{day}</TableCell>}
+                      {classIndex === 0 && <TableCell className="font-semibold align-top sticky left-0 bg-card z-10" rowSpan={displayClasses.length}>{day}</TableCell>}
                       <TableCell className="font-medium align-top sticky left-[100px] bg-card z-10">{className}</TableCell>
                       {timeSlots.map(slot => (
                         <TableCell key={`${day}-${className}-${slot}`} className="p-0 align-top">{renderCellContent(day, className, slot)}</TableCell>
@@ -476,3 +472,5 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
 
 RoutineDisplay.displayName = 'RoutineDisplay';
 export default RoutineDisplay;
+
+    

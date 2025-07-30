@@ -532,7 +532,6 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
     );
   }
 
-
   return (
     <>
       <Card className="h-full flex flex-col">
@@ -581,106 +580,108 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
         </CardContent>
       </Card>
       
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Edit Schedule Slot</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="subject" className="text-right">Subject</Label>
-              <Select
-                value={cellData.subject}
-                onValueChange={(value) => setCellData({ ...cellData, subject: value === '---' ? '---' : value, teacher: '' })}
-              >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select subject" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="---">--- (Clear Slot)</SelectItem>
-                  {subjects.map((s) => (
-                    <SelectItem key={s} value={s}>{s}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-4 items-start gap-4">
-              <Label className="text-right pt-2">Class(es)</Label>
-               <div className="col-span-3 space-y-4">
-                  {secondaryClasses.length > 0 && (
-                    <div>
-                      <Label className="text-sm font-medium">Secondary</Label>
-                      <Separator className="my-2" />
-                      <div className="grid grid-cols-2 gap-2">
-                        {secondaryClasses.map(c => <ClassCheckbox key={c} className={c} />)}
+      {currentCell && (
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Edit Schedule Slot</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="subject" className="text-right">Subject</Label>
+                <Select
+                  value={cellData.subject}
+                  onValueChange={(value) => setCellData({ ...cellData, subject: value === '---' ? '---' : value, teacher: '' })}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select subject" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="---">--- (Clear Slot)</SelectItem>
+                    {subjects.map((s) => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-start gap-4">
+                <Label className="text-right pt-2">Class(es)</Label>
+                 <div className="col-span-3 space-y-4">
+                    {secondaryClasses.length > 0 && (
+                      <div>
+                        <Label className="text-sm font-medium">Secondary</Label>
+                        <Separator className="my-2" />
+                        <div className="grid grid-cols-2 gap-2">
+                          {secondaryClasses.map(c => <ClassCheckbox key={c} className={c} />)}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                  {seniorSecondaryClasses.length > 0 && (
-                     <div>
-                      <Label className="text-sm font-medium">Senior Secondary</Label>
-                      <Separator className="my-2" />
-                      <div className="grid grid-cols-2 gap-2">
-                        {seniorSecondaryClasses.map(c => <ClassCheckbox key={c} className={c} />)}
+                    )}
+                    {seniorSecondaryClasses.length > 0 && (
+                       <div>
+                        <Label className="text-sm font-medium">Senior Secondary</Label>
+                        <Separator className="my-2" />
+                        <div className="grid grid-cols-2 gap-2">
+                          {seniorSecondaryClasses.map(c => <ClassCheckbox key={c} className={c} />)}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="teacher" className="text-right">Teacher(s)</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                      <Button variant="outline" className="col-span-3 justify-start font-normal">
+                          {selectedTeachers.length > 0 ? selectedTeachers.join(', ') : "Select teachers"}
+                      </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[300px] p-0">
+                      <Command>
+                          <CommandInput placeholder="Search teachers..." />
+                          <CommandList>
+                              <CommandEmpty>No teachers found for this subject.</CommandEmpty>
+                              <CommandGroup>
+                                  {availableTeachers.map((teacher) => (
+                                      <CommandItem
+                                          key={teacher}
+                                          onSelect={() => handleMultiSelectTeacher(teacher)}
+                                          value={teacher}
+                                      >
+                                          <div className={cn(
+                                              "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                                              selectedTeachers.includes(teacher)
+                                                  ? "bg-primary text-primary-foreground"
+                                                  : "opacity-50 [&_svg]:invisible"
+                                          )}>
+                                              <Check className={cn("h-4 w-4")} />
+                                          </div>
+                                          <span>{teacher}</span>
+                                      </CommandItem>
+                                  ))}
+                              </Group>
+                          </CommandList>
+                      </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+               <div className="col-span-4 text-xs text-muted-foreground text-center">
+                  Available for {cellData.subject || "any subject"}: {availableTeachers.join(', ')}
+               </div>
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="teacher" className="text-right">Teacher(s)</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                    <Button variant="outline" className="col-span-3 justify-start font-normal">
-                        {selectedTeachers.length > 0 ? selectedTeachers.join(', ') : "Select teachers"}
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[300px] p-0">
-                    <Command>
-                        <CommandInput placeholder="Search teachers..." />
-                        <CommandList>
-                            <CommandEmpty>No teachers found for this subject.</CommandEmpty>
-                            <CommandGroup>
-                                {availableTeachers.map((teacher) => (
-                                    <CommandItem
-                                        key={teacher}
-                                        onSelect={() => handleMultiSelectTeacher(teacher)}
-                                        value={teacher}
-                                    >
-                                        <div className={cn(
-                                            "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                                            selectedTeachers.includes(teacher)
-                                                ? "bg-primary text-primary-foreground"
-                                                : "opacity-50 [&_svg]:invisible"
-                                        )}>
-                                            <Check className={cn("h-4 w-4")} />
-                                        </div>
-                                        <span>{teacher}</span>
-                                    </CommandItem>
-                                ))}
-                            </Group>
-                        </CommandList>
-                    </Command>
-                </PopoverContent>
-              </Popover>
-            </div>
-             <div className="col-span-4 text-xs text-muted-foreground text-center">
-                Available for {cellData.subject || "any subject"}: {availableTeachers.join(', ')}
-             </div>
-          </div>
-          <DialogFooter className="sm:justify-between">
-             {currentCell?.entry ? (
-                <Button type="button" variant="destructive" onClick={handleDelete} className="gap-1">
-                  <Trash2 className="h-4 w-4" /> Delete
-                </Button>
-             ) : <div></div>}
-            <div className="flex gap-2">
-                <Button type="button" variant="secondary" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                <Button type="submit" onClick={handleSave}>Save Changes</Button>
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter className="sm:justify-between">
+               {currentCell?.entry ? (
+                  <Button type="button" variant="destructive" onClick={handleDelete} className="gap-1">
+                    <Trash2 className="h-4 w-4" /> Delete
+                  </Button>
+               ) : <div></div>}
+              <div className="flex gap-2">
+                  <Button type="button" variant="secondary" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                  <Button type="submit" onClick={handleSave}>Save Changes</Button>
+              </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   );
 });
@@ -688,5 +689,3 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
 RoutineDisplay.displayName = 'RoutineDisplay';
 
 export default RoutineDisplay;
-
-    

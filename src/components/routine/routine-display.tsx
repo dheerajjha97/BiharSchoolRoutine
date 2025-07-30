@@ -11,11 +11,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, Trash2 } from "lucide-react";
+import { Download, Trash2, CheckIcon } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from '../ui/checkbox';
 import { cn } from '@/lib/utils';
@@ -37,6 +39,12 @@ type GridSchedule = {
     }
   }
 };
+
+type CellData = {
+    subject: string;
+    classNames: string[];
+    teacher: string;
+}
 
 const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -86,7 +94,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [currentCell, setCurrentCell] = useState<{ day: string; timeSlot: string; className: string; entry: ScheduleEntry | null } | null>(null);
-  const [cellData, setCellData] = useState<{ subject: string; classNames: string[]; teacher: string }>({
+  const [cellData, setCellData] = useState<CellData>({
     subject: "",
     classNames: [],
     teacher: "",
@@ -120,7 +128,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
         }
 
         const entryClasses = entry.className.split(' & ').map(c => c.trim());
-        const entryTeachers = entry.teacher.split(' और ').map(t => t.trim()).filter(t => t !== "N/A");
+        const entryTeachers = entry.teacher.split(' और ').map(t => t.trim()).filter(t => t !== "N/A" && t !== "");
 
         // Check for teacher clashes
         entryTeachers.forEach(teacher => {
@@ -143,7 +151,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
     scheduleData.schedule.forEach(entry => {
         const key = `${entry.day}-${entry.timeSlot}`;
         const entryClasses = entry.className.split(' & ').map(c => c.trim());
-        const entryTeachers = entry.teacher.split(' और ').map(t => t.trim()).filter(t => t !== "N/A");
+        const entryTeachers = entry.teacher.split(' और ').map(t => t.trim()).filter(t => t !== "N/A" && t !== "");
 
         entryTeachers.forEach(teacher => {
             if (clashes.has(`teacher-${key}-${teacher}`)) {
@@ -226,7 +234,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
 
   useEffect(() => {
     // When the subject changes, check if the current teacher is still valid
-    const currentTeachers = cellData.teacher.split(' और ').map(t => t.trim());
+    const currentTeachers = cellData.teacher.split(' और ').map(t => t.trim()).filter(Boolean);
     if (cellData.subject && currentTeachers.some(t => !availableTeachers.includes(t) && t !== 'N/A')) {
         // If not, reset the teacher selection
         setCellData(prev => ({ ...prev, teacher: '' }));
@@ -271,7 +279,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
                     const entries = gridSchedule[day]?.[className]?.[slot] || [];
                     if (entries.length > 0) {
                         const cellContent = entries.map(entry => {
-                          const teacherDisplay = entry.teacher === 'N/A' ? '' : `(${entry.teacher})`;
+                          const teacherDisplay = entry.teacher === 'N/A' || !entry.teacher ? '' : `(${entry.teacher})`;
                           return `${entry.subject} ${teacherDisplay}`;
                         }).join(' / ');
                         row.push(`"${cellContent.replace(/"/g, '""')}"`);
@@ -322,7 +330,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
         setCellData({
             subject: entry.subject,
             classNames: entry.className.split(' & ').map(c => c.trim()),
-            teacher: entry.teacher,
+            teacher: entry.teacher || "",
         });
     } else {
         setCellData({ subject: "", classNames: [className], teacher: "" });
@@ -371,12 +379,21 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
       setIsDialogOpen(false);
       setCurrentCell(null);
   }
+  
+  const handleMultiSelectTeacher = (selectedTeacher: string) => {
+    const currentTeachers = cellData.teacher.split(' और ').map(t => t.trim()).filter(Boolean);
+    const newTeachers = currentTeachers.includes(selectedTeacher)
+      ? currentTeachers.filter(t => t !== selectedTeacher)
+      : [...currentTeachers, selectedTeacher];
+    setCellData({ ...cellData, teacher: newTeachers.join(' और ') });
+  };
+
 
   const renderCellContent = (day: string, className: string, timeSlot: string) => {
     const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
     const isClashed = entries.some(entry => {
         const entryClasses = entry.className.split(' & ').map(c => c.trim());
-        const entryTeachers = entry.teacher.split(' और ').map(t => t.trim()).filter(t => t !== "N/A");
+        const entryTeachers = (entry.teacher || "").split(' और ').map(t => t.trim()).filter(t => t !== "N/A" && t !== "");
         return entryTeachers.some(t => clashSet.has(`teacher-${day}-${timeSlot}-${t}`)) ||
                entryClasses.some(c => clashSet.has(`class-${day}-${timeSlot}-${c}`));
     });
@@ -395,7 +412,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
                 </div>
             )}
             {[...new Map(entries.map(e => [JSON.stringify(e), e])).values()].map((entry, index) => {
-                const teachersList = entry.teacher.split(' और ').map(t => t.trim());
+                const teachersList = (entry.teacher || "").split(' और ').map(t => t.trim()).filter(Boolean);
                 return (
                     <div
                         key={index}
@@ -477,6 +494,8 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
       </div>
     );
   };
+
+  const selectedTeachers = cellData.teacher.split(' और ').map(t => t.trim()).filter(Boolean);
 
   return (
     <>
@@ -571,17 +590,41 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="teacher" className="text-right">Teacher(s)</Label>
-               <Input
-                  id="teacher"
-                  value={cellData.teacher}
-                  onChange={(e) => setCellData({ ...cellData, teacher: e.target.value })}
-                  className="col-span-3"
-                  placeholder="e.g. Teacher 1 और Teacher 2"
-                />
+              <Popover>
+                <PopoverTrigger asChild>
+                    <Button variant="outline" className="col-span-3 justify-start">
+                        {selectedTeachers.length > 0 ? selectedTeachers.join(', ') : "Select teachers"}
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[300px] p-0">
+                    <Command>
+                        <CommandInput placeholder="Search teachers..." />
+                        <CommandList>
+                            <CommandEmpty>No teachers found.</CommandEmpty>
+                            <CommandGroup>
+                                {availableTeachers.map((teacher) => (
+                                    <CommandItem
+                                        key={teacher}
+                                        onSelect={() => handleMultiSelectTeacher(teacher)}
+                                    >
+                                        <div className={cn(
+                                            "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                                            selectedTeachers.includes(teacher)
+                                                ? "bg-primary text-primary-foreground"
+                                                : "opacity-50 [&_svg]:invisible"
+                                        )}>
+                                            <CheckIcon className={cn("h-4 w-4")} />
+                                        </div>
+                                        <span>{teacher}</span>
+                                    </CommandItem>
+                                ))}
+                            </CommandGroup>
+                        </CommandList>
+                    </Command>
+                </PopoverContent>
+              </Popover>
             </div>
              <div className="col-span-4 text-xs text-muted-foreground text-center">
-                For multiple teachers, use " और " as a separator.
-                <br />
                 Available for {cellData.subject || "any subject"}: {availableTeachers.join(', ')}
              </div>
           </div>
@@ -605,5 +648,3 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
 RoutineDisplay.displayName = 'RoutineDisplay';
 
 export default RoutineDisplay;
-
-

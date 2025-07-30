@@ -9,7 +9,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -112,7 +112,6 @@ export default function RoutineControls({
   
   const handleAddUnavailability = () => {
     if (newUnavailability.teacher && newUnavailability.day && newUnavailability.timeSlot) {
-      // Avoid adding duplicates
       if (!unavailability.some(u => 
           u.teacher === newUnavailability.teacher && 
           u.day === newUnavailability.day && 
@@ -130,14 +129,15 @@ export default function RoutineControls({
 
 
   return (
-    <Card className="no-print">
+    <Card>
       <CardHeader>
         <CardTitle>Advanced Configuration</CardTitle>
+        <CardDescription>Set detailed rules and mappings for routine generation.</CardDescription>
       </CardHeader>
       <CardContent>
-        <Accordion type="multiple" className="w-full">
-          <AccordionItem value="scheduling-rules">
-            <AccordionTrigger>Scheduling Rules</AccordionTrigger>
+        <Accordion type="multiple" className="w-full space-y-4">
+          <AccordionItem value="scheduling-rules" className="border p-4 rounded-lg">
+            <AccordionTrigger className="py-0">Scheduling Rules</AccordionTrigger>
             <AccordionContent className="space-y-4 pt-4">
                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
@@ -150,11 +150,7 @@ export default function RoutineControls({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="4">4</SelectItem>
-                        <SelectItem value="5">5</SelectItem>
-                        <SelectItem value="6">6</SelectItem>
-                        <SelectItem value="7">7</SelectItem>
-                        <SelectItem value="8">8</SelectItem>
+                        {[...Array(5).keys()].map(i => <SelectItem key={i+4} value={String(i+4)}>{i+4}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -165,7 +161,7 @@ export default function RoutineControls({
                   checked={preventConsecutiveClasses}
                   onCheckedChange={(checked) => setPreventConsecutiveClasses(!!checked)}
                 />
-                <Label htmlFor="prevent-consecutive">
+                <Label htmlFor="prevent-consecutive" className="font-normal">
                   Prevent teachers from having 3 or more consecutive periods
                 </Label>
               </div>
@@ -175,19 +171,19 @@ export default function RoutineControls({
                   checked={enableCombinedClasses}
                   onCheckedChange={(checked) => setEnableCombinedClasses(!!checked)}
                 />
-                <Label htmlFor="enable-combined-classes">
+                <Label htmlFor="enable-combined-classes" className="font-normal">
                   Enable combined classes for the same subject/grade
                 </Label>
               </div>
             </AccordionContent>
           </AccordionItem>
-          <AccordionItem value="class-requirements">
-            <AccordionTrigger>Class Requirements</AccordionTrigger>
-            <AccordionContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <AccordionItem value="class-requirements" className="border p-4 rounded-lg">
+            <AccordionTrigger className="py-0">Class Requirements</AccordionTrigger>
+            <AccordionContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-4">
               {classes.map(c => (
-                <div key={c} className="p-4 border rounded-lg">
-                  <h4 className="font-semibold mb-2">{c}</h4>
-                  <div className="space-y-2">
+                <div key={c}>
+                  <h4 className="font-semibold mb-2 border-b pb-2">{c}</h4>
+                  <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
                     {subjects.map(s => (
                       <div key={s} className="flex items-center space-x-2">
                         <Checkbox
@@ -195,7 +191,7 @@ export default function RoutineControls({
                           checked={classRequirements[c]?.includes(s) || false}
                           onCheckedChange={(checked) => handleRequirementChange(c, s, !!checked)}
                         />
-                        <Label htmlFor={`${c}-${s}`}>{s}</Label>
+                        <Label htmlFor={`${c}-${s}`} className="font-normal">{s}</Label>
                       </div>
                     ))}
                   </div>
@@ -203,13 +199,13 @@ export default function RoutineControls({
               ))}
             </AccordionContent>
           </AccordionItem>
-          <AccordionItem value="teacher-subjects">
-            <AccordionTrigger>Teacher-Subject Mapping</AccordionTrigger>
-            <AccordionContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <AccordionItem value="teacher-subjects" className="border p-4 rounded-lg">
+            <AccordionTrigger className="py-0">Teacher-Subject Mapping</AccordionTrigger>
+            <AccordionContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-4">
               {teachers.map(t => (
-                <div key={t} className="p-4 border rounded-lg">
-                  <h4 className="font-semibold mb-2">{t}</h4>
-                  <div className="space-y-2">
+                <div key={t}>
+                  <h4 className="font-semibold mb-2 border-b pb-2">{t}</h4>
+                  <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
                     {subjects.map(s => (
                       <div key={s} className="flex items-center space-x-2">
                         <Checkbox
@@ -217,7 +213,7 @@ export default function RoutineControls({
                           checked={teacherSubjects[t]?.includes(s) || false}
                           onCheckedChange={(checked) => handleTeacherSubjectChange(t, s, !!checked)}
                         />
-                        <Label htmlFor={`${t}-${s}`}>{s}</Label>
+                        <Label htmlFor={`${t}-${s}`} className="font-normal">{s}</Label>
                       </div>
                     ))}
                   </div>
@@ -225,13 +221,13 @@ export default function RoutineControls({
               ))}
             </AccordionContent>
           </AccordionItem>
-          <AccordionItem value="teacher-classes">
-            <AccordionTrigger>Teacher-Class Mapping</AccordionTrigger>
-            <AccordionContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <AccordionItem value="teacher-classes" className="border p-4 rounded-lg">
+            <AccordionTrigger className="py-0">Teacher-Class Mapping</AccordionTrigger>
+            <AccordionContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-4">
               {teachers.map(t => (
-                <div key={t} className="p-4 border rounded-lg">
-                  <h4 className="font-semibold mb-2">{t}</h4>
-                  <div className="space-y-2">
+                <div key={t}>
+                  <h4 className="font-semibold mb-2 border-b pb-2">{t}</h4>
+                  <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
                     {classes.map(c => (
                       <div key={c} className="flex items-center space-x-2">
                         <Checkbox
@@ -239,7 +235,7 @@ export default function RoutineControls({
                           checked={teacherClasses[t]?.includes(c) || false}
                           onCheckedChange={(checked) => handleTeacherClassChange(t, c, !!checked)}
                         />
-                        <Label htmlFor={`${t}-${c}`}>{c}</Label>
+                        <Label htmlFor={`${t}-${c}`} className="font-normal">{c}</Label>
                       </div>
                     ))}
                   </div>
@@ -247,9 +243,9 @@ export default function RoutineControls({
               ))}
             </AccordionContent>
           </AccordionItem>
-          <AccordionItem value="subject-categories">
-            <AccordionTrigger>Subject Categories</AccordionTrigger>
-            <AccordionContent className="space-y-4">
+          <AccordionItem value="subject-categories" className="border p-4 rounded-lg">
+            <AccordionTrigger className="py-0">Subject Categories</AccordionTrigger>
+            <AccordionContent className="space-y-4 pt-4">
                <p className="text-sm text-muted-foreground">
                 Categorize subjects as Main (prioritized, no daily repeats) or Additional (fills remaining slots).
               </p>
@@ -287,9 +283,9 @@ export default function RoutineControls({
               </Table>
             </AccordionContent>
           </AccordionItem>
-          <AccordionItem value="subject-priority">
-            <AccordionTrigger>Subject Priority (Time of Day)</AccordionTrigger>
-            <AccordionContent className="space-y-4">
+          <AccordionItem value="subject-priority" className="border p-4 rounded-lg">
+            <AccordionTrigger className="py-0">Subject Priority (Time of Day)</AccordionTrigger>
+            <AccordionContent className="space-y-4 pt-4">
               <p className="text-sm text-muted-foreground">
                 Optionally, set when subjects should be prioritized. This helps in scheduling important subjects before lunch.
               </p>
@@ -331,9 +327,9 @@ export default function RoutineControls({
               </Table>
             </AccordionContent>
           </AccordionItem>
-           <AccordionItem value="prayer-period">
-            <AccordionTrigger>Prayer Period</AccordionTrigger>
-            <AccordionContent className="space-y-4">
+           <AccordionItem value="prayer-period" className="border p-4 rounded-lg">
+            <AccordionTrigger className="py-0">Prayer Period</AccordionTrigger>
+            <AccordionContent className="space-y-4 pt-4">
                 <p className="text-sm text-muted-foreground">
                     Select a time slot to be the designated prayer period.
                 </p>
@@ -348,9 +344,9 @@ export default function RoutineControls({
                 </Select>
             </AccordionContent>
           </AccordionItem>
-          <AccordionItem value="lunch-period">
-            <AccordionTrigger>Lunch Period</AccordionTrigger>
-            <AccordionContent className="space-y-4">
+          <AccordionItem value="lunch-period" className="border p-4 rounded-lg">
+            <AccordionTrigger className="py-0">Lunch Period</AccordionTrigger>
+            <AccordionContent className="space-y-4 pt-4">
                 <p className="text-sm text-muted-foreground">
                     Select a time slot to be the designated lunch period. This will schedule a "Lunch" break for all classes at that time.
                 </p>
@@ -365,9 +361,9 @@ export default function RoutineControls({
                 </Select>
             </AccordionContent>
           </AccordionItem>
-          <AccordionItem value="teacher-unavailability">
-            <AccordionTrigger>Teacher Unavailability</AccordionTrigger>
-            <AccordionContent className="space-y-4">
+          <AccordionItem value="teacher-unavailability" className="border p-4 rounded-lg">
+            <AccordionTrigger className="py-0">Teacher Unavailability</AccordionTrigger>
+            <AccordionContent className="space-y-4 pt-4">
                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
                   <Select value={newUnavailability.teacher} onValueChange={(value) => setNewUnavailability({...newUnavailability, teacher: value})}>
                       <SelectTrigger><SelectValue placeholder="Select Teacher" /></SelectTrigger>
@@ -410,7 +406,7 @@ export default function RoutineControls({
                       </TableBody>
                     </Table>
                   ) : (
-                    <p className="text-sm text-muted-foreground text-center">No unavailability rules added. All teachers are assumed to be available.</p>
+                    <p className="text-sm text-muted-foreground text-center py-4">No unavailability rules added. All teachers are assumed to be available.</p>
                   )}
                </div>
             </AccordionContent>

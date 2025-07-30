@@ -1,0 +1,120 @@
+
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useContext, useState } from "react";
+import { AppStateContext } from "@/context/app-state-provider";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Menu,
+  BookOpenCheck,
+  LayoutDashboard,
+  Database,
+  SlidersHorizontal,
+  FileDown,
+  FileUp,
+  FolderOpen,
+  Save,
+  Printer,
+  Trash2,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import type { ChangeEvent } from "react";
+
+const navItems = [
+  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/data", label: "Data Management", icon: Database },
+  { href: "/config", label: "Configuration", icon: SlidersHorizontal },
+];
+
+export default function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const { 
+    handleImportConfig, 
+    handleSaveConfig,
+    handlePrint,
+    handleClearRoutine
+  } = useContext(AppStateContext);
+
+  const sidebarContent = (
+    <div className="flex flex-col h-full">
+      <div className="p-4 border-b">
+        <Link href="/" className="flex items-center gap-3">
+          <BookOpenCheck className="h-8 w-8 text-primary" />
+          <h1 className="text-xl font-bold text-foreground">BiharSchoolRoutine</h1>
+        </Link>
+      </div>
+      <nav className="flex-grow px-4 py-4">
+        <ul className="space-y-2">
+          {navItems.map((item) => (
+            <li key={item.href}>
+              <Link
+                href={item.href}
+                onClick={() => setIsSheetOpen(false)}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary hover:bg-primary/10",
+                  pathname === item.href && "bg-primary/10 text-primary font-semibold"
+                )}
+              >
+                <item.icon className="h-5 w-5" />
+                {item.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
+      <div className="p-4 mt-auto border-t">
+        <div className="grid gap-2">
+           <Button variant="outline" size="sm" onClick={handleSaveConfig}>
+            <Save className="mr-2 h-4 w-4" /> Save Config
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleImportConfig}>
+            <FolderOpen className="mr-2 h-4 w-4" /> Load Config
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="grid min-h-screen w-full md:grid-cols-[240px_1fr]">
+      <div className="hidden border-r bg-card md:block">
+        {sidebarContent}
+      </div>
+      <div className="flex flex-col">
+        <header className="flex h-16 items-center gap-4 border-b bg-card px-4 md:px-6 sticky top-0 z-30">
+          <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="icon" className="shrink-0 md:hidden">
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Toggle navigation menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="flex flex-col p-0">
+              {sidebarContent}
+            </SheetContent>
+          </Sheet>
+          <div className="flex-1">
+             <h1 className="font-semibold text-lg">
+                {navItems.find(item => item.href === pathname)?.label || 'Dashboard'}
+             </h1>
+          </div>
+          <div className="flex items-center gap-2">
+             <Button variant="outline" size="sm" onClick={handlePrint} >
+              <Printer className="h-4 w-4" />
+            </Button>
+             <Button variant="destructive" size="sm" onClick={handleClearRoutine}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </header>
+        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 bg-background">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+}

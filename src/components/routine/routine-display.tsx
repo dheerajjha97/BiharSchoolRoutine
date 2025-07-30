@@ -17,7 +17,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, Trash2, Check } from "lucide-react";
+import { Download, Trash2, Check, AlertTriangle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from '../ui/checkbox';
 import { cn } from '@/lib/utils';
@@ -202,7 +202,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
   }, [scheduleData, timeSlots, classes]);
 
   const availableTeachers = useMemo(() => {
-    if (!cellData.subject) {
+    if (!cellData.subject || cellData.subject === '---') {
       return teachers;
     }
     const qualifiedTeachers = teachers.filter(teacher => 
@@ -342,13 +342,19 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
         teacher: cellData.teacher
     };
 
-    const originalEntries = currentCell.entry ? (currentSchedule.filter(e => 
-      e.day === currentCell.day &&
-      e.timeSlot === currentCell.timeSlot &&
-      e.className.split(' & ').map(c => c.trim()).some(c => cellData.classNames.includes(c))
-    )) : [];
+    const originalEntry = currentCell.entry;
+    
+    // Remove the original entry if it exists
+    newSchedule = originalEntry ? currentSchedule.filter(e => e !== originalEntry) : [...currentSchedule];
 
-    newSchedule = currentSchedule.filter(e => !originalEntries.includes(e));
+    // Remove any entries that might conflict with the new class combination
+    newSchedule = newSchedule.filter(e => {
+        if (e.day !== currentCell.day || e.timeSlot !== currentCell.timeSlot) {
+            return true;
+        }
+        const existingClasses = e.className.split(' & ').map(c => c.trim());
+        return !existingClasses.some(c => cellData.classNames.includes(c));
+    });
 
     if (cellData.subject && cellData.subject !== '---') {
         const newEntry: ScheduleEntry = {
@@ -386,40 +392,43 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
     const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
     const isClashed = entries.some(entry => {
         const entryTeachers = (entry.teacher || "").split(' और ').map(t => t.trim()).filter(t => t !== "N/A" && t !== "");
-        return entryTeachers.some(t => clashSet.has(`teacher-${day}-${timeSlot}-${t}`)) ||
-               clashSet.has(`class-${day}-${timeSlot}-${className}`);
+        const teacherClash = entryTeachers.some(t => clashSet.has(`teacher-${day}-${timeSlot}-${t}`));
+        const classClash = clashSet.has(`class-${day}-${timeSlot}-${className}`);
+        return teacherClash || classClash;
     });
 
     return (
         <div
             className={cn(
-                "h-full min-h-[60px] flex flex-col items-center justify-center p-1 space-y-1 cursor-pointer",
-                isClashed && "bg-destructive/20"
+                "h-full min-h-[70px] flex flex-col items-center justify-center p-1 space-y-1 cursor-pointer transition-colors hover:bg-primary/5",
+                isClashed && "bg-destructive/20 hover:bg-destructive/30"
             )}
             onClick={() => handleCellClick(day, timeSlot, className, entries[0] || null)}
         >
+            {isClashed && <AlertTriangle className="h-4 w-4 text-destructive absolute top-1 right-1 no-print" />}
             {entries.length === 0 && (
                 <div className="flex-grow w-full flex items-center justify-center">
                     <span className="text-muted-foreground text-xs hover:text-primary opacity-0 hover:opacity-100 no-print transition-opacity">+</span>
                 </div>
             )}
             {[...new Map(entries.map(e => [JSON.stringify(e), e])).values()].map((entry, index) => {
+                if (entry.subject === '---') return null;
                 const teachersList = (entry.teacher || "").split(' और ').map(t => t.trim()).filter(Boolean);
                 return (
                     <div
                         key={index}
-                        className="w-full text-xs text-center p-1 bg-background rounded no-print:shadow-sm"
+                        className="w-full text-xs text-center p-1 bg-card rounded-md border"
                     >
                         <div className="font-semibold">{entry.subject}</div>
                         <div className="text-muted-foreground text-xs">
                            {teachersList.length > 1 ? (
                                 teachersList.map((t, i) => <div key={i}>{t}</div>)
                            ) : (
-                                entry.teacher
+                                entry.teacher || <span className="italic">N/A</span>
                            )}
                         </div>
                         {entry.className.includes('&') && (
-                            <div className="text-muted-foreground text-[10px] italic">(Combined)</div>
+                            <div className="text-muted-foreground text-[10px] italic mt-1">(Combined)</div>
                         )}
                     </div>
                 )
@@ -443,15 +452,15 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
   
     return (
       <div className="printable-section break-inside-avoid">
-        <h3 className="text-lg font-semibold mb-2">{title}</h3>
-        <div className="overflow-x-auto border rounded-lg">
+        <h3 className="text-xl font-semibold mb-3 print:text-center">{title}</h3>
+        <div className="overflow-x-auto border rounded-lg bg-card">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="font-bold align-bottom">Day</TableHead>
-                <TableHead className="font-bold align-bottom">Class</TableHead>
+                <TableHead className="font-bold align-bottom min-w-[100px]">Day</TableHead>
+                <TableHead className="font-bold align-bottom min-w-[120px]">Class</TableHead>
                 {timeSlots.map(slot => (
-                  <TableHead key={slot} className="text-center font-bold text-xs min-w-[100px] p-1 align-bottom">
+                  <TableHead key={slot} className="text-center font-bold text-xs min-w-[110px] p-1 align-bottom">
                       <div>{slot}</div>
                       <div className="font-normal text-muted-foreground">
                         {instructionalSlotMap[slot] ? toRoman(instructionalSlotMap[slot]) : '-'}
@@ -478,6 +487,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
                       ))}
                     </TableRow>
                   ))}
+                  {day !== 'Saturday' && <TableRow className="bg-background"><TableCell colSpan={timeSlots.length + 2} className="p-1"></TableCell></TableRow>}
                 </React.Fragment>
               ))}
             </TableBody>
@@ -505,12 +515,29 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
         <Label htmlFor={`class-${className}`} className={cn("font-normal", getDisabledClasses.has(className) && 'text-muted-foreground')}>{className}</Label>
     </div>
   );
+  
+  if (!scheduleData || !scheduleData.schedule || scheduleData.schedule.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>School Routine</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-12 text-muted-foreground">
+            <p>No routine has been generated yet.</p>
+            <p className="text-sm">Click the "Generate Routine" button to start.</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
 
   return (
     <>
       <Card className="h-full flex flex-col">
         <CardHeader className="no-print">
-          <div className="flex justify-between items-start">
+          <div className="flex flex-wrap justify-between items-center gap-4">
               <div>
                   <CardTitle>School Routine</CardTitle>
                   <CardDescription>View, print, export, or edit your routine by clicking on a cell.</CardDescription>
@@ -555,7 +582,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
       </Card>
       
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Edit Schedule Slot</DialogTitle>
           </DialogHeader>
@@ -612,7 +639,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
                     <Command>
                         <CommandInput placeholder="Search teachers..." />
                         <CommandList>
-                            <CommandEmpty>No teachers found.</CommandEmpty>
+                            <CommandEmpty>No teachers found for this subject.</CommandEmpty>
                             <CommandGroup>
                                 {availableTeachers.map((teacher) => (
                                     <CommandItem
@@ -648,8 +675,8 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
                 </Button>
              ) : <div></div>}
             <div className="flex gap-2">
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                <Button type="submit" onClick={handleSave}>Save changes</Button>
+                <Button type="button" variant="secondary" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                <Button type="submit" onClick={handleSave}>Save Changes</Button>
             </div>
           </DialogFooter>
         </DialogContent>

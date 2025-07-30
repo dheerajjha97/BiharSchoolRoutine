@@ -5,12 +5,13 @@ import { useContext } from "react";
 import { AppStateContext } from "@/context/app-state-provider";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Wand2 } from "lucide-react";
 import RoutineDisplay from "@/components/routine/routine-display";
 import TeacherLoad from "@/components/routine/teacher-load";
 import { generateScheduleLogic } from "@/lib/schedule-generator";
 import type { GenerateScheduleLogicInput } from "@/lib/schedule-generator";
+import PageHeader from "@/components/app/page-header";
 
 export default function Home() {
   const { appState, updateState, isLoading, setIsLoading } = useContext(AppStateContext);
@@ -55,20 +56,22 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-8">
+      <PageHeader 
+        title="Dashboard"
+        description="Generate, view, and manage your school's class routine."
+      />
+
        <Card>
         <CardHeader>
-          <CardTitle>Generate School Routine</CardTitle>
+          <CardTitle>Generate New Routine</CardTitle>
+          <CardDescription>
+            Click the button to generate a new routine based on your current data and configuration.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col items-start gap-4">
-             <p className="text-muted-foreground">
-                Click the button below to generate a new routine based on your current data and configuration.
-                You can manage your school's data and set advanced rules on the other pages.
-              </p>
             <Button
               size="lg"
-              className="w-full sm:w-auto"
               onClick={handleGenerateRoutine}
               disabled={isLoading}
             >
@@ -79,7 +82,6 @@ export default function Home() {
               )}
               Generate Routine
             </Button>
-          </div>
         </CardContent>
       </Card>
       

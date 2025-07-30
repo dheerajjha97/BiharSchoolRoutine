@@ -1,6 +1,4 @@
 
-"use client";
-
 type SchoolData = {
   teachers: string[];
   classes: string[];
@@ -27,15 +25,11 @@ export const exportToCsv = (data: SchoolData, filename: string) => {
 
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement("a");
-  if (link.download !== undefined) {
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", filename);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 };
 
 export const importFromCsv = (file: File): Promise<SchoolData> => {
@@ -60,6 +54,7 @@ export const importFromCsv = (file: File): Promise<SchoolData> => {
         const timeSlotIndex = headers.indexOf('timeSlots');
 
         for (let i = 1; i < lines.length; i++) {
+            // Simple CSV parsing, may not handle all edge cases like commas in values
             const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
             if (teacherIndex !== -1 && values[teacherIndex]) {
                 data.teachers.push(values[teacherIndex]);
@@ -70,17 +65,16 @@ export const importFromCsv = (file: File): Promise<SchoolData> => {
             if (subjectIndex !== -1 && values[subjectIndex]) {
                 data.subjects.push(values[subjectIndex]);
             }
-            if (timeSlotIndex !== -1 && values[timeSlotIndex]) {
-                data.timeSlots?.push(values[timeSlotIndex]);
+            if (timeSlotIndex !== -1 && values[timeSlotIndex] && data.timeSlots) {
+                data.timeSlots.push(values[timeSlotIndex]);
             }
         }
         
-        // Remove duplicates
-        data.teachers = [...new Set(data.teachers)];
-        data.classes = [...new Set(data.classes)];
-        data.subjects = [...new Set(data.subjects)];
+        data.teachers = [...new Set(data.teachers)].sort();
+        data.classes = [...new Set(data.classes)].sort();
+        data.subjects = [...new Set(data.subjects)].sort();
         if (data.timeSlots) {
-          data.timeSlots = [...new Set(data.timeSlots)];
+          data.timeSlots = [...new Set(data.timeSlots)].sort();
         }
         
         resolve(data);
@@ -90,7 +84,6 @@ export const importFromCsv = (file: File): Promise<SchoolData> => {
     };
 
     reader.onerror = (error) => reject(error);
-
     reader.readAsText(file);
   });
 };

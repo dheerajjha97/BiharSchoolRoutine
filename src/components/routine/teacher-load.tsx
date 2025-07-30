@@ -12,10 +12,10 @@ interface TeacherLoadProps {
 const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Total"];
 
 export default function TeacherLoad({ teacherLoad }: TeacherLoadProps) {
-  const teachers = Object.keys(teacherLoad);
+  const teachers = Object.keys(teacherLoad).sort();
 
   if (teachers.length === 0) {
-    return null; // Don't render anything if there's no load data
+    return null;
   }
 
   return (
@@ -28,13 +28,13 @@ export default function TeacherLoad({ teacherLoad }: TeacherLoadProps) {
         <CardDescription>Number of classes assigned per teacher per day.</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto border rounded-lg">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Teacher</TableHead>
+                <TableHead className="font-semibold">Teacher</TableHead>
                 {daysOfWeek.map(day => (
-                  <TableHead key={day} className="text-center">{day.substring(0, 3)}</TableHead>
+                  <TableHead key={day} className="text-center font-semibold">{day.substring(0, 3)}</TableHead>
                 ))}
               </TableRow>
             </TableHeader>

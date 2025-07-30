@@ -4,7 +4,7 @@
 import { useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -57,7 +57,7 @@ export default function DataManager({ title, icon: Icon, items, setItems, placeh
           <div className="space-y-2">
             {items.length > 0 ? (
               items.map(item => (
-                <div key={item} className="flex items-center justify-between bg-secondary/50 p-2 rounded-md text-sm">
+                <div key={item} className="flex items-center justify-between bg-secondary p-2 rounded-md text-sm">
                   <span>{item}</span>
                   <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveItem(item)}>
                     <X className="h-4 w-4" />

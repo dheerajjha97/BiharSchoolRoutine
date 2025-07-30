@@ -1,15 +1,14 @@
 
 "use client";
 
-import { useContext } from "react";
+import { useContext, useRef } from "react";
+import type { ChangeEvent } from "react";
 import { AppStateContext } from "@/context/app-state-provider";
 import DataManager from "@/components/routine/data-manager";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Upload, Download, User, School, Book, Clock } from "lucide-react";
 import { importFromCsv, exportToCsv } from "@/lib/csv-helpers";
-import type { ChangeEvent } from "react";
-import { useRef } from "react";
 import PageHeader from "@/components/app/page-header";
 
 export default function DataManagementPage() {
@@ -20,10 +19,10 @@ export default function DataManagementPage() {
 
     const handleExportCsv = () => {
         try {
-        exportToCsv({ teachers, classes, subjects, timeSlots }, "school-data.csv");
-        toast({ title: "Data exported successfully!" });
+            exportToCsv({ teachers, classes, subjects, timeSlots }, "school-data.csv");
+            toast({ title: "Data exported successfully!" });
         } catch (error) {
-        toast({ variant: "destructive", title: "Export failed", description: "Could not export the data." });
+            toast({ variant: "destructive", title: "Export failed", description: "Could not export the data." });
         }
     };
 
@@ -36,14 +35,14 @@ export default function DataManagementPage() {
         if (!file) return;
 
         try {
-        const data = await importFromCsv(file);
-        if (data.teachers) updateState('teachers', data.teachers);
-        if (data.classes) updateState('classes', data.classes);
-        if (data.subjects) updateState('subjects', data.subjects);
-        if (data.timeSlots) updateState('timeSlots', data.timeSlots);
-        toast({ title: "Data imported successfully!" });
+            const data = await importFromCsv(file);
+            if (data.teachers) updateState('teachers', data.teachers);
+            if (data.classes) updateState('classes', data.classes);
+            if (data.subjects) updateState('subjects', data.subjects);
+            if (data.timeSlots) updateState('timeSlots', data.timeSlots);
+            toast({ title: "Data imported successfully!" });
         } catch (error) {
-        toast({ variant: "destructive", title: "Import failed", description: "Could not parse the CSV file." });
+            toast({ variant: "destructive", title: "Import failed", description: "Could not parse the CSV file." });
         }
         if(csvInputRef.current) csvInputRef.current.value = "";
     };

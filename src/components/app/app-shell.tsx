@@ -13,15 +13,12 @@ import {
   LayoutDashboard,
   Database,
   SlidersHorizontal,
-  FileDown,
-  FileUp,
-  FolderOpen,
   Save,
   Printer,
   Trash2,
+  FolderOpen
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { ChangeEvent } from "react";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -40,33 +37,32 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   } = useContext(AppStateContext);
 
   const sidebarContent = (
-    <div className="flex flex-col h-full">
-      <div className="p-4 border-b">
-        <Link href="/" className="flex items-center gap-3">
-          <BookOpenCheck className="h-8 w-8 text-primary" />
-          <h1 className="text-xl font-bold text-foreground">BiharSchoolRoutine</h1>
+    <div className="flex h-full flex-col">
+      <div className="flex h-16 items-center border-b px-6">
+        <Link href="/" className="flex items-center gap-2 font-semibold">
+          <BookOpenCheck className="h-6 w-6 text-primary" />
+          <span>BiharSchoolRoutine</span>
         </Link>
       </div>
-      <nav className="flex-grow px-4 py-4">
-        <ul className="space-y-2">
+      <div className="flex-1 overflow-y-auto">
+        <nav className="grid items-start px-4 text-sm font-medium">
           {navItems.map((item) => (
-            <li key={item.href}>
-              <Link
-                href={item.href}
-                onClick={() => setIsSheetOpen(false)}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary hover:bg-primary/10",
-                  pathname === item.href && "bg-primary/10 text-primary font-semibold"
-                )}
-              >
-                <item.icon className="h-5 w-5" />
-                {item.label}
-              </Link>
-            </li>
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setIsSheetOpen(false)}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+                pathname === item.href && "bg-muted text-primary"
+              )}
+            >
+              <item.icon className="h-4 w-4" />
+              {item.label}
+            </Link>
           ))}
-        </ul>
-      </nav>
-      <div className="p-4 mt-auto border-t">
+        </nav>
+      </div>
+       <div className="mt-auto p-4 border-t">
         <div className="grid gap-2">
            <Button variant="outline" size="sm" onClick={handleSaveConfig}>
             <Save className="mr-2 h-4 w-4" /> Save Config
@@ -80,15 +76,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <div className="grid min-h-screen w-full md:grid-cols-[240px_1fr]">
-      <div className="hidden border-r bg-card md:block">
+    <div className="grid min-h-screen w-full lg:grid-cols-[280px_1fr]">
+      <div className="hidden border-r bg-card text-card-foreground lg:block">
         {sidebarContent}
       </div>
       <div className="flex flex-col">
-        <header className="flex h-16 items-center gap-4 border-b bg-card px-4 md:px-6 sticky top-0 z-30">
+        <header className="flex h-16 items-center gap-4 border-b bg-card px-6 sticky top-0 z-30">
           <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
             <SheetTrigger asChild>
-              <Button variant="outline" size="icon" className="shrink-0 md:hidden">
+              <Button variant="outline" size="icon" className="shrink-0 lg:hidden">
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Toggle navigation menu</span>
               </Button>
@@ -97,21 +93,21 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               {sidebarContent}
             </SheetContent>
           </Sheet>
-          <div className="flex-1">
+           <div className="flex-1">
              <h1 className="font-semibold text-lg">
                 {navItems.find(item => item.href === pathname)?.label || 'Dashboard'}
              </h1>
           </div>
           <div className="flex items-center gap-2">
              <Button variant="outline" size="sm" onClick={handlePrint} >
-              <Printer className="h-4 w-4" />
+              <Printer className="mr-2 h-4 w-4" /> Print Routine
             </Button>
              <Button variant="destructive" size="sm" onClick={handleClearRoutine}>
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="mr-2 h-4 w-4" /> Clear Routine
             </Button>
           </div>
         </header>
-        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 bg-background">
+        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6 bg-background">
           {children}
         </main>
       </div>

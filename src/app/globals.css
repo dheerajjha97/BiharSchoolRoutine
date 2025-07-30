@@ -1,60 +1,51 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: 'Noto Sans', sans-serif;
-}
-
 @layer base {
   :root {
-    --background: 240 10% 97%; /* Lighter gray */
-    --foreground: 240 5% 15%;
-    --card: 240 0% 100%;
-    --card-foreground: 240 5% 15%;
-    --popover: 240 0% 100%;
-    --popover-foreground: 240 5% 15%;
-    --primary: 262 82% 57%; /* Deep Purple */
-    --primary-foreground: 0 0% 100%;
-    --secondary: 240 5% 90%;
-    --secondary-foreground: 240 5% 25%;
-    --muted: 240 5% 90%;
-    --muted-foreground: 240 5% 45%;
-    --accent: 210 90% 60%; /* Bright Blue */
-    --accent-foreground: 0 0% 100%;
+    --background: 210 40% 98%; /* Light Gray */
+    --foreground: 215 25% 27%;
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 27%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 27%;
+    --primary: 217 33% 54%; /* Slate Blue */
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 175 74% 80%; /* Pale Turquoise */
+    --accent-foreground: 222.2 47.4% 11.2%;
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5% 85%;
-    --input: 240 5% 92%;
-    --ring: 262 82% 57%;
-    --chart-1: 262 82% 57%;
-    --chart-2: 210 90% 60%;
-    --chart-3: 27 87% 67%;
-    --chart-4: 173 58% 39%;
-    --chart-5: 43 74% 66%;
-    --radius: 0.75rem;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 217 33% 54%;
+    --radius: 0.5rem;
   }
+
   .dark {
-    --background: 240 5% 10%;
-    --foreground: 240 5% 95%;
-    --card: 240 5% 15%;
-    --card-foreground: 240 5% 95%;
-    --popover: 240 5% 15%;
-    --popover-foreground: 240 5% 95%;
-    --primary: 262 82% 67%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 240 5% 25%;
-    --secondary-foreground: 240 5% 95%;
-    --muted: 240 5% 25%;
-    --muted-foreground: 240 5% 65%;
-    --accent: 210 90% 60%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 72.2% 50.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5% 25%;
-    --input: 240 5% 20%;
-    --ring: 262 82% 67%;
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 91.2% 59.8%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 217.2 91.2% 59.8%;
   }
 }
 
@@ -71,7 +62,6 @@ body {
   body {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
-    font-family: 'Noto Sans', sans-serif;
   }
 
   .no-print {
@@ -80,25 +70,15 @@ body {
   
   body > div, main {
     display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
   }
 
   @page {
     size: A4 landscape;
     margin: 0.5in;
-    
-    @top-center {
-      content: var(--print-header-content, "");
-      font-weight: bold;
-      font-size: 14pt;
-    }
-
-    @bottom-center {
-      content: var(--print-footer-content, "");
-      font-size: 9pt;
-      color: #666;
-    }
   }
-
+  
   .printable-section {
     padding: 0;
     margin: 0;
@@ -110,13 +90,9 @@ body {
     overflow: visible;
   }
 
-  .printable-section .border {
-    border: none;
-  }
-
   .printable-section table {
     width: 100%;
-    font-size: 9pt;
+    font-size: 8pt;
     border-collapse: collapse;
   }
 
@@ -131,26 +107,14 @@ body {
   }
 
   .printable-section .text-xs {
-    font-size: 8pt;
-  }
-  
-  .printable-section .text-\[10px\] {
     font-size: 7pt;
   }
-
+  
   .printable-section .font-semibold {
-    font-weight: 500;
-  }
-
-  .printable-section .p-1 {
-    padding: 1px;
+    font-weight: 600;
   }
   
-  .printable-section .bg-background {
-    background-color: transparent !important;
-  }
-
-  .printable-section .bg-accent {
-    background-color: transparent !important;
+  .printable-section .p-1 {
+    padding: 1px;
   }
 }

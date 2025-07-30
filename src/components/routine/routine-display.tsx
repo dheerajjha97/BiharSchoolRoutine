@@ -18,6 +18,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Download, Trash2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from '../ui/checkbox';
+import { cn } from '@/lib/utils';
 
 interface RoutineDisplayProps {
   scheduleData: GenerateScheduleOutput | null;
@@ -105,6 +106,57 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
     });
     return { instructionalSlots, instructionalSlotMap };
   }, [timeSlots]);
+
+  const clashSet = useMemo(() => {
+    const clashes = new Set<string>();
+    if (!scheduleData?.schedule) return clashes;
+
+    const bookings: Record<string, string[]> = {}; // Key: "day-timeSlot", Value: [teacher1, teacher2, class1, class2]
+
+    scheduleData.schedule.forEach(entry => {
+        const key = `${entry.day}-${entry.timeSlot}`;
+        if (!bookings[key]) {
+            bookings[key] = [];
+        }
+
+        const entryClasses = entry.className.split(' & ').map(c => c.trim());
+        
+        // Check for teacher clashes
+        if (entry.teacher !== "N/A") {
+            if (bookings[key].includes(`teacher-${entry.teacher}`)) {
+                clashes.add(`teacher-${key}-${entry.teacher}`);
+            }
+            bookings[key].push(`teacher-${entry.teacher}`);
+        }
+
+        // Check for class clashes
+        entryClasses.forEach(c => {
+             if (bookings[key].includes(`class-${c}`)) {
+                 clashes.add(`class-${key}-${c}`);
+             }
+             bookings[key].push(`class-${c}`);
+        });
+    });
+
+    // Go back through and mark all participants in a clash
+    scheduleData.schedule.forEach(entry => {
+      const key = `${entry.day}-${entry.timeSlot}`;
+      const entryClasses = entry.className.split(' & ').map(c => c.trim());
+      
+      if (clashes.has(`teacher-${key}-${entry.teacher}`)) {
+        clashes.add(`${key}-${entry.className}-${entry.teacher}`);
+      }
+
+      entryClasses.forEach(c => {
+        if (clashes.has(`class-${key}-${c}`)) {
+          clashes.add(`${key}-${c}-${entry.teacher}`);
+        }
+      });
+    });
+
+    return clashes;
+  }, [scheduleData]);
+
 
   const gridSchedule = useMemo<GridSchedule>(() => {
     const grid: GridSchedule = {};
@@ -275,28 +327,29 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
 
   const renderCellContent = (day: string, className: string, timeSlot: string) => {
     const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
-    
-    if (entries.length === 0) {
-        return (
-             <div
-                className="h-full min-h-[60px] text-center pt-1 flex-grow w-full flex items-center justify-center"
-                onClick={() => handleCellClick(day, timeSlot, className, null)}
-            >
-                <span className="text-muted-foreground text-xs hover:text-primary opacity-50 hover:opacity-100 no-print">+</span>
-            </div>
-        )
-    }
-
-    // Use a Set to avoid rendering duplicate entries if a class is part of multiple combined groups in the same slot
-    const uniqueEntries = [...new Map(entries.map(e => [JSON.stringify(e), e])).values()];
+    const isClashed = entries.some(entry => {
+        const entryClasses = entry.className.split(' & ').map(c => c.trim());
+        return clashSet.has(`teacher-${day}-${timeSlot}-${entry.teacher}`) ||
+               entryClasses.some(c => clashSet.has(`class-${day}-${timeSlot}-${c}`));
+    });
 
     return (
-        <div className="h-full min-h-[60px] flex flex-col items-center justify-center p-1 space-y-1">
-            {uniqueEntries.map((entry, index) => (
+        <div
+            className={cn(
+                "h-full min-h-[60px] flex flex-col items-center justify-center p-1 space-y-1",
+                isClashed && "bg-destructive/20"
+            )}
+            onClick={() => handleCellClick(day, timeSlot, className, entries[0] || null)}
+        >
+            {entries.length === 0 && (
+                <div className="flex-grow w-full flex items-center justify-center">
+                    <span className="text-muted-foreground text-xs hover:text-primary opacity-50 hover:opacity-100 no-print">+</span>
+                </div>
+            )}
+            {[...new Map(entries.map(e => [JSON.stringify(e), e])).values()].map((entry, index) => (
                 <div
                     key={index}
                     className="w-full text-xs text-center p-1 bg-background rounded cursor-pointer hover:bg-accent hover:shadow-md no-print:shadow-sm"
-                    onClick={() => handleCellClick(day, timeSlot, className, entry)}
                 >
                     <div className="font-semibold">{entry.subject}</div>
                     <div className="text-muted-foreground text-xs">{entry.teacher}</div>
@@ -308,6 +361,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
         </div>
     );
 };
+
 
   const renderScheduleTable = (title: string, displayClasses: string[]) => {
     if (selectedClass !== 'all' && !displayClasses.includes(selectedClass)) {

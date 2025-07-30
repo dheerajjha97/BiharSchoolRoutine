@@ -488,15 +488,15 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
               </TableRow>
             </TableHeader>
             <TableBody>
-              {daysOfWeek.map((day, dayIndex) => (
+              {daysOfWeek.map((day) => (
                 <React.Fragment key={day}>
                   {filteredDisplayClasses.map((className, classIndex) => (
                     <TableRow key={`${day}-${className}`}>
-                      {classIndex === 0 && (
+                      {classIndex === 0 ? (
                         <TableCell className="font-medium align-top" rowSpan={filteredDisplayClasses.length}>
                           {day}
                         </TableCell>
-                      )}
+                      ) : null}
                       <TableCell className="font-medium align-top">{className}</TableCell>
                       {timeSlots.map(slot => (
                         <TableCell key={`${day}-${className}-${slot}`} className="p-0 align-top">

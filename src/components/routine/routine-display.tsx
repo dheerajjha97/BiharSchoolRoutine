@@ -55,6 +55,18 @@ const getGradeFromClassName = (className: string): string | null => {
     return match ? match[1] : null;
 };
 
+// Custom sort function for classes
+const sortClasses = (a: string, b: string): number => {
+  const gradeA = parseInt(getGradeFromClassName(a) || '0', 10);
+  const gradeB = parseInt(getGradeFromClassName(b) || '0', 10);
+
+  if (gradeA !== gradeB) {
+    return gradeA - gradeB;
+  }
+  // If grades are the same, sort alphabetically by the rest of the name
+  return a.localeCompare(b);
+};
+
 // Function to categorize classes
 const categorizeClasses = (classes: string[]) => {
     const secondary: string[] = [];
@@ -67,7 +79,7 @@ const categorizeClasses = (classes: string[]) => {
         seniorSecondary.push(c);
       }
     });
-    return { secondaryClasses: secondary.sort(), seniorSecondaryClasses: seniorSecondary.sort() };
+    return { secondaryClasses: secondary.sort(sortClasses), seniorSecondaryClasses: seniorSecondary.sort(sortClasses) };
 };
 
 const toRoman = (num: number): string => {
@@ -540,7 +552,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="all">All Classes</SelectItem>
-                            {classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                            {classes.sort(sortClasses).map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                           </SelectContent>
                         </Select>
                     </div>
@@ -642,7 +654,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
                                         <span>{teacher}</span>
                                     </CommandItem>
                                 ))}
-                            </CommandGroup>
+                            </Group>
                         </CommandList>
                     </Command>
                 </PopoverContent>
@@ -672,5 +684,3 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
 RoutineDisplay.displayName = 'RoutineDisplay';
 
 export default RoutineDisplay;
-
-    

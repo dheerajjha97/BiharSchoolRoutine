@@ -19,7 +19,7 @@ export default function TeacherLoad({ teacherLoad }: TeacherLoadProps) {
   }
 
   return (
-    <Card>
+    <Card className="no-print">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5 text-primary" />
@@ -28,6 +28,7 @@ export default function TeacherLoad({ teacherLoad }: TeacherLoadProps) {
         <CardDescription>Number of classes assigned per teacher per day.</CardDescription>
       </CardHeader>
       <CardContent>
+        <h3 className="hidden print:block print-title">Teacher Workload Summary</h3>
         <div className="overflow-x-auto border rounded-lg">
           <Table>
             <TableHeader>

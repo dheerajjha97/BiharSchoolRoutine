@@ -163,7 +163,7 @@ export default function Home() {
         </CardContent>
       </Card>
       
-      <div className="no-print">
+      <div className="printable-section">
         <TeacherLoad teacherLoad={appState.teacherLoad} />
       </div>
 

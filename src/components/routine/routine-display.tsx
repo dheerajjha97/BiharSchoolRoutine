@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, Trash2, Check, AlertTriangle, Copy } from "lucide-react";
+import { Download, Trash2, Check, AlertTriangle, Copy, Printer } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from '../ui/checkbox';
 import { cn } from '@/lib/utils';
@@ -183,12 +183,10 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
     }
   }, [cellData.subject, availableTeachers, cellData.teacher]);
   
-  useImperativeHandle(ref, () => ({
-      handlePrint: () => {
-        document.documentElement.style.setProperty('--print-header-content', `'${printHeader.replace(/'/g, "\\'")}'`);
-        window.print();
-      }
-  }));
+  const handlePrint = () => {
+    document.documentElement.style.setProperty('--print-header-content', `'${printHeader.replace(/'/g, "\\'")}'`);
+    window.print();
+  };
 
   const handleExport = () => {
     const csvRows: string[] = [];
@@ -364,12 +362,12 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
       <div className="printable-section">
         <h3 className="text-xl font-semibold mb-3 print:hidden">{title}</h3>
         <h3 className="hidden print:block print-title">{title}</h3>
-        <div className="border rounded-lg bg-card">
+        <div className="border rounded-lg bg-card overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="font-bold min-w-[100px] sticky left-0 bg-card z-10">Day</TableHead>
-                <TableHead className="font-bold min-w-[120px] sticky left-[100px] bg-card z-10">Class</TableHead>
+                <TableHead className="font-bold min-w-[100px] sticky left-0 bg-card z-10 print:static">Day</TableHead>
+                <TableHead className="font-bold min-w-[120px] sticky left-[100px] bg-card z-10 print:static">Class</TableHead>
                 {timeSlots.map(slot => (
                   <TableHead key={slot} className="text-center font-bold text-xs min-w-[110px] p-1">
                       <div>{slot}</div>
@@ -384,7 +382,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
                   {displayClasses.map((className, classIndex) => (
                     <TableRow key={`${day}-${className}`}>
                       {classIndex === 0 && (
-                        <TableCell className="font-semibold align-top sticky left-0 bg-card z-10" rowSpan={displayClasses.length}>
+                        <TableCell className="font-semibold align-top sticky left-0 bg-card z-10 print:static" rowSpan={displayClasses.length}>
                           <div className="flex items-center gap-2">
                              <span>{day}</span>
                               <DropdownMenu>
@@ -411,7 +409,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
                           </div>
                         </TableCell>
                       )}
-                      <TableCell className="font-medium align-top sticky left-[100px] bg-card z-10">{className}</TableCell>
+                      <TableCell className="font-medium align-top sticky left-[100px] bg-card z-10 print:static">{className}</TableCell>
                       {timeSlots.map(timeSlot => (
                         <TableCell key={`${day}-${className}-${timeSlot}`} className="p-0 align-top">{renderCellContent(day, className, timeSlot)}</TableCell>
                       ))}
@@ -458,6 +456,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
             <div className="flex flex-wrap justify-between items-center gap-4">
                 <CardTitle>View Routine</CardTitle>
                 <div className="flex gap-2">
+                    <Button onClick={handlePrint} size="sm" variant="outline"><Printer className="mr-2 h-4 w-4" /> Print All</Button>
                     <Button onClick={handleExport} size="sm" variant="outline"><Download className="mr-2 h-4 w-4" /> Export CSV</Button>
                 </div>
             </div>

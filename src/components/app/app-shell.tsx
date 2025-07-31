@@ -45,15 +45,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     handleSaveConfig,
     handleSaveBackup,
     handleImportBackup,
-    handlePrint,
     handleClearRoutine,
-    handlePrintTeacherRoutine
   } = useContext(AppStateContext);
 
   const fileMenuContent = (closeSheet?: () => void) => (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline">
+        <Button variant="outline" className="justify-start">
           <Save className="mr-2 h-4 w-4" /> File
         </Button>
       </DropdownMenuTrigger>
@@ -108,7 +106,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
       </div>
        <div className="mt-auto p-4 border-t">
-        {fileMenuContent()}
+         <div className="grid">
+          {fileMenuContent()}
+        </div>
       </div>
     </div>
   );
@@ -142,7 +142,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
       </div>
        <div className="mt-auto p-4 border-t">
-         {fileMenuContent(() => setIsSheetOpen(false))}
+         <div className="grid">
+            {fileMenuContent(() => setIsSheetOpen(false))}
+         </div>
       </div>
     </div>
   );
@@ -162,23 +164,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="flex flex-col p-0">
-               <SheetHeader>
-                  <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+               <SheetHeader className="sr-only">
+                  <SheetTitle>Navigation Menu</SheetTitle>
               </SheetHeader>
               {mobileSidebarContent}
             </SheetContent>
           </Sheet>
           <div className="flex-1">
-             <h1 className="font-semibold text-lg">
+             <h1 className="font-semibold text-lg hidden sm:block">
                 {navItems.find(item => item.href === pathname)?.label || 'Dashboard'}
              </h1>
           </div>
-          <div className="flex items-center gap-2">
-             <Button variant="outline" size="sm" onClick={handlePrint}>
-              <Printer className="mr-2 h-4 w-4" /> Print All
-            </Button>
+          <div className="flex items-center gap-2 flex-wrap justify-end">
              <Button variant="destructive" size="sm" onClick={handleClearRoutine}>
-              <Trash2 className="mr-2 h-4 w-4" /> Clear All
+              <Trash2 className="mr-2 h-4 w-4" /> Clear Routine
             </Button>
           </div>
         </header>

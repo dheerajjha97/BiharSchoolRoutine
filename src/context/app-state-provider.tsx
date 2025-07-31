@@ -49,7 +49,6 @@ interface AppStateContextType {
   handleImportConfig: () => void;
   handleSaveBackup: () => void;
   handleImportBackup: () => void;
-  handlePrint: () => void;
   handleClearRoutine: () => void;
   handlePrintTeacherRoutine: (teacherName: string) => void;
 }
@@ -81,7 +80,7 @@ const DEFAULT_APP_STATE: AppState = {
     lunchTimeSlot: "12:15 PM - 01:00 PM",
     preventConsecutiveClasses: true,
     enableCombinedClasses: false,
-    dailyPeriodQuota: 6,
+    dailyPeriodQuota: 5,
   },
   routine: null,
   teacherLoad: {},
@@ -267,10 +266,6 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   const handleImportBackup = useCallback(() => {
     backupInputRef.current?.click();
   }, []);
-
-  const handlePrint = useCallback(() => {
-    window.print();
-  }, []);
   
   const handleClearRoutine = useCallback(() => {
       updateState('routine', null);
@@ -282,7 +277,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         toast({ variant: "destructive", title: "No routine available to print." });
         return;
     }
-    
+
     const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const teacherSchedule = appState.routine.schedule.filter(entry => entry.teacher.includes(teacherName));
     
@@ -293,12 +288,14 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     });
 
     const printStyles = `
-        body { font-family: sans-serif; }
-        h1 { text-align: center; }
-        table { width: 100%; border-collapse: collapse; font-size: 10pt; }
-        th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
-        th { background-color: #f2f2f2; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        @page { size: A4; margin: 0.5in; }
+        h1 { text-align: center; font-size: 16pt; margin-bottom: 1rem; }
+        table { width: 100%; border-collapse: collapse; font-size: 8pt; }
+        th, td { border: 1px solid #ccc; padding: 4px; text-align: center; }
+        th { background-color: #f2f2f2 !important; font-weight: 600; }
         td:first-child { text-align: left; font-weight: bold; }
+        small { font-size: 7pt; color: #555; }
     `;
 
     let tableHtml = `
@@ -306,8 +303,8 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         <table>
             <thead>
                 <tr>
-                    <th>Day</th>
-                    ${appState.timeSlots.map(slot => `<th>${slot}</th>`).join('')}
+                    <th>Day / Time</th>
+                    ${appState.timeSlots.map(slot => `<th>${slot.replace(/ /g, '')}</th>`).join('')}
                 </tr>
             </thead>
             <tbody>
@@ -318,7 +315,8 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         appState.timeSlots.forEach(slot => {
             const entry = scheduleByDayTime[day]?.[slot];
             if (entry) {
-                tableHtml += `<td><b>${entry.subject}</b><br><small>${entry.className}</small></td>`;
+                const subjectText = entry.subject === 'Prayer' || entry.subject === 'Lunch' ? `<b>${entry.subject}</b>` : `<b>${entry.subject}</b><br><small>${entry.className}</small>`;
+                tableHtml += `<td>${subjectText}</td>`;
             } else {
                 tableHtml += `<td>---</td>`;
             }
@@ -328,35 +326,31 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 
     tableHtml += `</tbody></table>`;
     
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'absolute';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = '0';
-    document.body.appendChild(iframe);
-
-    const doc = iframe.contentWindow?.document;
-    if (doc) {
-        doc.open();
-        doc.write('<html><head><title>Print Teacher Routine</title>');
-        doc.write(`<style>${printStyles}</style>`);
-        doc.write('</head><body>');
-        doc.write(tableHtml);
-        doc.write('</body></html>');
-        doc.close();
-
-        iframe.contentWindow?.focus();
-        iframe.contentWindow?.print();
+    const newWindow = window.open('', '_blank');
+    if (newWindow) {
+        newWindow.document.write('<html><head><title>Print Teacher Routine</title>');
+        newWindow.document.write(`<style>${printStyles}</style>`);
+        newWindow.document.write('</head><body>');
+        newWindow.document.write(tableHtml);
+        newWindow.document.write('</body></html>');
+        newWindow.document.close();
+        
+        // Use a timeout to ensure content is loaded before printing
+        setTimeout(() => {
+          try {
+            newWindow.print();
+          } finally {
+            newWindow.close();
+          }
+        }, 250);
+    } else {
+        toast({ variant: "destructive", title: "Print failed", description: "Could not open a new window. Please check your browser's popup settings." });
     }
-    
-    setTimeout(() => {
-        document.body.removeChild(iframe);
-    }, 1000);
 
   }, [appState.routine, appState.timeSlots, toast]);
 
   return (
-    <AppStateContext.Provider value={{ appState, updateState, updateConfig, isLoading, setIsLoading, handleSaveConfig, handleImportConfig, handleSaveBackup, handleImportBackup, handlePrint, handleClearRoutine, handlePrintTeacherRoutine }}>
+    <AppStateContext.Provider value={{ appState, updateState, updateConfig, isLoading, setIsLoading, handleSaveConfig, handleImportConfig, handleSaveBackup, handleImportBackup, handleClearRoutine, handlePrintTeacherRoutine }}>
       {children}
       <input
         type="file"
@@ -375,3 +369,5 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     </AppStateContext.Provider>
   );
 };
+
+    

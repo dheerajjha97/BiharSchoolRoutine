@@ -64,6 +64,7 @@
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
     background-color: #fff;
+    font-size: 10pt;
   }
 
   .no-print {
@@ -79,7 +80,7 @@
 
   @page {
     size: A4 landscape;
-    margin: 0.4in 0.2in;
+    margin: 0.4in;
   }
   
   .printable-section {
@@ -96,17 +97,21 @@
     overflow: visible;
   }
   
-  /* Add custom header content for printing */
-  .printable-section::before {
+  .print-header-container::before {
     content: var(--print-header-content, "");
     display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
     text-align: center;
     font-size: 16pt;
     font-weight: bold;
-    margin-bottom: 1rem;
+    padding: 0.2in;
+    padding-bottom: 0;
   }
 
-  .printable-section .print-title {
+  .print-title {
     text-align: center;
     font-size: 14pt;
     font-weight: 600;
@@ -120,7 +125,7 @@
   }
 
   .printable-section th, .printable-section td {
-    border: 1px solid #ccc;
+    border: 1px solid #ccc !important;
     padding: 2px; /* Reduced padding */
     text-align: center;
     height: 40px; /* Set a fixed height for cells */
@@ -131,9 +136,11 @@
     background-color: #f2f2f2 !important;
   }
   
-  .printable-section .p-1 { padding: 1px; }
-  .printable-section .min-h-\[60px\] { min-height: 0; }
-  .printable-section .text-xs { font-size: 7pt; }
-  .printable-section .text-\[10px\] { font-size: 6pt; }
-  .printable-section .font-semibold { font-weight: 600; }
+  /* Resetting specific component styles for print */
+  .printable-section .p-1 { padding: 1px !important; }
+  .printable-section .min-h-\[60px\] { min-height: auto !important; }
+  .printable-section .text-xs { font-size: 7pt !important; }
+  .printable-section .text-\[10px\] { font-size: 6pt !important; }
+  .printable-section .font-semibold { font-weight: 600 !important; }
+  .print\:static { position: static !important; }
 }

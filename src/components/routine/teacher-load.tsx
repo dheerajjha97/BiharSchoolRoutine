@@ -33,7 +33,7 @@ export default function TeacherLoad({ teacherLoad }: TeacherLoadProps) {
       </CardHeader>
       <CardContent>
         <h3 className="hidden print:block print-title">Teacher Workload Summary</h3>
-        <div className="overflow-x-auto border rounded-lg">
+        <div className="border rounded-lg">
           <Table>
             <TableHeader>
               <TableRow>

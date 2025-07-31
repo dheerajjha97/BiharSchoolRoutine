@@ -123,14 +123,13 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="p-4 md:p-6 flex-shrink-0">
-        <PageHeader 
+    <div className="space-y-6">
+       <PageHeader 
           title="Dashboard"
           description="Generate, view, and manage your school's class routine."
         />
 
-        <Card className="no-print mt-6">
+        <Card className="no-print">
           <CardHeader>
             <CardTitle>Generate New Routine</CardTitle>
             <CardDescription>
@@ -163,13 +162,11 @@ export default function Home() {
               </div>
           </CardContent>
         </Card>
-      </div>
       
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 pt-0 space-y-8">
         <div className="printable-section">
           <TeacherLoad teacherLoad={appState.teacherLoad} />
         </div>
-
+      
         <RoutineDisplay 
           scheduleData={appState.routine}
           onScheduleChange={(newSchedule) => updateState('routine', { schedule: newSchedule })}
@@ -180,7 +177,6 @@ export default function Home() {
           teacherSubjects={appState.config.teacherSubjects}
           dailyPeriodQuota={appState.config.dailyPeriodQuota}
         />
-      </div>
     </div>
   );
 }

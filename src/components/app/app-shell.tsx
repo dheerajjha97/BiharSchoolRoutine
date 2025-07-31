@@ -46,13 +46,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     handleSaveBackup,
     handleImportBackup,
     handlePrint,
-    handleClearRoutine
+    handleClearRoutine,
+    handlePrintTeacherRoutine
   } = useContext(AppStateContext);
 
   const fileMenuContent = (closeSheet?: () => void) => (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="w-full justify-start">
+        <Button variant="outline">
           <Save className="mr-2 h-4 w-4" /> File
         </Button>
       </DropdownMenuTrigger>
@@ -79,7 +80,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </DropdownMenuContent>
     </DropdownMenu>
   );
-
+  
   const sidebarContent = (
     <div className="flex h-full flex-col">
       <div className="flex h-16 items-center border-b px-6">
@@ -113,9 +114,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   );
   
   const mobileSidebarContent = (
-    <div className="flex h-full flex-col">
-       <SheetHeader className="border-b">
-        <SheetTitle className="p-6 pt-0">
+     <div className="flex h-full flex-col">
+       <SheetHeader className="border-b p-4">
+        <SheetTitle>
           <Link href="/" onClick={() => setIsSheetOpen(false)} className="flex items-center gap-2 font-semibold">
             <BookOpenCheck className="h-6 w-6 text-primary" />
             <span>BiharSchoolRoutine</span>
@@ -146,34 +147,34 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 
-
   return (
     <div className="grid min-h-screen w-full lg:grid-cols-[280px_1fr]">
       <div className="hidden border-r bg-card text-card-foreground lg:block no-print">
         {sidebarContent}
       </div>
-      <div className="flex flex-col max-h-screen">
-        <header className="flex h-auto min-h-16 items-center gap-4 border-b bg-card px-6 sticky top-0 z-30 no-print flex-wrap py-2">
-          <div className="flex items-center gap-4 flex-1">
-            <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-              <SheetTrigger asChild>
-                <Button variant="outline" size="icon" className="shrink-0 lg:hidden">
-                  <Menu className="h-5 w-5" />
-                  <span className="sr-only">Toggle navigation menu</span>
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="flex flex-col p-0">
-                 {mobileSidebarContent}
-              </SheetContent>
-            </Sheet>
-             <div className="flex-1">
-               <h1 className="font-semibold text-lg truncate">
-                  {navItems.find(item => item.href === pathname)?.label || 'Dashboard'}
-               </h1>
-            </div>
+      <div className="flex flex-col">
+        <header className="flex h-16 items-center gap-4 border-b bg-card px-6 sticky top-0 z-30 no-print">
+          <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="icon" className="shrink-0 lg:hidden">
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Toggle navigation menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="flex flex-col p-0">
+               <SheetHeader>
+                  <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+              </SheetHeader>
+              {mobileSidebarContent}
+            </SheetContent>
+          </Sheet>
+          <div className="flex-1">
+             <h1 className="font-semibold text-lg">
+                {navItems.find(item => item.href === pathname)?.label || 'Dashboard'}
+             </h1>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-             <Button variant="outline" size="sm" onClick={handlePrint} >
+          <div className="flex items-center gap-2">
+             <Button variant="outline" size="sm" onClick={handlePrint}>
               <Printer className="mr-2 h-4 w-4" /> Print All
             </Button>
              <Button variant="destructive" size="sm" onClick={handleClearRoutine}>
@@ -181,7 +182,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </Button>
           </div>
         </header>
-        <main className="flex-1 flex flex-col bg-background overflow-y-auto">
+        <main className="flex-1 bg-background p-4 md:p-6 overflow-y-auto">
           {children}
         </main>
       </div>

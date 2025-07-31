@@ -364,7 +364,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
       <div className="printable-section">
         <h3 className="text-xl font-semibold mb-3 print:hidden">{title}</h3>
         <h3 className="hidden print:block print-title">{title}</h3>
-        <div className="overflow-x-auto border rounded-lg bg-card">
+        <div className="border rounded-lg bg-card">
           <Table>
             <TableHeader>
               <TableRow>

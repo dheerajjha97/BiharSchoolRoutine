@@ -360,7 +360,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
   
     return (
       <div className="printable-section">
-        <h3 className="text-xl font-semibold mb-3 print:hidden">{title}</h3>
+        <h3 className="text-xl font-semibold mb-3 print:hidden px-6">{title}</h3>
         <h3 className="hidden print:block print-title">{title}</h3>
         <div className="border rounded-lg bg-card overflow-x-auto">
           <Table>
@@ -467,7 +467,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
             </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="space-y-6 p-6">
+          <div className="space-y-6 py-6">
             {renderScheduleTable("Secondary", secondaryClasses)}
             {renderScheduleTable("Senior Secondary", seniorSecondaryClasses)}
           </div>

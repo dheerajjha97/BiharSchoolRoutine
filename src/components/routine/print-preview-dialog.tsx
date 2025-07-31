@@ -2,7 +2,6 @@
 "use client";
 
 import React, { useRef, useState, useMemo, useEffect } from 'react';
-import { useReactToPrint } from 'react-to-print';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -70,8 +69,7 @@ const PrintPreviewDialog: React.FC<PrintPreviewDialogProps> = ({ isOpen, onOpenC
   const { teacherRoutineForPrint } = appState;
 
   const teacherContentRef = useRef<HTMLDivElement>(null);
-  const componentToPrintRef = teacherRoutineForPrint ? teacherContentRef : contentRef;
-
+  
   const [scale, setScale] = useState(100);
   const [margins, setMargins] = useState({ top: 1, right: 1, bottom: 1, left: 1 });
   const [orientation, setOrientation] = useState<'landscape' | 'portrait'>('landscape');
@@ -79,9 +77,8 @@ const PrintPreviewDialog: React.FC<PrintPreviewDialogProps> = ({ isOpen, onOpenC
 
   useEffect(() => {
     if (isOpen) {
-      setPreviewKey(prev => prev + 1); // Force re-render of preview
+      setPreviewKey(prev => prev + 1); 
     } else {
-      // Reset teacher print state when dialog closes
       updateState('teacherRoutineForPrint', null);
     }
   }, [isOpen, updateState]);
@@ -91,55 +88,17 @@ const PrintPreviewDialog: React.FC<PrintPreviewDialogProps> = ({ isOpen, onOpenC
       size: ${orientation};
       margin: ${margins.top}cm ${margins.right}cm ${margins.bottom}cm ${margins.left}cm;
     }
-    @media print {
-      body {
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-        background-color: #fff !important;
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 8pt;
-      }
-      th, td {
-        border: 1px solid #ccc !important;
-        padding: 2px;
-        text-align: center;
-      }
-      th {
-        font-weight: bold;
-        background-color: #f2f2f2 !important;
-      }
-      .break-after-page {
-        page-break-after: always;
-      }
-      h3 {
-        font-size: 14pt;
-        font-weight: 600;
-        text-align: center;
-        margin-bottom: 0.5rem;
-      }
-    }
   `, [margins, orientation]);
 
-  const handlePrint = useReactToPrint({
-    content: () => componentToPrintRef.current,
-    pageStyle: pageStyle,
-    documentTitle: title,
-  });
+  const handlePrint = () => {
+      window.print();
+  };
 
   const previewScale = useMemo(() => {
     const a4_width_mm = orientation === 'landscape' ? 297 : 210;
-    const a4_height_mm = orientation === 'landscape' ? 210 : 297;
     const margin_x_mm = (margins.left + margins.right) * 10;
-    const margin_y_mm = (margins.top + margins.bottom) * 10;
-    
-    // Using a fixed DPI for preview consistency
     const dpi = 96; 
     const a4_width_px = (a4_width_mm - margin_x_mm) * dpi / 25.4;
-    
-    // Let's assume a standard preview container width of about 800px
     return 800 / a4_width_px;
   }, [orientation, margins]);
 
@@ -152,7 +111,6 @@ const PrintPreviewDialog: React.FC<PrintPreviewDialogProps> = ({ isOpen, onOpenC
         return <PrintableTeacherRoutine ref={teacherContentRef} />;
     }
     if (contentRef.current) {
-      // Clone the node to avoid issues with the original DOM
       return <div dangerouslySetInnerHTML={{ __html: contentRef.current.innerHTML }} />;
     }
     return null;
@@ -161,13 +119,14 @@ const PrintPreviewDialog: React.FC<PrintPreviewDialogProps> = ({ isOpen, onOpenC
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-7xl h-[90vh] flex flex-col">
-        <DialogHeader>
+        <style>{pageStyle}</style>
+        <DialogHeader className="no-print">
           <DialogTitle>Print Preview: {title}</DialogTitle>
         </DialogHeader>
 
         <div className="grid grid-cols-[300px_1fr] gap-6 flex-1 overflow-hidden">
           {/* Controls Panel */}
-          <div className="bg-gray-50 p-4 rounded-lg flex flex-col gap-6 overflow-y-auto">
+          <div className="bg-gray-50 p-4 rounded-lg flex flex-col gap-6 overflow-y-auto no-print">
             <div>
               <Label>Orientation</Label>
               <Select value={orientation} onValueChange={(v: 'landscape' | 'portrait') => setOrientation(v)}>
@@ -206,7 +165,7 @@ const PrintPreviewDialog: React.FC<PrintPreviewDialogProps> = ({ isOpen, onOpenC
           </div>
 
           {/* Preview Panel */}
-          <div className="bg-gray-200 flex-1 overflow-auto p-8">
+          <div className="bg-gray-200 flex-1 overflow-auto p-8 no-print">
              <div 
                 className="mx-auto bg-white shadow-lg"
                 style={{
@@ -223,7 +182,7 @@ const PrintPreviewDialog: React.FC<PrintPreviewDialogProps> = ({ isOpen, onOpenC
                     }}
                 >
                     <div 
-                      key={previewKey} // Force re-render on settings change
+                      key={previewKey} 
                       style={{ transform: `scale(${scale / 100})`, transformOrigin: 'top left' }}
                     >
                         <h2 className="text-2xl font-bold text-center mb-4">{title}</h2>
@@ -232,9 +191,18 @@ const PrintPreviewDialog: React.FC<PrintPreviewDialogProps> = ({ isOpen, onOpenC
                 </div>
             </div>
           </div>
+          
+          {/* Hidden printable content */}
+          <div id="printable-area" className="hidden print:block">
+            <h2 className="text-2xl font-bold text-center mb-4">{title}</h2>
+            <div style={{ transform: `scale(${scale / 100})`, transformOrigin: 'top left' }}>
+                {renderContent()}
+            </div>
+          </div>
+
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="no-print">
           <Button variant="outline" onClick={() => onOpenChange(false)}><X className="mr-2 h-4 w-4" /> Cancel</Button>
           <Button onClick={handlePrint}><Printer className="mr-2 h-4 w-4" /> Print</Button>
         </DialogFooter>

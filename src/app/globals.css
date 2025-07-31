@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -55,5 +56,61 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@media print {
+  body {
+    background-color: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .no-print, 
+  .no-print * {
+    display: none !important;
+  }
+  
+  body * {
+    visibility: hidden;
+  }
+  
+  #printable-area, #printable-area * {
+    visibility: visible;
+  }
+  
+  #printable-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8pt; /* Adjust as needed */
+  }
+
+  th, td {
+    border: 1px solid #ccc !important;
+    padding: 2px;
+    text-align: center;
+  }
+
+  th {
+    font-weight: bold;
+    background-color: #f2f2f2 !important;
+  }
+
+  .break-after-page {
+    page-break-after: always;
+  }
+  
+  h3 {
+    font-size: 14pt;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 0.5rem;
   }
 }

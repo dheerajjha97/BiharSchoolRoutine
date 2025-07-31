@@ -24,7 +24,6 @@ import {
   Save,
   Printer,
   Trash2,
-  FolderOpen,
   FileDown,
   FileUp,
   FileCog,
@@ -49,6 +48,37 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     handlePrint,
     handleClearRoutine
   } = useContext(AppStateContext);
+
+  const fileMenuContent = (closeSheet?: () => void) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" className="w-full justify-start">
+          <Save className="mr-2 h-4 w-4" /> File
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-56" align="end">
+        <DropdownMenuLabel>Backup</DropdownMenuLabel>
+        <DropdownMenuItem onClick={() => { handleSaveBackup(); closeSheet?.(); }}>
+          <FileDown className="mr-2 h-4 w-4" />
+          <span>Save Backup</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => { handleImportBackup(); closeSheet?.(); }}>
+          <FileUp className="mr-2 h-4 w-4" />
+          <span>Load Backup</span>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel>Configuration</DropdownMenuLabel>
+         <DropdownMenuItem onClick={() => { handleSaveConfig(); closeSheet?.(); }}>
+          <FileCog className="mr-2 h-4 w-4" />
+          <span>Save Config Only</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => { handleImportConfig(); closeSheet?.(); }}>
+          <FolderCog className="mr-2 h-4 w-4" />
+          <span>Load Config Only</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 
   const sidebarContent = (
     <div className="flex h-full flex-col">
@@ -77,50 +107,23 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
       </div>
        <div className="mt-auto p-4 border-t">
-         <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="w-full justify-start">
-                <Save className="mr-2 h-4 w-4" /> File
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end">
-              <DropdownMenuLabel>Backup</DropdownMenuLabel>
-              <DropdownMenuItem onClick={handleSaveBackup}>
-                <FileDown className="mr-2 h-4 w-4" />
-                <span>Save Backup</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleImportBackup}>
-                <FileUp className="mr-2 h-4 w-4" />
-                <span>Load Backup</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel>Configuration</DropdownMenuLabel>
-               <DropdownMenuItem onClick={handleSaveConfig}>
-                <FileCog className="mr-2 h-4 w-4" />
-                <span>Save Config Only</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleImportConfig}>
-                <FolderCog className="mr-2 h-4 w-4" />
-                <span>Load Config Only</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+        {fileMenuContent()}
       </div>
     </div>
   );
   
   const mobileSidebarContent = (
     <div className="flex h-full flex-col">
-       <SheetHeader className="h-16 flex-shrink-0">
-          <SheetTitle>Navigation Menu</SheetTitle>
-          <div className="flex h-16 items-center border-b px-6">
-            <Link href="/" onClick={() => setIsSheetOpen(false)} className="flex items-center gap-2 font-semibold">
-              <BookOpenCheck className="h-6 w-6 text-primary" />
-              <span>BiharSchoolRoutine</span>
-            </Link>
-          </div>
-        </SheetHeader>
-      <div className="flex-1 overflow-y-auto">
+       <SheetHeader className="border-b">
+        <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+        <div className="flex h-16 items-center px-6">
+          <Link href="/" onClick={() => setIsSheetOpen(false)} className="flex items-center gap-2 font-semibold">
+            <BookOpenCheck className="h-6 w-6 text-primary" />
+            <span>BiharSchoolRoutine</span>
+          </Link>
+        </div>
+      </SheetHeader>
+      <div className="flex-1 overflow-y-auto py-2">
         <nav className="grid items-start px-4 text-sm font-medium">
           {navItems.map((item) => (
             <Link
@@ -139,34 +142,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
       </div>
        <div className="mt-auto p-4 border-t">
-         <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="w-full justify-start">
-                <Save className="mr-2 h-4 w-4" /> File
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end">
-              <DropdownMenuLabel>Backup</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => { handleSaveBackup(); setIsSheetOpen(false); }}>
-                <FileDown className="mr-2 h-4 w-4" />
-                <span>Save Backup</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => { handleImportBackup(); setIsSheetOpen(false); }}>
-                <FileUp className="mr-2 h-4 w-4" />
-                <span>Load Backup</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel>Configuration</DropdownMenuLabel>
-               <DropdownMenuItem onClick={() => { handleSaveConfig(); setIsSheetOpen(false); }}>
-                <FileCog className="mr-2 h-4 w-4" />
-                <span>Save Config Only</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => { handleImportConfig(); setIsSheetOpen(false); }}>
-                <FolderCog className="mr-2 h-4 w-4" />
-                <span>Load Config Only</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+         {fileMenuContent(() => setIsSheetOpen(false))}
       </div>
     </div>
   );
@@ -178,22 +154,24 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {sidebarContent}
       </div>
       <div className="flex flex-col">
-        <header className="flex h-16 items-center gap-4 border-b bg-card px-6 sticky top-0 z-30 no-print">
-          <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-            <SheetTrigger asChild>
-              <Button variant="outline" size="icon" className="shrink-0 lg:hidden">
-                <Menu className="h-5 w-5" />
-                <span className="sr-only">Toggle navigation menu</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="flex flex-col p-0">
-               {mobileSidebarContent}
-            </SheetContent>
-          </Sheet>
-           <div className="flex-1">
-             <h1 className="font-semibold text-lg truncate">
-                {navItems.find(item => item.href === pathname)?.label || 'Dashboard'}
-             </h1>
+        <header className="flex h-auto min-h-16 items-center gap-4 border-b bg-card px-6 sticky top-0 z-30 no-print flex-wrap py-2">
+          <div className="flex items-center gap-4 flex-1">
+            <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="icon" className="shrink-0 lg:hidden">
+                  <Menu className="h-5 w-5" />
+                  <span className="sr-only">Toggle navigation menu</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="flex flex-col p-0">
+                 {mobileSidebarContent}
+              </SheetContent>
+            </Sheet>
+             <div className="flex-1">
+               <h1 className="font-semibold text-lg truncate">
+                  {navItems.find(item => item.href === pathname)?.label || 'Dashboard'}
+               </h1>
+            </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
              <Button variant="outline" size="sm" onClick={handlePrint} >

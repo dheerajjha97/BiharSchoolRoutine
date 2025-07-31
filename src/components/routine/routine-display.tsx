@@ -185,7 +185,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
   
   useImperativeHandle(ref, () => ({
       handlePrint: () => {
-        document.body.style.setProperty('--print-header-content', `"${printHeader}"`);
+        document.documentElement.style.setProperty('--print-header-content', `'${printHeader.replace(/'/g, "\\'")}'`);
         window.print();
       }
   }));
@@ -362,7 +362,8 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
   
     return (
       <div className="printable-section">
-        <h3 className="text-xl font-semibold mb-3 print:text-center">{title}</h3>
+        <h3 className="text-xl font-semibold mb-3 print:hidden">{title}</h3>
+        <h3 className="hidden print:block print-title">{title}</h3>
         <div className="overflow-x-auto border rounded-lg bg-card">
           <Table>
             <TableHeader>
@@ -416,7 +417,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
                       ))}
                     </TableRow>
                   ))}
-                  {day !== 'Saturday' && <TableRow className="bg-background hover:bg-background"><TableCell colSpan={timeSlots.length + 2} className="p-1"></TableCell></TableRow>}
+                  {day !== 'Saturday' && <TableRow className="bg-background hover:bg-background no-print"><TableCell colSpan={timeSlots.length + 2} className="p-1"></TableCell></TableRow>}
                 </React.Fragment>
               ))}
             </TableBody>

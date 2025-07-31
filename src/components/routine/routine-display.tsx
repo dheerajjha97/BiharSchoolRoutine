@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo, useEffect, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, useMemo, useEffect, forwardRef } from 'react';
 import type { GenerateScheduleOutput, ScheduleEntry } from "@/ai/flows/generate-schedule";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -466,8 +466,8 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
                 <Input id="print-header" value={printHeader} onChange={(e) => setPrintHeader(e.target.value)} />
             </div>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-6">
+        <CardContent className="p-0">
+          <div className="space-y-6 p-6">
             {renderScheduleTable("Secondary", secondaryClasses)}
             {renderScheduleTable("Senior Secondary", seniorSecondaryClasses)}
           </div>

@@ -47,6 +47,8 @@ interface AppStateContextType {
   setIsLoading: (loading: boolean) => void;
   handleSaveConfig: () => void;
   handleImportConfig: () => void;
+  handleSaveBackup: () => void;
+  handleImportBackup: () => void;
   handlePrint: () => void;
   handleClearRoutine: () => void;
 }
@@ -78,7 +80,7 @@ const DEFAULT_APP_STATE: AppState = {
     lunchTimeSlot: "12:15 PM - 01:00 PM",
     preventConsecutiveClasses: true,
     enableCombinedClasses: false,
-    dailyPeriodQuota: 5,
+    dailyPeriodQuota: 6,
   },
   routine: null,
   teacherLoad: {},
@@ -90,7 +92,8 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   const [isLoading, setIsLoading] = useState(false);
   const [isStateLoaded, setIsStateLoaded] = useState(false);
   const { toast } = useToast();
-  const jsonInputRef = useRef<HTMLInputElement>(null);
+  const configInputRef = useRef<HTMLInputElement>(null);
+  const backupInputRef = useRef<HTMLInputElement>(null);
 
   const calculatedTeacherLoad = useMemo(() => {
     const load: TeacherLoad = {};
@@ -101,6 +104,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     });
 
     appState.routine.schedule.forEach(entry => {
+        if(entry.subject === "Prayer" || entry.subject === "Lunch") return;
         const teachersInEntry = entry.teacher.split(' & ').map(t => t.trim());
         teachersInEntry.forEach(teacher => {
             if (teacher && teacher !== "N/A" && load[teacher]) {
@@ -121,7 +125,6 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       if (savedStateJSON) {
         const savedState: AppState = JSON.parse(savedStateJSON);
         if (savedState && savedState.config) {
-          // Merge saved state with defaults to prevent missing properties on update
           const mergedConfig = { ...DEFAULT_APP_STATE.config, ...savedState.config };
           const mergedState = { ...DEFAULT_APP_STATE, ...savedState, config: mergedConfig };
           if(mergedState.timeSlots) {
@@ -208,18 +211,63 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     } catch (error) {
       toast({ variant: "destructive", title: "Load failed", description: "Could not parse the configuration file." });
     } finally {
-        if(jsonInputRef.current) jsonInputRef.current.value = "";
+        if(configInputRef.current) configInputRef.current.value = "";
     }
   };
 
   const handleImportConfig = useCallback(() => {
-    jsonInputRef.current?.click();
+    configInputRef.current?.click();
   }, []);
   
+  const handleSaveBackup = useCallback(() => {
+    try {
+      const stateToSave = { ...appState, teacherLoad: {} }; // Don't save computed load
+      const jsonString = JSON.stringify(stateToSave, null, 2);
+      const blob = new Blob([jsonString], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "school-backup.json";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast({ title: "Backup saved successfully!" });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Backup save failed" });
+    }
+  }, [appState, toast]);
+
+  const handleFileLoadBackup = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const loadedState: Partial<AppState> = JSON.parse(text);
+
+      if (typeof loadedState !== 'object' || loadedState === null || !loadedState.config || !loadedState.teachers) {
+          throw new Error("Invalid backup file format.");
+      }
+      
+      const mergedConfig = { ...DEFAULT_APP_STATE.config, ...loadedState.config };
+      const mergedState = { ...DEFAULT_APP_STATE, ...loadedState, config: mergedConfig };
+      if(mergedState.timeSlots) {
+        mergedState.timeSlots = sortTimeSlots(mergedState.timeSlots);
+      }
+      setAppState(mergedState);
+
+      toast({ title: "Backup loaded successfully!" });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Backup load failed", description: "Could not parse the backup file." });
+    } finally {
+        if(backupInputRef.current) backupInputRef.current.value = "";
+    }
+  };
+
+  const handleImportBackup = useCallback(() => {
+    backupInputRef.current?.click();
+  }, []);
+
   const handlePrint = useCallback(() => {
-    // This function is now handled inside RoutineDisplay component
-    // We can call it via a ref if needed, but for now we just trigger window.print
-    // A more robust solution could use a ref to call a specific print handler in the child component.
     window.print();
   }, []);
   
@@ -229,14 +277,21 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   }, [updateState, toast]);
 
   return (
-    <AppStateContext.Provider value={{ appState, updateState, updateConfig, isLoading, setIsLoading, handleSaveConfig, handleImportConfig, handlePrint, handleClearRoutine }}>
+    <AppStateContext.Provider value={{ appState, updateState, updateConfig, isLoading, setIsLoading, handleSaveConfig, handleImportConfig, handleSaveBackup, handleImportBackup, handlePrint, handleClearRoutine }}>
       {children}
       <input
         type="file"
-        ref={jsonInputRef}
+        ref={configInputRef}
         onChange={handleFileLoadConfig}
         className="hidden"
-        accept=".json,application/json"
+        accept="application/json"
+      />
+      <input
+        type="file"
+        ref={backupInputRef}
+        onChange={handleFileLoadBackup}
+        className="hidden"
+        accept="application/json"
       />
     </AppStateContext.Provider>
   );

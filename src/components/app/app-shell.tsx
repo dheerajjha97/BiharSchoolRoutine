@@ -8,6 +8,14 @@ import { AppStateContext } from "@/context/app-state-provider";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
   Menu,
   BookOpenCheck,
   LayoutDashboard,
@@ -16,7 +24,11 @@ import {
   Save,
   Printer,
   Trash2,
-  FolderOpen
+  FolderOpen,
+  FileDown,
+  FileUp,
+  FileCog,
+  FolderCog,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +44,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const { 
     handleImportConfig, 
     handleSaveConfig,
+    handleSaveBackup,
+    handleImportBackup,
     handlePrint,
     handleClearRoutine
   } = useContext(AppStateContext);
@@ -63,14 +77,34 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
       </div>
        <div className="mt-auto p-4 border-t">
-        <div className="grid gap-2">
-           <Button variant="outline" size="sm" onClick={handleSaveConfig}>
-            <Save className="mr-2 h-4 w-4" /> Save Config
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleImportConfig}>
-            <FolderOpen className="mr-2 h-4 w-4" /> Load Config
-          </Button>
-        </div>
+         <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="w-full justify-start">
+                <Save className="mr-2 h-4 w-4" /> File
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="end">
+              <DropdownMenuLabel>Backup</DropdownMenuLabel>
+              <DropdownMenuItem onClick={handleSaveBackup}>
+                <FileDown className="mr-2 h-4 w-4" />
+                <span>Save Backup</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleImportBackup}>
+                <FileUp className="mr-2 h-4 w-4" />
+                <span>Load Backup</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel>Configuration</DropdownMenuLabel>
+               <DropdownMenuItem onClick={handleSaveConfig}>
+                <FileCog className="mr-2 h-4 w-4" />
+                <span>Save Config Only</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleImportConfig}>
+                <FolderCog className="mr-2 h-4 w-4" />
+                <span>Load Config Only</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
       </div>
     </div>
   );
@@ -90,9 +124,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="flex flex-col p-0">
-              <SheetHeader>
-                  <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
-              </SheetHeader>
               {sidebarContent}
             </SheetContent>
           </Sheet>

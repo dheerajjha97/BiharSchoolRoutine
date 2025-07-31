@@ -123,60 +123,64 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col gap-8">
-      <PageHeader 
-        title="Dashboard"
-        description="Generate, view, and manage your school's class routine."
-      />
+    <div className="flex flex-col h-full">
+      <div className="p-4 md:p-6 flex-shrink-0">
+        <PageHeader 
+          title="Dashboard"
+          description="Generate, view, and manage your school's class routine."
+        />
 
-       <Card className="no-print">
-        <CardHeader>
-          <CardTitle>Generate New Routine</CardTitle>
-          <CardDescription>
-            Use the generator to create a routine automatically, or create a blank template to fill in manually.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-            <div className="flex flex-wrap gap-4">
-               <Button
-                size="lg"
-                onClick={handleGenerateRoutine}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                ) : (
-                  <Wand2 className="mr-2 h-5 w-5" />
-                )}
-                Generate Routine
-              </Button>
-               <Button
-                size="lg"
-                variant="outline"
-                onClick={handleCreateBlankRoutine}
-                disabled={isLoading}
-              >
-                <PlusSquare className="mr-2 h-5 w-5" />
-                Create Blank Routine
-              </Button>
-            </div>
-        </CardContent>
-      </Card>
-      
-      <div className="printable-section">
-        <TeacherLoad teacherLoad={appState.teacherLoad} />
+        <Card className="no-print mt-6">
+          <CardHeader>
+            <CardTitle>Generate New Routine</CardTitle>
+            <CardDescription>
+              Use the generator to create a routine automatically, or create a blank template to fill in manually.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+              <div className="flex flex-wrap gap-4">
+                <Button
+                  size="lg"
+                  onClick={handleGenerateRoutine}
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  ) : (
+                    <Wand2 className="mr-2 h-5 w-5" />
+                  )}
+                  Generate Routine
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={handleCreateBlankRoutine}
+                  disabled={isLoading}
+                >
+                  <PlusSquare className="mr-2 h-5 w-5" />
+                  Create Blank Routine
+                </Button>
+              </div>
+          </CardContent>
+        </Card>
       </div>
+      
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 pt-0 space-y-8">
+        <div className="printable-section">
+          <TeacherLoad teacherLoad={appState.teacherLoad} />
+        </div>
 
-      <RoutineDisplay 
-        scheduleData={appState.routine}
-        onScheduleChange={(newSchedule) => updateState('routine', { schedule: newSchedule })}
-        timeSlots={appState.timeSlots} 
-        classes={appState.classes}
-        subjects={appState.subjects}
-        teachers={appState.teachers}
-        teacherSubjects={appState.config.teacherSubjects}
-        dailyPeriodQuota={appState.config.dailyPeriodQuota}
-      />
+        <RoutineDisplay 
+          scheduleData={appState.routine}
+          onScheduleChange={(newSchedule) => updateState('routine', { schedule: newSchedule })}
+          timeSlots={appState.timeSlots} 
+          classes={appState.classes}
+          subjects={appState.subjects}
+          teachers={appState.teachers}
+          teacherSubjects={appState.config.teacherSubjects}
+          dailyPeriodQuota={appState.config.dailyPeriodQuota}
+        />
+      </div>
     </div>
   );
 }

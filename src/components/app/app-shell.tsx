@@ -115,13 +115,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const mobileSidebarContent = (
     <div className="flex h-full flex-col">
        <SheetHeader className="border-b">
-        <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
-        <div className="flex h-16 items-center px-6">
+        <SheetTitle className="p-6 pt-0">
           <Link href="/" onClick={() => setIsSheetOpen(false)} className="flex items-center gap-2 font-semibold">
             <BookOpenCheck className="h-6 w-6 text-primary" />
             <span>BiharSchoolRoutine</span>
           </Link>
-        </div>
+        </SheetTitle>
       </SheetHeader>
       <div className="flex-1 overflow-y-auto py-2">
         <nav className="grid items-start px-4 text-sm font-medium">
@@ -153,7 +152,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <div className="hidden border-r bg-card text-card-foreground lg:block no-print">
         {sidebarContent}
       </div>
-      <div className="flex flex-col">
+      <div className="flex flex-col max-h-screen">
         <header className="flex h-auto min-h-16 items-center gap-4 border-b bg-card px-6 sticky top-0 z-30 no-print flex-wrap py-2">
           <div className="flex items-center gap-4 flex-1">
             <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
@@ -182,7 +181,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </Button>
           </div>
         </header>
-        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6 bg-background">
+        <main className="flex-1 flex flex-col bg-background overflow-y-auto">
           {children}
         </main>
       </div>

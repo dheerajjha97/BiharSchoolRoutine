@@ -22,7 +22,6 @@ import {
   Database,
   SlidersHorizontal,
   Save,
-  Printer,
   Trash2,
   FileDown,
   FileUp,
@@ -145,7 +144,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex flex-col h-screen">
-      <header className="flex h-16 w-full items-center gap-4 border-b bg-card px-6 no-print">
+      <header className="flex h-16 w-full items-center gap-4 border-b bg-card px-6 no-print shrink-0">
         <div className="flex items-center gap-4">
           <Link href="/" className="flex items-center gap-2 font-semibold lg:hidden">
             <BookOpenCheck className="h-6 w-6 text-primary" />
@@ -177,19 +176,21 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </Button>
         </div>
       </header>
-      <div className="grid min-h-0 flex-1 w-full lg:grid-cols-[280px_1fr]">
-        <div className="hidden border-r bg-card text-card-foreground lg:flex lg:flex-col no-print">
-            <div className="flex h-16 items-center border-b px-6">
-                <Link href="/" className="flex items-center gap-2 font-semibold">
-                    <BookOpenCheck className="h-6 w-6 text-primary" />
-                    <span>BiharSchoolRoutine</span>
-                </Link>
-            </div>
-            {sidebarContent}
+      <div className="flex-1 w-full overflow-x-auto">
+        <div className="grid min-h-full lg:grid-cols-[280px_1fr] min-w-[1200px]">
+          <div className="hidden border-r bg-card text-card-foreground lg:flex lg:flex-col no-print">
+              <div className="flex h-16 items-center border-b px-6">
+                  <Link href="/" className="flex items-center gap-2 font-semibold">
+                      <BookOpenCheck className="h-6 w-6 text-primary" />
+                      <span>BiharSchoolRoutine</span>
+                  </Link>
+              </div>
+              {sidebarContent}
+          </div>
+          <main className="flex-1 bg-background p-4 md:p-6 overflow-y-auto">
+              {children}
+          </main>
         </div>
-        <main className="flex-1 bg-background p-4 md:p-6 overflow-y-auto">
-            {children}
-        </main>
       </div>
     </div>
   );

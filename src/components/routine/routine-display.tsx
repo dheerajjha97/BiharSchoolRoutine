@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo, useEffect, forwardRef } from 'react';
+import React, { useState, useMemo, useEffect, forwardRef, useCallback } from 'react';
 import type { GenerateScheduleOutput, ScheduleEntry } from "@/ai/flows/generate-schedule";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -183,10 +183,12 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
     }
   }, [cellData.subject, availableTeachers, cellData.teacher]);
   
-  const handlePrint = () => {
+  const handlePrint = useCallback(() => {
     document.documentElement.style.setProperty('--print-header-content', `'${printHeader.replace(/'/g, "\\'")}'`);
-    window.print();
-  };
+    setTimeout(() => {
+        window.print();
+    }, 100);
+  }, [printHeader]);
 
   const handleExport = () => {
     const csvRows: string[] = [];
@@ -362,7 +364,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
       <div className="printable-section">
         <h3 className="text-xl font-semibold mb-3 print:hidden px-6">{title}</h3>
         <h3 className="hidden print:block print-title">{title}</h3>
-        <div className="border rounded-lg bg-card">
+        <div className="border rounded-lg bg-card overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -467,7 +469,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
             </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="space-y-6 p-6">
+          <div className="space-y-6">
             {renderScheduleTable("Secondary", secondaryClasses)}
             {renderScheduleTable("Senior Secondary", seniorSecondaryClasses)}
           </div>

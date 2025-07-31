@@ -339,10 +339,11 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         setTimeout(() => {
           try {
             newWindow.print();
-          } finally {
-            newWindow.close();
+          } catch (e) {
+            console.error("Print failed:", e);
+            toast({ variant: "destructive", title: "Print failed", description: "An error occurred while trying to print." });
           }
-        }, 250);
+        }, 500); // Increased timeout for stability
     } else {
         toast({ variant: "destructive", title: "Print failed", description: "Could not open a new window. Please check your browser's popup settings." });
     }
@@ -369,5 +370,3 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     </AppStateContext.Provider>
   );
 };
-
-    

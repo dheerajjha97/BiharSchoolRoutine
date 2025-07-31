@@ -50,8 +50,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const fileMenuContent = (closeSheet?: () => void) => (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="justify-start w-full">
-          <Save className="mr-2 h-4 w-4" /> File
+        <Button variant="outline" className="justify-start w-full gap-2">
+          <Save className="h-4 w-4" /> File
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end">

@@ -133,11 +133,17 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
             if (periodsToday >= dailyPeriodQuota) return;
 
             const assignableClasses = shuffleArray(teacherClasses[teacher] || []);
-            const additionalSubjects = shuffleArray((teacherSubjects[teacher] || []).filter(s => subjectCategories[s] === 'additional' || !subjectCategories[s]));
+            const additionalSubjectsForTeacher = shuffleArray((teacherSubjects[teacher] || []).filter(s => subjectCategories[s] === 'additional' || !subjectCategories[s]));
 
             for (const className of assignableClasses) {
                 if (periodsToday >= dailyPeriodQuota) break;
-                for (const subject of additionalSubjects) {
+                
+                // CRITICAL FIX: Only consider subjects that are actually required for THIS class.
+                const validSubjectsForClass = additionalSubjectsForTeacher.filter(subject =>
+                    (classRequirements[className] || []).includes(subject)
+                );
+
+                for (const subject of validSubjectsForClass) {
                     if (periodsToday >= dailyPeriodQuota) break;
                     
                     const availableSlot = shuffleArray(instructionalSlots).find(slot =>

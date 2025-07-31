@@ -58,13 +58,13 @@ const DEFAULT_APP_STATE: AppState = {
   classes: ["Class 9A", "Class 9B", "Class 10A", "Class 11 Science", "Class 12 Science", "Class 12 Commerce"],
   subjects: ["Math", "Science", "Social Sc.", "English", "Hindi", "Physics", "Chemistry", "Biology", "Accountancy", "Business St.", "History", "Pol. Science", "Sanskrit", "Computer"],
   timeSlots: [
-    "09:00 AM - 09:15 AM", 
-    "09:15 AM - 10:00 AM", 
-    "10:00 AM - 10:45 AM", 
-    "10:45 AM - 11:30 AM", 
-    "11:30 AM - 12:15 PM", 
-    "12:15 PM - 01:00 PM", 
-    "01:00 PM - 01:45 PM", 
+    "09:00 AM - 09:15 AM",
+    "09:15 AM - 10:00 AM",
+    "10:00 AM - 10:45 AM",
+    "10:45 AM - 11:30 AM",
+    "11:30 AM - 12:15 PM",
+    "12:15 PM - 01:00 PM",
+    "01:00 PM - 01:45 PM",
     "01:45 PM - 02:30 PM"
   ],
   config: {

@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Wand2, PlusSquare } from "lucide-react";
 import RoutineDisplay from "@/components/routine/routine-display";
-import TeacherLoad from "@/components/routine/teacher-load";
 import { generateScheduleLogic } from "@/lib/schedule-generator";
 import type { GenerateScheduleLogicInput } from "@/lib/schedule-generator";
 import type { ScheduleEntry } from "@/ai/flows/generate-schedule";
@@ -17,7 +16,7 @@ import PageHeader from "@/components/app/page-header";
 const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export default function Home() {
-  const { appState, updateState, isLoading, setIsLoading } = useContext(AppStateContext);
+  const { appState, updateState, isLoading, setIsLoading, handlePrintTeacherRoutine } = useContext(AppStateContext);
   const { toast } = useToast();
 
   const handleGenerateRoutine = async () => {
@@ -129,7 +128,7 @@ export default function Home() {
           description="Generate, view, and manage your school's class routine."
         />
 
-        <Card className="no-print">
+        <Card>
           <CardHeader>
             <CardTitle>Generate New Routine</CardTitle>
             <CardDescription>
@@ -163,10 +162,6 @@ export default function Home() {
           </CardContent>
         </Card>
       
-        <div className="printable-section">
-          <TeacherLoad teacherLoad={appState.teacherLoad} />
-        </div>
-      
         <RoutineDisplay 
           scheduleData={appState.routine}
           onScheduleChange={(newSchedule) => updateState('routine', { schedule: newSchedule })}
@@ -176,6 +171,8 @@ export default function Home() {
           teachers={appState.teachers}
           teacherSubjects={appState.config.teacherSubjects}
           dailyPeriodQuota={appState.config.dailyPeriodQuota}
+          teacherLoad={appState.teacherLoad}
+          onPrintTeacher={handlePrintTeacherRoutine}
         />
     </div>
   );

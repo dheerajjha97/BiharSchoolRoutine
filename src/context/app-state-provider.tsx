@@ -3,7 +3,7 @@
 
 import { createContext, useState, useEffect, useMemo, useRef, useCallback, ChangeEvent } from "react";
 import { useToast } from "@/hooks/use-toast";
-import type { GenerateScheduleOutput } from "@/ai/flows/generate-schedule";
+import type { GenerateScheduleOutput, ScheduleEntry } from "@/ai/flows/generate-schedule";
 import type { SubjectCategory, SubjectPriority } from "@/lib/schedule-generator";
 import { sortTimeSlots } from "@/lib/utils";
 
@@ -29,6 +29,11 @@ export type SchoolConfig = {
 
 type TeacherLoad = Record<string, Record<string, number>>;
 
+type TeacherRoutine = {
+    teacherName: string;
+    schedule: Record<string, Record<string, { className: string, subject: string }>>;
+};
+
 type AppState = {
   teachers: string[];
   classes: string[];
@@ -37,6 +42,7 @@ type AppState = {
   config: SchoolConfig;
   routine: GenerateScheduleOutput | null;
   teacherLoad: TeacherLoad;
+  teacherRoutineForPrint: TeacherRoutine | null;
 }
 
 interface AppStateContextType {
@@ -84,6 +90,7 @@ const DEFAULT_APP_STATE: AppState = {
   },
   routine: null,
   teacherLoad: {},
+  teacherRoutineForPrint: null,
 };
 
 
@@ -151,7 +158,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   useEffect(() => {
     if (isStateLoaded) {
       try {
-        const stateToSave = { ...appState, teacherLoad: {} }; // Don't save computed load
+        const stateToSave = { ...appState, teacherLoad: {}, teacherRoutineForPrint: null }; // Don't save computed/temporary state
         const appStateJSON = JSON.stringify(stateToSave);
         localStorage.setItem("biharSchoolRoutineState_v2", appStateJSON);
       } catch (error) {
@@ -221,10 +228,9 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   
   const handleSaveBackup = useCallback(() => {
     try {
-      const stateToSave = { ...appState, teacherLoad: {} }; // Don't save computed load
+      const stateToSave = { ...appState, teacherLoad: {}, teacherRoutineForPrint: null }; // Don't save computed/temporary state
       const jsonString = JSON.stringify(stateToSave, null, 2);
       const blob = new Blob([jsonString], { type: "application/json" });
-      const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
       link.download = "school-backup.json";
       document.body.appendChild(link);
@@ -277,78 +283,15 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         toast({ variant: "destructive", title: "No routine available to print." });
         return;
     }
-
-    const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    const teacherSchedule = appState.routine.schedule.filter(entry => entry.teacher.includes(teacherName));
-    
-    const scheduleByDayTime: Record<string, Record<string, { className: string, subject: string }>> = {};
-    teacherSchedule.forEach(entry => {
+    const teacherScheduleEntries = appState.routine.schedule.filter(entry => entry.teacher.includes(teacherName));
+    const scheduleByDayTime: TeacherRoutine['schedule'] = {};
+    teacherScheduleEntries.forEach(entry => {
         if (!scheduleByDayTime[entry.day]) scheduleByDayTime[entry.day] = {};
         scheduleByDayTime[entry.day][entry.timeSlot] = { className: entry.className, subject: entry.subject };
     });
-
-    const printStyles = `
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        @page { size: A4; margin: 0.5in; }
-        h1 { text-align: center; font-size: 16pt; margin-bottom: 1rem; }
-        table { width: 100%; border-collapse: collapse; font-size: 8pt; }
-        th, td { border: 1px solid #ccc; padding: 4px; text-align: center; }
-        th { background-color: #f2f2f2 !important; font-weight: 600; }
-        td:first-child { text-align: left; font-weight: bold; }
-        small { font-size: 7pt; color: #555; }
-    `;
-
-    let tableHtml = `
-        <h1>Routine for ${teacherName}</h1>
-        <table>
-            <thead>
-                <tr>
-                    <th>Day / Time</th>
-                    ${appState.timeSlots.map(slot => `<th>${slot.replace(/ /g, '')}</th>`).join('')}
-                </tr>
-            </thead>
-            <tbody>
-    `;
-
-    daysOfWeek.forEach(day => {
-        tableHtml += `<tr><td>${day}</td>`;
-        appState.timeSlots.forEach(slot => {
-            const entry = scheduleByDayTime[day]?.[slot];
-            if (entry) {
-                const subjectText = entry.subject === 'Prayer' || entry.subject === 'Lunch' ? `<b>${entry.subject}</b>` : `<b>${entry.subject}</b><br><small>${entry.className}</small>`;
-                tableHtml += `<td>${subjectText}</td>`;
-            } else {
-                tableHtml += `<td>---</td>`;
-            }
-        });
-        tableHtml += `</tr>`;
-    });
-
-    tableHtml += `</tbody></table>`;
     
-    const newWindow = window.open('', '_blank');
-    if (newWindow) {
-        newWindow.document.write('<html><head><title>Print Teacher Routine</title>');
-        newWindow.document.write(`<style>${printStyles}</style>`);
-        newWindow.document.write('</head><body>');
-        newWindow.document.write(tableHtml);
-        newWindow.document.write('</body></html>');
-        newWindow.document.close();
-        
-        // Use a timeout to ensure content is loaded before printing
-        setTimeout(() => {
-          try {
-            newWindow.print();
-          } catch (e) {
-            console.error("Print failed:", e);
-            toast({ variant: "destructive", title: "Print failed", description: "An error occurred while trying to print." });
-          }
-        }, 500); // Increased timeout for stability
-    } else {
-        toast({ variant: "destructive", title: "Print failed", description: "Could not open a new window. Please check your browser's popup settings." });
-    }
-
-  }, [appState.routine, appState.timeSlots, toast]);
+    updateState('teacherRoutineForPrint', { teacherName, schedule: scheduleByDayTime });
+  }, [appState.routine, updateState, toast]);
 
   return (
     <AppStateContext.Provider value={{ appState, updateState, updateConfig, isLoading, setIsLoading, handleSaveConfig, handleImportConfig, handleSaveBackup, handleImportBackup, handleClearRoutine, handlePrintTeacherRoutine }}>

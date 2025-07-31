@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo, useEffect, forwardRef, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, forwardRef, useCallback, useRef } from 'react';
 import type { GenerateScheduleOutput, ScheduleEntry } from "@/ai/flows/generate-schedule";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -27,6 +27,8 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import PrintPreviewDialog from './print-preview-dialog';
+import TeacherLoad from './teacher-load';
 
 interface RoutineDisplayProps {
   scheduleData: GenerateScheduleOutput | null;
@@ -37,6 +39,8 @@ interface RoutineDisplayProps {
   teacherSubjects: Record<string, string[]>;
   onScheduleChange: (newSchedule: ScheduleEntry[]) => void;
   dailyPeriodQuota: number;
+  teacherLoad: Record<string, Record<string, number>>;
+  onPrintTeacher: (teacher: string) => void;
 }
 
 type GridSchedule = Record<string, Record<string, Record<string, ScheduleEntry[]>>>;
@@ -83,13 +87,17 @@ const toRoman = (num: number): string => {
     return result;
 };
 
-const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects, teachers, teacherSubjects, onScheduleChange, dailyPeriodQuota }: RoutineDisplayProps, ref) => {
+const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects, teachers, teacherSubjects, onScheduleChange, dailyPeriodQuota, teacherLoad, onPrintTeacher }: RoutineDisplayProps, ref) => {
   const [printHeader, setPrintHeader] = useState("Class Routine – Session 2025–26");
   const { toast } = useToast();
   
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isCellDialogOpen, setIsCellDialogOpen] = useState(false);
+  const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
   const [currentCell, setCurrentCell] = useState<{ day: string; timeSlot: string; className: string; entry: ScheduleEntry | null } | null>(null);
   const [cellData, setCellData] = useState<CellData>({ subject: "", classNames: [], teacher: "" });
+  
+  const printContentRef = useRef<HTMLDivElement>(null);
+  const printTitleRef = useRef<string>('');
 
   const sortedClasses = useMemo(() => [...classes].sort(sortClasses), [classes]);
   const { secondaryClasses, seniorSecondaryClasses } = useMemo(() => categorizeClasses(sortedClasses), [sortedClasses]);
@@ -183,36 +191,10 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
     }
   }, [cellData.subject, availableTeachers, cellData.teacher]);
   
-  const handlePrint = useCallback(() => {
-    const printableElements = document.querySelectorAll('.printable-section');
-    const teacherLoadPrintable = document.getElementById('teacher-load-printable');
-
-    let contentToPrint = '';
-    
-    // Add main routine tables
-    printableElements.forEach(el => {
-      contentToPrint += el.innerHTML;
-    });
-
-    // Add teacher load table if it exists
-    if (teacherLoadPrintable) {
-        contentToPrint += `<div style="page-break-before: always;">${teacherLoadPrintable.innerHTML}</div>`;
-    }
-
-    const newWindow = window.open('', '_blank');
-    if (newWindow) {
-        newWindow.document.write('<html><head><title>Print Routine</title>');
-        newWindow.document.write('<style>@media print{@page{size: A4 landscape; margin: 0.4in;}.print-title{text-align: center; font-size: 14pt; font-weight: 600; margin-bottom: 0.5rem;}table{width: 100%; border-collapse: collapse; font-size: 8pt;}th,td{border: 1px solid #ccc !important; padding: 2px; text-align: center; height: 40px;}th{font-weight: bold; background-color: #f2f2f2 !important;}.font-semibold{font-weight: 600;}body {-webkit-print-color-adjust: exact; print-color-adjust: exact;}div > .print-title { display: block; } div > h3.print-hidden { display: none; } }</style>');
-        newWindow.document.write('</head><body>');
-        newWindow.document.write(`<h1 style="text-align: center; font-size: 16pt;">${printHeader}</h1>`);
-        newWindow.document.write(contentToPrint);
-        newWindow.document.write('</body></html>');
-        newWindow.document.close();
-        setTimeout(() => {
-            newWindow.print();
-        }, 500);
-    }
-  }, [printHeader]);
+  const handlePrint = () => {
+    printTitleRef.current = printHeader;
+    setIsPrintDialogOpen(true);
+  };
 
   const handleExport = () => {
     const csvRows: string[] = [];
@@ -263,7 +245,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
         classNames: entry.className.split(' & ').map(c => c.trim()),
         teacher: entry.teacher || "",
     } : { subject: "", classNames: [className], teacher: "" });
-    setIsDialogOpen(true);
+    setIsCellDialogOpen(true);
   };
   
   const handleSave = () => {
@@ -308,7 +290,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
     }
     
     onScheduleChange(prospectiveSchedule);
-    setIsDialogOpen(false);
+    setIsCellDialogOpen(false);
     setCurrentCell(null);
   };
   
@@ -316,7 +298,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
      if (!currentCell || !currentCell.entry) return;
      const newSchedule = (scheduleData?.schedule || []).filter(e => e !== currentCell.entry);
      onScheduleChange(newSchedule);
-     setIsDialogOpen(false);
+     setIsCellDialogOpen(false);
      setCurrentCell(null);
   };
   
@@ -359,17 +341,21 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
 
     return (
         <div
-            className={cn("h-full min-h-[60px] flex flex-col items-center justify-center p-1 space-y-1 cursor-pointer transition-colors hover:bg-primary/5 relative", isClashed && "bg-destructive/20 hover:bg-destructive/30")}
+            className={cn("h-full min-h-[60px] flex flex-col items-center justify-center p-1 space-y-1 cursor-pointer transition-colors hover:bg-primary/5 relative")}
             onClick={() => handleCellClick(day, timeSlot, className, entries[0] || null)}
         >
-            {isClashed && <AlertTriangle className="h-4 w-4 text-destructive absolute top-1 right-1 no-print" />}
+            {isClashed && <AlertTriangle className="h-4 w-4 text-destructive absolute top-1 right-1" />}
             {entries.length === 0 ? (
-                <span className="text-muted-foreground text-xs hover:text-primary opacity-0 hover:opacity-100 no-print transition-opacity">+</span>
+                <span className="text-muted-foreground text-xs hover:text-primary opacity-0 hover:opacity-100 transition-opacity">+</span>
             ) : (
                 entries.map((entry, index) => {
                     if (entry.subject === '---') return null;
+                    const isClashedEntry = isClashed && (
+                        entry.teacher.split(' & ').some(t => clashSet.has(`teacher-${day}-${timeSlot}-${t}`)) ||
+                        clashSet.has(`class-${day}-${timeSlot}-${className}`)
+                    );
                     return (
-                        <div key={index} className="w-full text-center p-1 bg-card rounded-md border text-xs">
+                        <div key={index} className={cn("w-full text-center p-1 bg-card rounded-md border text-xs", isClashedEntry && "bg-destructive/20")}>
                             <div className="font-semibold">{entry.subject}</div>
                             <div className="text-muted-foreground text-[10px]">{entry.teacher || <span className="italic">N/A</span>}</div>
                             {entry.className.includes('&') && <div className="text-muted-foreground text-[10px] italic mt-1">(Combined)</div>}
@@ -381,19 +367,18 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
     );
   };
 
-  const renderScheduleTable = (title: string, displayClasses: string[], isPrintable: boolean = true) => {
+  const renderScheduleTable = (title: string, displayClasses: string[]) => {
     if (displayClasses.length === 0) return null;
   
     return (
-      <div className={cn(isPrintable && "printable-section")}>
-        <h3 className="text-xl font-semibold mb-3 print:hidden px-6">{title}</h3>
-        <h3 className="hidden print:block print-title">{title}</h3>
+      <div className="break-after-page">
+        <h3 className="text-xl font-semibold mb-3 px-6 md:px-0">{title}</h3>
         <div className="border rounded-lg bg-card overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="font-bold min-w-[100px] sticky left-0 bg-card z-10 print:static">Day</TableHead>
-                <TableHead className="font-bold min-w-[120px] sticky left-[100px] bg-card z-10 print:static">Class</TableHead>
+                <TableHead className="font-bold min-w-[100px] sticky left-0 bg-card z-10">Day</TableHead>
+                <TableHead className="font-bold min-w-[120px] sticky left-[100px] bg-card z-10">Class</TableHead>
                 {timeSlots.map(slot => (
                   <TableHead key={slot} className="text-center font-bold text-xs min-w-[110px] p-1">
                       <div>{slot}</div>
@@ -408,12 +393,12 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
                   {displayClasses.map((className, classIndex) => (
                     <TableRow key={`${day}-${className}`}>
                       {classIndex === 0 && (
-                        <TableCell className="font-semibold align-top sticky left-0 bg-card z-10 print:static" rowSpan={displayClasses.length}>
+                        <TableCell className="font-semibold align-top sticky left-0 bg-card z-10" rowSpan={displayClasses.length}>
                           <div className="flex items-center gap-2">
                              <span>{day}</span>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-6 w-6 no-print">
+                                  <Button variant="ghost" size="icon" className="h-6 w-6">
                                     <Copy className="h-3 w-3" />
                                   </Button>
                                 </DropdownMenuTrigger>
@@ -435,13 +420,13 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
                           </div>
                         </TableCell>
                       )}
-                      <TableCell className="font-medium align-top sticky left-[100px] bg-card z-10 print:static">{className}</TableCell>
+                      <TableCell className="font-medium align-top sticky left-[100px] bg-card z-10">{className}</TableCell>
                       {timeSlots.map(timeSlot => (
                         <TableCell key={`${day}-${className}-${timeSlot}`} className="p-0 align-top">{renderCellContent(day, className, timeSlot)}</TableCell>
                       ))}
                     </TableRow>
                   ))}
-                  {day !== 'Saturday' && <TableRow className="bg-background hover:bg-background no-print"><TableCell colSpan={timeSlots.length + 2} className="p-1"></TableCell></TableRow>}
+                  {day !== 'Saturday' && <TableRow className="bg-background hover:bg-background"><TableCell colSpan={timeSlots.length + 2} className="p-1"></TableCell></TableRow>}
                 </React.Fragment>
               ))}
             </TableBody>
@@ -450,10 +435,16 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
       </div>
     );
   };
+
+  const handlePrintTeacher = (teacher: string) => {
+    onPrintTeacher(teacher);
+    printTitleRef.current = `Routine for ${teacher}`;
+    setIsPrintDialogOpen(true);
+  };
   
   if (!scheduleData || !scheduleData.schedule || scheduleData.schedule.length === 0) {
     return (
-      <Card className="no-print">
+      <Card>
         <CardHeader>
           <CardTitle>School Routine</CardTitle>
           <CardDescription>No routine has been generated yet.</CardDescription>
@@ -478,7 +469,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
   return (
     <>
       <Card>
-        <CardHeader className="no-print">
+        <CardHeader>
             <div className="flex flex-wrap justify-between items-center gap-4">
                 <CardTitle>View Routine</CardTitle>
                 <div className="flex gap-2">
@@ -493,15 +484,16 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
             </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="space-y-6 p-6">
+          <div className="space-y-6" ref={printContentRef}>
             {renderScheduleTable("Secondary", secondaryClasses)}
             {renderScheduleTable("Senior Secondary", seniorSecondaryClasses)}
+            <TeacherLoad teacherLoad={teacherLoad} onPrintTeacher={handlePrintTeacher} />
           </div>
         </CardContent>
       </Card>
       
-      {currentCell && (
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      {isCellDialogOpen && (
+        <Dialog open={isCellDialogOpen} onOpenChange={setIsCellDialogOpen}>
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>Edit Schedule Slot</DialogTitle>
@@ -562,14 +554,23 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
               </div>
             </div>
             <DialogFooter className="sm:justify-between flex-col-reverse sm:flex-row gap-2">
-               {currentCell.entry ? (<Button type="button" variant="destructive" onClick={handleDelete}><Trash2 className="mr-2 h-4 w-4" /> Delete</Button>) : <div />}
+               {currentCell?.entry ? (<Button type="button" variant="destructive" onClick={handleDelete}><Trash2 className="mr-2 h-4 w-4" /> Delete</Button>) : <div />}
               <div className="flex gap-2 justify-end">
-                  <Button type="button" variant="secondary" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                  <Button type="button" variant="secondary" onClick={() => setIsCellDialogOpen(false)}>Cancel</Button>
                   <Button type="submit" onClick={handleSave}>Save Changes</Button>
               </div>
             </DialogFooter>
           </DialogContent>
         </Dialog>
+      )}
+
+      {isPrintDialogOpen && (
+         <PrintPreviewDialog
+            isOpen={isPrintDialogOpen}
+            onOpenChange={setIsPrintDialogOpen}
+            contentRef={printContentRef}
+            title={printTitleRef.current}
+         />
       )}
     </>
   );

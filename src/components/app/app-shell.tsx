@@ -197,7 +197,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
              <Button variant="outline" size="sm" onClick={handlePrint} >
-              <Printer className="mr-2 h-4 w-4" /> Print
+              <Printer className="mr-2 h-4 w-4" /> Print All
             </Button>
              <Button variant="destructive" size="sm" onClick={handleClearRoutine}>
               <Trash2 className="mr-2 h-4 w-4" /> Clear All

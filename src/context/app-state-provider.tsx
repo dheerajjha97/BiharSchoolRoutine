@@ -51,6 +51,7 @@ interface AppStateContextType {
   handleImportBackup: () => void;
   handlePrint: () => void;
   handleClearRoutine: () => void;
+  handlePrintTeacherRoutine: (teacherName: string) => void;
 }
 
 export const AppStateContext = createContext<AppStateContextType>({} as AppStateContextType);
@@ -275,9 +276,87 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       updateState('routine', null);
       toast({ title: "Routine Cleared", description: "The generated routine has been removed." });
   }, [updateState, toast]);
+  
+  const handlePrintTeacherRoutine = useCallback((teacherName: string) => {
+    if (!appState.routine?.schedule) {
+        toast({ variant: "destructive", title: "No routine available to print." });
+        return;
+    }
+    
+    const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const teacherSchedule = appState.routine.schedule.filter(entry => entry.teacher.includes(teacherName));
+    
+    const scheduleByDayTime: Record<string, Record<string, { className: string, subject: string }>> = {};
+    teacherSchedule.forEach(entry => {
+        if (!scheduleByDayTime[entry.day]) scheduleByDayTime[entry.day] = {};
+        scheduleByDayTime[entry.day][entry.timeSlot] = { className: entry.className, subject: entry.subject };
+    });
+
+    const printStyles = `
+        body { font-family: sans-serif; }
+        h1 { text-align: center; }
+        table { width: 100%; border-collapse: collapse; font-size: 10pt; }
+        th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
+        th { background-color: #f2f2f2; }
+        td:first-child { text-align: left; font-weight: bold; }
+    `;
+
+    let tableHtml = `
+        <h1>Routine for ${teacherName}</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>Day</th>
+                    ${appState.timeSlots.map(slot => `<th>${slot}</th>`).join('')}
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    daysOfWeek.forEach(day => {
+        tableHtml += `<tr><td>${day}</td>`;
+        appState.timeSlots.forEach(slot => {
+            const entry = scheduleByDayTime[day]?.[slot];
+            if (entry) {
+                tableHtml += `<td><b>${entry.subject}</b><br><small>${entry.className}</small></td>`;
+            } else {
+                tableHtml += `<td>---</td>`;
+            }
+        });
+        tableHtml += `</tr>`;
+    });
+
+    tableHtml += `</tbody></table>`;
+    
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (doc) {
+        doc.open();
+        doc.write('<html><head><title>Print Teacher Routine</title>');
+        doc.write(`<style>${printStyles}</style>`);
+        doc.write('</head><body>');
+        doc.write(tableHtml);
+        doc.write('</body></html>');
+        doc.close();
+
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+    }
+    
+    setTimeout(() => {
+        document.body.removeChild(iframe);
+    }, 1000);
+
+  }, [appState.routine, appState.timeSlots, toast]);
 
   return (
-    <AppStateContext.Provider value={{ appState, updateState, updateConfig, isLoading, setIsLoading, handleSaveConfig, handleImportConfig, handleSaveBackup, handleImportBackup, handlePrint, handleClearRoutine }}>
+    <AppStateContext.Provider value={{ appState, updateState, updateConfig, isLoading, setIsLoading, handleSaveConfig, handleImportConfig, handleSaveBackup, handleImportBackup, handlePrint, handleClearRoutine, handlePrintTeacherRoutine }}>
       {children}
       <input
         type="file"

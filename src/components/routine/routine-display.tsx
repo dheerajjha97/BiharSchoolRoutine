@@ -428,7 +428,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
   
   if (!scheduleData || !scheduleData.schedule || scheduleData.schedule.length === 0) {
     return (
-      <Card>
+      <Card className="no-print">
         <CardHeader>
           <CardTitle>School Routine</CardTitle>
           <CardDescription>No routine has been generated yet.</CardDescription>

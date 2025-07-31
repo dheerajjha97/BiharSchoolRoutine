@@ -112,7 +112,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const mobileSidebarContent = (
     <div className="flex h-full flex-col">
        <SheetHeader className="h-16 flex-shrink-0">
-          <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+          <SheetTitle>Navigation Menu</SheetTitle>
           <div className="flex h-16 items-center border-b px-6">
             <Link href="/" onClick={() => setIsSheetOpen(false)} className="flex items-center gap-2 font-semibold">
               <BookOpenCheck className="h-6 w-6 text-primary" />
@@ -174,11 +174,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="grid min-h-screen w-full lg:grid-cols-[280px_1fr]">
-      <div className="hidden border-r bg-card text-card-foreground lg:block">
+      <div className="hidden border-r bg-card text-card-foreground lg:block no-print">
         {sidebarContent}
       </div>
       <div className="flex flex-col">
-        <header className="flex h-16 items-center gap-4 border-b bg-card px-6 sticky top-0 z-30">
+        <header className="flex h-16 items-center gap-4 border-b bg-card px-6 sticky top-0 z-30 no-print">
           <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
             <SheetTrigger asChild>
               <Button variant="outline" size="icon" className="shrink-0 lg:hidden">

@@ -129,7 +129,7 @@ export default function Home() {
         description="Generate, view, and manage your school's class routine."
       />
 
-       <Card>
+       <Card className="no-print">
         <CardHeader>
           <CardTitle>Generate New Routine</CardTitle>
           <CardDescription>
@@ -163,7 +163,9 @@ export default function Home() {
         </CardContent>
       </Card>
       
-      <TeacherLoad teacherLoad={appState.teacherLoad} />
+      <div className="no-print">
+        <TeacherLoad teacherLoad={appState.teacherLoad} />
+      </div>
 
       <RoutineDisplay 
         scheduleData={appState.routine}

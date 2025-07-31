@@ -184,10 +184,34 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
   }, [cellData.subject, availableTeachers, cellData.teacher]);
   
   const handlePrint = useCallback(() => {
-    document.documentElement.style.setProperty('--print-header-content', `'${printHeader.replace(/'/g, "\\'")}'`);
-    setTimeout(() => {
-        window.print();
-    }, 100);
+    const printableElements = document.querySelectorAll('.printable-section');
+    const teacherLoadPrintable = document.getElementById('teacher-load-printable');
+
+    let contentToPrint = '';
+    
+    // Add main routine tables
+    printableElements.forEach(el => {
+      contentToPrint += el.innerHTML;
+    });
+
+    // Add teacher load table if it exists
+    if (teacherLoadPrintable) {
+        contentToPrint += `<div style="page-break-before: always;">${teacherLoadPrintable.innerHTML}</div>`;
+    }
+
+    const newWindow = window.open('', '_blank');
+    if (newWindow) {
+        newWindow.document.write('<html><head><title>Print Routine</title>');
+        newWindow.document.write('<style>@media print{@page{size: A4 landscape; margin: 0.4in;}.print-title{text-align: center; font-size: 14pt; font-weight: 600; margin-bottom: 0.5rem;}table{width: 100%; border-collapse: collapse; font-size: 8pt;}th,td{border: 1px solid #ccc !important; padding: 2px; text-align: center; height: 40px;}th{font-weight: bold; background-color: #f2f2f2 !important;}.font-semibold{font-weight: 600;}body {-webkit-print-color-adjust: exact; print-color-adjust: exact;}div > .print-title { display: block; } div > h3.print-hidden { display: none; } }</style>');
+        newWindow.document.write('</head><body>');
+        newWindow.document.write(`<h1 style="text-align: center; font-size: 16pt;">${printHeader}</h1>`);
+        newWindow.document.write(contentToPrint);
+        newWindow.document.write('</body></html>');
+        newWindow.document.close();
+        setTimeout(() => {
+            newWindow.print();
+        }, 500);
+    }
   }, [printHeader]);
 
   const handleExport = () => {
@@ -357,11 +381,11 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
     );
   };
 
-  const renderScheduleTable = (title: string, displayClasses: string[]) => {
+  const renderScheduleTable = (title: string, displayClasses: string[], isPrintable: boolean = true) => {
     if (displayClasses.length === 0) return null;
   
     return (
-      <div className="printable-section">
+      <div className={cn(isPrintable && "printable-section")}>
         <h3 className="text-xl font-semibold mb-3 print:hidden px-6">{title}</h3>
         <h3 className="hidden print:block print-title">{title}</h3>
         <div className="border rounded-lg bg-card overflow-x-auto">
@@ -469,7 +493,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
             </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="space-y-6">
+          <div className="space-y-6 p-6">
             {renderScheduleTable("Secondary", secondaryClasses)}
             {renderScheduleTable("Senior Secondary", seniorSecondaryClasses)}
           </div>

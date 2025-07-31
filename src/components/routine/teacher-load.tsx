@@ -23,9 +23,9 @@ export default function TeacherLoad({ teacherLoad }: TeacherLoadProps) {
   }
 
   return (
-    <Card className="no-print">
+    <Card className="no-print" id="teacher-load-printable">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 print-title">
             <Users className="h-5 w-5 text-primary" />
             Teacher Workload
         </CardTitle>
@@ -33,7 +33,7 @@ export default function TeacherLoad({ teacherLoad }: TeacherLoadProps) {
       </CardHeader>
       <CardContent>
         <h3 className="hidden print:block print-title">Teacher Workload Summary</h3>
-        <div className="border rounded-lg">
+        <div className="border rounded-lg overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

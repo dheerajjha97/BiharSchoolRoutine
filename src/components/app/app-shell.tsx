@@ -51,7 +51,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const fileMenuContent = (closeSheet?: () => void) => (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="justify-start">
+        <Button variant="outline" className="justify-start w-full">
           <Save className="mr-2 h-4 w-4" /> File
         </Button>
       </DropdownMenuTrigger>
@@ -81,14 +81,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   
   const sidebarContent = (
     <div className="flex h-full flex-col">
-      <div className="flex h-16 items-center border-b px-6">
-        <Link href="/" className="flex items-center gap-2 font-semibold">
-          <BookOpenCheck className="h-6 w-6 text-primary" />
-          <span>BiharSchoolRoutine</span>
-        </Link>
-      </div>
-      <div className="flex-1 overflow-y-auto">
-        <nav className="grid items-start px-4 text-sm font-medium">
+      <div className="flex-1 overflow-y-auto p-4 pt-0">
+        <nav className="grid items-start text-sm font-medium">
           {navItems.map((item) => (
             <Link
               key={item.href}
@@ -150,12 +144,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <div className="grid min-h-screen w-full lg:grid-cols-[280px_1fr]">
-      <div className="hidden border-r bg-card text-card-foreground lg:block no-print">
-        {sidebarContent}
-      </div>
-      <div className="flex flex-col">
-        <header className="flex h-16 items-center gap-4 border-b bg-card px-6 sticky top-0 z-30 no-print">
+    <div className="flex flex-col h-screen">
+      <header className="flex h-16 w-full items-center gap-4 border-b bg-card px-6 no-print">
+        <div className="flex items-center gap-4">
+          <Link href="/" className="flex items-center gap-2 font-semibold lg:hidden">
+            <BookOpenCheck className="h-6 w-6 text-primary" />
+            <span className="sr-only">BiharSchoolRoutine</span>
+          </Link>
           <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
             <SheetTrigger asChild>
               <Button variant="outline" size="icon" className="shrink-0 lg:hidden">
@@ -170,19 +165,30 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               {mobileSidebarContent}
             </SheetContent>
           </Sheet>
-          <div className="flex-1">
-             <h1 className="font-semibold text-lg hidden sm:block">
-                {navItems.find(item => item.href === pathname)?.label || 'Dashboard'}
-             </h1>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap justify-end">
-             <Button variant="destructive" size="sm" onClick={handleClearRoutine}>
-              <Trash2 className="mr-2 h-4 w-4" /> Clear Routine
-            </Button>
-          </div>
-        </header>
+        </div>
+        <div className="flex-1">
+          <h1 className="font-semibold text-lg">
+            {navItems.find(item => item.href === pathname)?.label || 'Dashboard'}
+          </h1>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          <Button variant="destructive" size="sm" onClick={handleClearRoutine}>
+            <Trash2 className="mr-2 h-4 w-4" /> Clear Routine
+          </Button>
+        </div>
+      </header>
+      <div className="grid min-h-0 flex-1 w-full lg:grid-cols-[280px_1fr]">
+        <div className="hidden border-r bg-card text-card-foreground lg:flex lg:flex-col no-print">
+            <div className="flex h-16 items-center border-b px-6">
+                <Link href="/" className="flex items-center gap-2 font-semibold">
+                    <BookOpenCheck className="h-6 w-6 text-primary" />
+                    <span>BiharSchoolRoutine</span>
+                </Link>
+            </div>
+            {sidebarContent}
+        </div>
         <main className="flex-1 bg-background p-4 md:p-6 overflow-y-auto">
-          {children}
+            {children}
         </main>
       </div>
     </div>

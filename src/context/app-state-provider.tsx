@@ -57,7 +57,16 @@ const DEFAULT_APP_STATE: AppState = {
   teachers: ["Mr. Sharma", "Mrs. Gupta", "Mr. Singh", "Ms. Verma", "Mr. Khan", "Mrs. Roy"],
   classes: ["Class 9A", "Class 9B", "Class 10A", "Class 11 Science", "Class 12 Science", "Class 12 Commerce"],
   subjects: ["Math", "Science", "Social Sc.", "English", "Hindi", "Physics", "Chemistry", "Biology", "Accountancy", "Business St.", "History", "Pol. Science", "Sanskrit", "Computer"],
-  timeSlots: ["09:00 - 09:15", "09:15 - 10:00", "10:00 - 10:45", "10:45 - 11:30", "11:30 - 12:15", "12:15 - 13:00", "13:00 - 13:45", "13:45 - 14:30"],
+  timeSlots: [
+    "09:00 AM - 09:15 AM", 
+    "09:15 AM - 10:00 AM", 
+    "10:00 AM - 10:45 AM", 
+    "10:45 AM - 11:30 AM", 
+    "11:30 AM - 12:15 PM", 
+    "12:15 PM - 01:00 PM", 
+    "01:00 PM - 01:45 PM", 
+    "01:45 PM - 02:30 PM"
+  ],
   config: {
     classRequirements: {},
     subjectPriorities: {},
@@ -65,8 +74,8 @@ const DEFAULT_APP_STATE: AppState = {
     teacherSubjects: {},
     teacherClasses: {},
     subjectCategories: {},
-    prayerTimeSlot: "09:00 - 09:15",
-    lunchTimeSlot: "12:15 - 13:00",
+    prayerTimeSlot: "09:00 AM - 09:15 AM",
+    lunchTimeSlot: "12:15 PM - 01:00 PM",
     preventConsecutiveClasses: true,
     enableCombinedClasses: false,
     dailyPeriodQuota: 5,
@@ -152,7 +161,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   const updateState = useCallback(<K extends keyof AppState>(key: K, value: AppState[K]) => {
     setAppState(prevState => {
       const newState = { ...prevState, [key]: value };
-      if (key === 'timeSlots') {
+      if (key === 'timeSlots' && Array.isArray(value)) {
         newState.timeSlots = sortTimeSlots(value as string[]);
       }
       return newState;

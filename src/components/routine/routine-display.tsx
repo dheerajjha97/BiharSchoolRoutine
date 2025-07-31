@@ -11,11 +11,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, Trash2, Check, AlertTriangle } from "lucide-react";
+import { Download, Trash2, Check, AlertTriangle, Copy } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from '../ui/checkbox';
 import { cn } from '@/lib/utils';
 import { Separator } from '../ui/separator';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuPortal,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 interface RoutineDisplayProps {
   scheduleData: GenerateScheduleOutput | null;
@@ -273,6 +283,28 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
       : [...currentTeachers, selectedTeacher];
     setCellData({ ...cellData, teacher: newTeachers.join(' & ') });
   };
+  
+  const handleCopyDay = (sourceDay: string, destinationDay: string) => {
+    if (!scheduleData?.schedule) return;
+
+    // Filter out the destination day's entries (except breaks)
+    const scheduleWithoutDestination = scheduleData.schedule.filter(entry => 
+      entry.day !== destinationDay || entry.subject === 'Prayer' || entry.subject === 'Lunch'
+    );
+    
+    // Get all source day entries (except breaks)
+    const sourceEntries = scheduleData.schedule.filter(entry => 
+      entry.day === sourceDay && entry.subject !== 'Prayer' && entry.subject !== 'Lunch'
+    );
+
+    // Create new entries for the destination day
+    const newDestinationEntries = sourceEntries.map(entry => ({
+      ...entry,
+      day: destinationDay
+    }));
+
+    onScheduleChange([...scheduleWithoutDestination, ...newDestinationEntries]);
+  };
 
   const renderCellContent = (day: string, className: string, timeSlot: string) => {
     const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
@@ -330,10 +362,37 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
                 <React.Fragment key={day}>
                   {displayClasses.map((className, classIndex) => (
                     <TableRow key={`${day}-${className}`}>
-                      {classIndex === 0 && <TableCell className="font-semibold align-top sticky left-0 bg-card z-10" rowSpan={displayClasses.length}>{day}</TableCell>}
+                      {classIndex === 0 && (
+                        <TableCell className="font-semibold align-top sticky left-0 bg-card z-10" rowSpan={displayClasses.length}>
+                          <div className="flex items-center gap-2">
+                             <span>{day}</span>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-6 w-6 no-print">
+                                    <Copy className="h-3 w-3" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent>
+                                    <DropdownMenuSub>
+                                      <DropdownMenuSubTrigger>Paste to...</DropdownMenuSubTrigger>
+                                      <DropdownMenuPortal>
+                                        <DropdownMenuSubContent>
+                                          {daysOfWeek.filter(d => d !== day).map(destinationDay => (
+                                            <DropdownMenuItem key={destinationDay} onClick={() => handleCopyDay(day, destinationDay)}>
+                                              {destinationDay}
+                                            </DropdownMenuItem>
+                                          ))}
+                                        </DropdownMenuSubContent>
+                                      </DropdownMenuPortal>
+                                    </DropdownMenuSub>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                          </div>
+                        </TableCell>
+                      )}
                       <TableCell className="font-medium align-top sticky left-[100px] bg-card z-10">{className}</TableCell>
-                      {timeSlots.map(slot => (
-                        <TableCell key={`${day}-${className}-${slot}`} className="p-0 align-top">{renderCellContent(day, className, slot)}</TableCell>
+                      {timeSlots.map(timeSlot => (
+                        <TableCell key={`${day}-${className}-${timeSlot}`} className="p-0 align-top">{renderCellContent(day, className, timeSlot)}</TableCell>
                       ))}
                     </TableRow>
                   ))}
@@ -356,7 +415,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
         </CardHeader>
         <CardContent>
           <div className="text-center py-12 text-muted-foreground">
-            <p>Click the "Generate Routine" button to start.</p>
+            <p>Click the "Generate Routine" or "Create Blank Routine" button to start.</p>
           </div>
         </CardContent>
       </Card>
@@ -381,7 +440,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
                     <Button onClick={handleExport} size="sm" variant="outline"><Download className="mr-2 h-4 w-4" /> Export CSV</Button>
                 </div>
             </div>
-            <CardDescription>View, print, export, or edit your routine by clicking on a cell.</CardDescription>
+            <CardDescription>View, print, export, or edit your routine. Use the copy icon next to a day's name to paste its schedule to another day.</CardDescription>
             <div className="pt-4">
                 <Label htmlFor="print-header">Print Header</Label>
                 <Input id="print-header" value={printHeader} onChange={(e) => setPrintHeader(e.target.value)} />

@@ -173,6 +173,7 @@ export default function Home() {
         subjects={appState.subjects}
         teachers={appState.teachers}
         teacherSubjects={appState.config.teacherSubjects}
+        dailyPeriodQuota={appState.config.dailyPeriodQuota}
       />
     </div>
   );

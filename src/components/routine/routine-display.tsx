@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from '../ui/checkbox';
 import { cn } from '@/lib/utils';
 import { Separator } from '../ui/separator';
+import { useToast } from "@/hooks/use-toast";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,6 +36,7 @@ interface RoutineDisplayProps {
   teachers: string[];
   teacherSubjects: Record<string, string[]>;
   onScheduleChange: (newSchedule: ScheduleEntry[]) => void;
+  dailyPeriodQuota: number;
 }
 
 type GridSchedule = Record<string, Record<string, Record<string, ScheduleEntry[]>>>;
@@ -81,8 +83,9 @@ const toRoman = (num: number): string => {
     return result;
 };
 
-const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects, teachers, teacherSubjects, onScheduleChange }: RoutineDisplayProps, ref) => {
+const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects, teachers, teacherSubjects, onScheduleChange, dailyPeriodQuota }: RoutineDisplayProps, ref) => {
   const [printHeader, setPrintHeader] = useState("Class Routine – Session 2025–26");
+  const { toast } = useToast();
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [currentCell, setCurrentCell] = useState<{ day: string; timeSlot: string; className: string; entry: ScheduleEntry | null } | null>(null);
@@ -251,19 +254,36 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
         teacher: cellData.teacher
     };
 
-    newSchedule = currentSchedule.filter(e => e !== currentCell.entry);
-    newSchedule = newSchedule.filter(e => !(e.day === currentCell.day && e.timeSlot === currentCell.timeSlot && e.className.split(' & ').some(c => cellData.classNames.includes(c))));
-    
+    // Calculate the future schedule if this change is saved
+    let prospectiveSchedule = currentSchedule.filter(e => e !== currentCell.entry);
+    prospectiveSchedule = prospectiveSchedule.filter(e => !(e.day === currentCell.day && e.timeSlot === currentCell.timeSlot && e.className.split(' & ').some(c => cellData.classNames.includes(c))));
     if (cellData.subject && cellData.subject !== '---') {
         const newEntry: ScheduleEntry = {
             day: currentCell.day,
             timeSlot: currentCell.timeSlot,
             ...newEntryData,
         };
-        newSchedule.push(newEntry);
+        prospectiveSchedule.push(newEntry);
+    }
+
+    // Check teacher load against quota
+    const teachersInSlot = cellData.teacher.split(' & ').map(t => t.trim()).filter(t => t && t !== "N/A");
+    for (const teacher of teachersInSlot) {
+        const periodsToday = prospectiveSchedule.filter(
+            e => e.day === currentCell.day && e.teacher.includes(teacher) && e.subject !== 'Prayer' && e.subject !== 'Lunch'
+        ).length;
+
+        if (periodsToday > dailyPeriodQuota) {
+            toast({
+                variant: "destructive",
+                title: "Teacher Workload Exceeded",
+                description: `${teacher} already has ${periodsToday-1} periods on ${currentCell.day}. Cannot assign more than ${dailyPeriodQuota}.`,
+            });
+            return; // Abort save
+        }
     }
     
-    onScheduleChange(newSchedule);
+    onScheduleChange(prospectiveSchedule);
     setIsDialogOpen(false);
     setCurrentCell(null);
   };
@@ -531,5 +551,3 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
 
 RoutineDisplay.displayName = 'RoutineDisplay';
 export default RoutineDisplay;
-
-    

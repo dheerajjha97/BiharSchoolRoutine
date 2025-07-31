@@ -106,7 +106,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               <Printer className="mr-2 h-4 w-4" /> Print
             </Button>
              <Button variant="destructive" size="sm" onClick={handleClearRoutine}>
-              <Trash2 className="mr-2 h-4 w-4" /> Clear
+              <Trash2 className="mr-2 h-4 w-4" /> Clear All
             </Button>
           </div>
         </header>

@@ -6,12 +6,15 @@ import { AppStateContext } from "@/context/app-state-provider";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Wand2 } from "lucide-react";
+import { Loader2, Wand2, PlusSquare } from "lucide-react";
 import RoutineDisplay from "@/components/routine/routine-display";
 import TeacherLoad from "@/components/routine/teacher-load";
 import { generateScheduleLogic } from "@/lib/schedule-generator";
 import type { GenerateScheduleLogicInput } from "@/lib/schedule-generator";
+import type { ScheduleEntry } from "@/ai/flows/generate-schedule";
 import PageHeader from "@/components/app/page-header";
+
+const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export default function Home() {
   const { appState, updateState, isLoading, setIsLoading } = useContext(AppStateContext);
@@ -54,6 +57,70 @@ export default function Home() {
       setIsLoading(false);
     }
   };
+  
+  const handleCreateBlankRoutine = () => {
+    setIsLoading(true);
+    try {
+      const { classes, timeSlots, config } = appState;
+      if (classes.length === 0 || timeSlots.length === 0) {
+        throw new Error("Please define classes and time slots in Data Management first.");
+      }
+
+      const blankSchedule: ScheduleEntry[] = [];
+      const instructionalSlots = timeSlots.filter(
+        slot => slot !== config.prayerTimeSlot && slot !== config.lunchTimeSlot
+      );
+
+      daysOfWeek.forEach(day => {
+        classes.forEach(className => {
+          // Add instructional slots as blank
+          instructionalSlots.forEach(timeSlot => {
+            blankSchedule.push({
+              day,
+              timeSlot,
+              className,
+              subject: "---",
+              teacher: "N/A",
+            });
+          });
+          // Add prayer and lunch slots if defined
+          if (config.prayerTimeSlot) {
+            blankSchedule.push({
+              day,
+              timeSlot: config.prayerTimeSlot,
+              className,
+              subject: "Prayer",
+              teacher: "N/A",
+            });
+          }
+          if (config.lunchTimeSlot) {
+            blankSchedule.push({
+              day,
+              timeSlot: config.lunchTimeSlot,
+              className,
+              subject: "Lunch",
+              teacher: "N/A",
+            });
+          }
+        });
+      });
+      
+      updateState('routine', { schedule: blankSchedule });
+      toast({
+        title: "Blank Routine Created",
+        description: "An empty schedule grid has been created for you to fill in.",
+      });
+    } catch (error) {
+       toast({
+        variant: "destructive",
+        title: "Error Creating Blank Routine",
+        description: error instanceof Error ? error.message : "An unexpected error occurred.",
+      });
+       updateState('routine', null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-8">
@@ -66,22 +133,33 @@ export default function Home() {
         <CardHeader>
           <CardTitle>Generate New Routine</CardTitle>
           <CardDescription>
-            Click the button to generate a new routine based on your current data and configuration.
+            Use the generator to create a routine automatically, or create a blank template to fill in manually.
           </CardDescription>
         </CardHeader>
         <CardContent>
-            <Button
-              size="lg"
-              onClick={handleGenerateRoutine}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              ) : (
-                <Wand2 className="mr-2 h-5 w-5" />
-              )}
-              Generate Routine
-            </Button>
+            <div className="flex flex-wrap gap-4">
+               <Button
+                size="lg"
+                onClick={handleGenerateRoutine}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                ) : (
+                  <Wand2 className="mr-2 h-5 w-5" />
+                )}
+                Generate Routine
+              </Button>
+               <Button
+                size="lg"
+                variant="outline"
+                onClick={handleCreateBlankRoutine}
+                disabled={isLoading}
+              >
+                <PlusSquare className="mr-2 h-5 w-5" />
+                Create Blank Routine
+              </Button>
+            </div>
         </CardContent>
       </Card>
       

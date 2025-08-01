@@ -56,7 +56,7 @@ interface AppStateContextType {
   handleSaveBackup: () => void;
   handleImportBackup: () => void;
   handleClearRoutine: () => void;
-  handlePrintTeacherRoutine: (teacherName: string) => void;
+  handlePrintTeacherRoutine: (teacherName: string | null) => void;
 }
 
 export const AppStateContext = createContext<AppStateContextType>({} as AppStateContextType);
@@ -91,6 +91,35 @@ const DEFAULT_APP_STATE: AppState = {
   routine: null,
   teacherLoad: {},
   teacherRoutineForPrint: null,
+};
+
+const getGradeFromClassName = (className: string): string | null => {
+    if (typeof className !== 'string') return null;
+    const match = className.match(/\d+/);
+    return match ? match[0] : null;
+};
+
+const categorizeClasses = (classes: string[]) => {
+    const sorted = [...classes].sort(sortClasses);
+    const secondary = sorted.filter(c => ['9', '10'].includes(getGradeFromClassName(c) || ''));
+    const seniorSecondary = sorted.filter(c => ['11', '12'].includes(getGradeFromClassName(c) || ''));
+    return { 
+        secondaryClasses: secondary, 
+        seniorSecondaryClasses: seniorSecondary 
+    };
+};
+
+const toRoman = (num: number): string => {
+    if (num < 1) return "";
+    const romanMap: Record<number, string> = { 10: 'X', 9: 'IX', 5: 'V', 4: 'IV', 1: 'I' };
+    let result = '';
+    for (const val of [10, 9, 5, 4, 1]) {
+        while (num >= val) {
+            result += romanMap[val];
+            num -= val;
+        }
+    }
+    return result;
 };
 
 
@@ -279,37 +308,26 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       toast({ title: "Routine Cleared", description: "The generated routine has been removed." });
   }, [updateState, toast]);
   
-  const handlePrintTeacherRoutine = (teacherName: string) => {
-    const { routine, timeSlots } = appState;
+  const handlePrintTeacherRoutine = (teacherName: string | null) => {
+    const { routine, timeSlots, classes, teacherLoad } = appState;
     if (!routine?.schedule) {
         toast({ variant: "destructive", title: "No routine available to print." });
         return;
     }
 
-    const teacherScheduleEntries = routine.schedule.filter(entry => entry.teacher.includes(teacherName));
-    const scheduleByDayTime: Record<string, Record<string, { className: string, subject: string }>> = {};
-    teacherScheduleEntries.forEach(entry => {
-        if (!scheduleByDayTime[entry.day]) scheduleByDayTime[entry.day] = {};
-        scheduleByDayTime[entry.day][entry.timeSlot] = { className: entry.className, subject: entry.subject };
-    });
-
     const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    
-    let contentHTML = `
-      <html>
-        <head>
-          <title>Print Routine for ${teacherName}</title>
-          <style>
-            @page { size: A4 landscape; margin: 0.5in; }
-            body { font-family: sans-serif; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            table { width: 100%; border-collapse: collapse; font-size: 10pt; }
-            th, td { border: 1px solid #ccc; padding: 4px; text-align: center; }
-            th { font-weight: bold; }
-            .day-header { text-align: left; font-weight: bold; }
-          </style>
-        </head>
-        <body onload="window.print()">
-          <h3 style="text-align: center; font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem;">Routine for ${teacherName}</h3>
+    let printContent = '';
+
+    if (teacherName) {
+      // Print single teacher routine
+      const teacherScheduleEntries = routine.schedule.filter(entry => entry.teacher.includes(teacherName));
+      const scheduleByDayTime: Record<string, Record<string, { className: string, subject: string }>> = {};
+      teacherScheduleEntries.forEach(entry => {
+          if (!scheduleByDayTime[entry.day]) scheduleByDayTime[entry.day] = {};
+          scheduleByDayTime[entry.day][entry.timeSlot] = { className: entry.className, subject: entry.subject };
+      });
+       printContent = `
+          <h2>Routine for ${teacherName}</h2>
           <table>
               <thead>
                   <tr>
@@ -329,14 +347,134 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
                   `).join('')}
               </tbody>
           </table>
-        </body>
-      </html>
-    `;
+      `;
+    } else {
+      // Print all routines
+      const { secondaryClasses, seniorSecondaryClasses } = categorizeClasses(classes);
+
+      const instructionalSlotMap: { [timeSlot: string]: number } = {};
+      let periodCounter = 1;
+      timeSlots.forEach(slot => {
+        if (!routine?.schedule?.find(e => e.timeSlot === slot && (e.subject === 'Prayer' || e.subject === 'Lunch'))) {
+            instructionalSlotMap[slot] = periodCounter++;
+        }
+      });
+      
+      const gridSchedule: Record<string, Record<string, Record<string, ScheduleEntry[]>>> = {};
+      daysOfWeek.forEach(day => {
+          gridSchedule[day] = {};
+          classes.forEach(c => {
+              gridSchedule[day][c] = {};
+              timeSlots.forEach(slot => { gridSchedule[day][c][slot] = []; });
+          });
+      });
+      routine.schedule.forEach(entry => {
+          entry.className.split(' & ').map(c => c.trim()).forEach(className => {
+              if (gridSchedule[entry.day]?.[className]?.[entry.timeSlot]) {
+                gridSchedule[entry.day][className][entry.timeSlot].push(entry);
+              }
+          });
+      });
+
+      const renderScheduleTable = (title: string, displayClasses: string[]) => {
+        if(displayClasses.length === 0) return '';
+        return `
+            <div class="break-after-page">
+              <h3>${title}</h3>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Day</th>
+                    <th>Class</th>
+                    ${timeSlots.map(slot => `<th>${slot}<br><span class="roman">${instructionalSlotMap[slot] ? toRoman(instructionalSlotMap[slot]) : '-'}</span></th>`).join('')}
+                  </tr>
+                </thead>
+                <tbody>
+                  ${daysOfWeek.map(day => 
+                    displayClasses.map((className, classIndex) => `
+                      <tr>
+                        ${classIndex === 0 ? `<td class="day-header" rowspan="${displayClasses.length}">${day}</td>` : ''}
+                        <td>${className}</td>
+                        ${timeSlots.map(timeSlot => {
+                          const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
+                          const cellContent = entries.map(e => {
+                            if (e.subject === '---') return '';
+                            let content = `<b>${e.subject}</b>`;
+                            if (e.teacher !== 'N/A') content += `<br><small>${e.teacher}</small>`;
+                            if (e.className.includes('&')) content += `<br><i>(Combined)</i>`;
+                            return content;
+                          }).join(' / ');
+                          return `<td>${cellContent}</td>`;
+                        }).join('')}
+                      </tr>
+                    `).join('')
+                  ).join('')}
+                </tbody>
+              </table>
+            </div>
+        `;
+      };
+      
+      const renderTeacherLoad = () => {
+         const teachers = Object.keys(teacherLoad).sort();
+         if(teachers.length === 0) return '';
+         return `
+            <div class="break-after-page">
+              <h3>Teacher Workload Summary</h3>
+              <table>
+                <thead>
+                   <tr>
+                    <th>Teacher</th>
+                    ${daysOfWeek.map(day => `<th>${day.substring(0,3)}</th>`).join('')}
+                    <th>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${teachers.map(teacher => `
+                    <tr>
+                      <td>${teacher}</td>
+                      ${daysOfWeek.map(day => `<td>${teacherLoad[teacher]?.[day] ?? 0}</td>`).join('')}
+                       <td>${teacherLoad[teacher]?.['Total'] ?? 0}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+         `;
+      };
+
+      printContent = `
+        <h2>Class Routine – Session 2025–26</h2>
+        ${renderScheduleTable("Secondary", secondaryClasses)}
+        ${renderScheduleTable("Senior Secondary", seniorSecondaryClasses)}
+        ${renderTeacherLoad()}
+      `;
+    }
 
     const newWindow = window.open('', '_blank');
     if (newWindow) {
-        newWindow.document.open();
-        newWindow.document.write(contentHTML);
+        newWindow.document.write(`
+          <html>
+            <head>
+              <title>Print Routine</title>
+              <style>
+                @page { size: A4 landscape; margin: 0.5in; }
+                body { font-family: sans-serif; font-size: 9pt; }
+                h2, h3 { text-align: center; }
+                table { width: 100%; border-collapse: collapse; margin-bottom: 2rem; }
+                th, td { border: 1px solid #ccc; padding: 4px; text-align: center; word-break: break-word; }
+                th { font-weight: bold; background-color: #f2f2f2; }
+                td b { font-size: 10pt; }
+                .day-header { text-align: left; font-weight: bold; vertical-align: middle; }
+                .roman { font-size: 8pt; color: #666; }
+                .break-after-page { page-break-after: always; }
+              </style>
+            </head>
+            <body onload="window.print()">
+              ${printContent}
+            </body>
+          </html>
+        `);
         newWindow.document.close();
     }
   };

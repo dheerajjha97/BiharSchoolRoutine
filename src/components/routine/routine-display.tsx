@@ -38,7 +38,7 @@ interface RoutineDisplayProps {
   onScheduleChange: (newSchedule: ScheduleEntry[]) => void;
   dailyPeriodQuota: number;
   teacherLoad: Record<string, Record<string, number>>;
-  onPrintTeacher: (teacher: string) => void;
+  onPrintTeacher: (teacher: string | null) => void;
 }
 
 type GridSchedule = Record<string, Record<string, Record<string, ScheduleEntry[]>>>;
@@ -179,10 +179,6 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
     }
   }, [cellData.subject, availableTeachers, cellData.teacher]);
   
-  const handlePrint = () => {
-    window.print();
-  };
-
   const handleExport = () => {
     const csvRows: string[] = [];
     const headers = ['Day', 'Class', ...timeSlots.map(slot => `"${slot} (${instructionalSlotMap[slot] ? toRoman(instructionalSlotMap[slot]) : '-'})"`)];
@@ -449,23 +445,18 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
 
   return (
     <>
-      <Card className='printable-area'>
-        <CardHeader className='no-print'>
+      <Card>
+        <CardHeader>
             <div className="flex flex-wrap justify-between items-center gap-4">
                 <CardTitle>View Routine</CardTitle>
                 <div className="flex gap-2">
-                    <Button onClick={handlePrint} size="sm" variant="outline"><Printer className="mr-2 h-4 w-4" /> Print All</Button>
+                    <Button onClick={() => onPrintTeacher(null)} size="sm" variant="outline"><Printer className="mr-2 h-4 w-4" /> Print All</Button>
                     <Button onClick={handleExport} size="sm" variant="outline"><Download className="mr-2 h-4 w-4" /> Export CSV</Button>
                 </div>
             </div>
             <CardDescription>View, print, export, or edit your routine. Use the copy icon next to a day's name to paste its schedule to another day.</CardDescription>
-            <div className="pt-4">
-                <Label htmlFor="print-header">Print Header</Label>
-                <Input id="print-header" value={printHeader} onChange={(e) => setPrintHeader(e.target.value)} />
-            </div>
         </CardHeader>
         <CardContent className="p-0">
-          <h2 className="text-center text-xl font-bold mb-4 hidden print:block">{printHeader}</h2>
           <div className="p-4 md:p-6 space-y-6">
                 {renderScheduleTable("Secondary", secondaryClasses)}
                 {renderScheduleTable("Senior Secondary", seniorSecondaryClasses)}

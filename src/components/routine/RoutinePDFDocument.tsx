@@ -215,10 +215,10 @@ const RoutinePDFDocument = ({ scheduleData, timeSlots, classes, teacherLoad, tit
                                 return (
                                     <View key={timeSlot} style={[styles.tableCol, styles.slotCell]}>
                                         {cellContent && cellContent.subject !== '---' ? (
-                                            <React.Fragment>
+                                            <>
                                                 <Text style={styles.cellContentSubject}>{cellContent.subject}</Text>
                                                 <Text style={styles.cellContentTeacher}>{cellContent.teacher}</Text>
-                                            </React.Fragment>
+                                            </>
                                         ) : <Text style={styles.tableCell}>-</Text>}
                                     </View>
                                 )
@@ -282,10 +282,10 @@ const RoutinePDFDocument = ({ scheduleData, timeSlots, classes, teacherLoad, tit
                              return (
                                  <View key={timeSlot} style={[styles.tableCol, styles.slotCell]}>
                                      {entry ? (
-                                        <React.Fragment>
+                                        <>
                                             <Text style={styles.cellContentSubject}>{entry.subject}</Text>
                                             <Text style={styles.cellContentTeacher}>{entry.className}</Text>
-                                        </React.Fragment>
+                                        </>
                                      ) : <Text style={styles.tableCell}>-</Text>}
                                  </View>
                              );
@@ -316,5 +316,3 @@ const RoutinePDFDocument = ({ scheduleData, timeSlots, classes, teacherLoad, tit
 };
 
 export default RoutinePDFDocument;
-
-    

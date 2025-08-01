@@ -1,12 +1,12 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Users, FileDown, Loader2 } from "lucide-react";
 import { Button } from "../ui/button";
-import { pdf } from '@react-pdf/renderer';
+import { BlobProvider } from '@react-pdf/renderer';
 import type { GenerateScheduleOutput } from '@/ai/flows/generate-schedule';
 import RoutinePDFDocument from './RoutinePDFDocument';
 import { useToast } from '@/hooks/use-toast';
@@ -23,7 +23,6 @@ const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Sat
 export default function TeacherLoad({ teacherLoad, scheduleData, timeSlots }: TeacherLoadProps) {
   const teachers = Object.keys(teacherLoad).sort();
   const { toast } = useToast();
-  const [downloadingTeacher, setDownloadingTeacher] = useState<string | null>(null);
 
   if (teachers.length === 0) {
     return null;
@@ -41,40 +40,18 @@ export default function TeacherLoad({ teacherLoad, scheduleData, timeSlots }: Te
       schedule: scheduleByDayTime,
     }
   }
+  
+  const SingleTeacherPDF = ({ teacher }: { teacher: string }) => (
+      <RoutinePDFDocument
+        scheduleData={scheduleData}
+        timeSlots={timeSlots}
+        classes={[]}
+        teacherLoad={{}}
+        title={`Routine for ${teacher}`}
+        singleTeacherData={getSingleTeacherData(teacher)}
+      />
+  );
 
-  const handleDownloadPdf = async (teacher: string) => {
-      if (!scheduleData) return;
-      setDownloadingTeacher(teacher);
-      try {
-          const doc = (
-            <RoutinePDFDocument 
-                scheduleData={scheduleData}
-                timeSlots={timeSlots}
-                classes={[]}
-                teacherLoad={{}}
-                title={`Routine for ${teacher}`}
-                singleTeacherData={getSingleTeacherData(teacher)}
-            />
-          );
-          const asPdf = pdf([]);
-          asPdf.updateContainer(doc);
-          const blob = await asPdf.toBlob();
-
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.setAttribute('download', `routine-${teacher.replace(/\s+/g, '-')}.pdf`);
-          document.body.appendChild(link);
-          link.click();
-          link.parentNode?.removeChild(link);
-          URL.revokeObjectURL(url);
-      } catch (error) {
-          console.error("Failed to generate PDF for teacher", error);
-          toast({ variant: "destructive", title: "PDF Generation Failed" });
-      } finally {
-          setDownloadingTeacher(null);
-      }
-  };
 
   return (
     <div className="px-6 md:px-0 break-after-page">
@@ -109,13 +86,24 @@ export default function TeacherLoad({ teacherLoad, scheduleData, timeSlots }: Te
                       </TableCell>
                     ))}
                     <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => handleDownloadPdf(teacher)} disabled={downloadingTeacher === teacher}>
-                            {downloadingTeacher === teacher ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                                <FileDown className="h-4 w-4" />
-                            )}
-                        </Button>
+                       <BlobProvider document={<SingleTeacherPDF teacher={teacher} />}>
+                        {({ blob, url, loading, error }) => {
+                            if (error) {
+                                return <span>Error</span>
+                            }
+                            return (
+                                <a href={url!} download={`routine-${teacher.replace(/\s+/g, '-')}.pdf`}>
+                                    <Button variant="ghost" size="icon" disabled={loading}>
+                                        {loading ? (
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                            <FileDown className="h-4 w-4" />
+                                        )}
+                                    </Button>
+                                </a>
+                            )
+                        }}
+                       </BlobProvider>
                       </TableCell>
                   </TableRow>
                 ))}

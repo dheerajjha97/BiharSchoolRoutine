@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import type { GenerateScheduleOutput, ScheduleEntry } from "@/ai/flows/generate-schedule";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -28,7 +28,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import TeacherLoad from './teacher-load';
-import { pdf } from '@react-pdf/renderer';
+import { BlobProvider } from '@react-pdf/renderer';
 import RoutinePDFDocument from './RoutinePDFDocument';
 import type { TeacherLoad as TeacherLoadType } from '@/context/app-state-provider';
 
@@ -86,12 +86,10 @@ const toRoman = (num: number): string => {
 const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, teacherSubjects, onScheduleChange, dailyPeriodQuota, teacherLoad }: RoutineDisplayProps) => {
   const { toast } = useToast();
   
-  const [isCellDialogOpen, setIsCellDialogOpen] = useState(false);
-  const [currentCell, setCurrentCell] = useState<{ day: string; timeSlot: string; className: string; entry: ScheduleEntry | null } | null>(null);
-  const [cellData, setCellData] = useState<CellData>({ subject: "", classNames: [], teacher: "" });
-  const [isDownloading, setIsDownloading] = useState(false);
+  const [isCellDialogOpen, setIsCellDialogOpen] = React.useState(false);
+  const [currentCell, setCurrentCell] = React.useState<{ day: string; timeSlot: string; className: string; entry: ScheduleEntry | null } | null>(null);
+  const [cellData, setCellData] = React.useState<CellData>({ subject: "", classNames: [], teacher: "" });
   
-
   const { secondaryClasses, seniorSecondaryClasses } = useMemo(() => categorizeClasses(classes), [classes]);
 
   const instructionalSlotMap = useMemo(() => {
@@ -277,38 +275,15 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
     onScheduleChange([...scheduleWithoutDestination, ...newDestinationEntries]);
   };
 
-  const handleDownloadPdf = async () => {
-      if (!scheduleData) return;
-      setIsDownloading(true);
-      try {
-          const doc = (
-            <RoutinePDFDocument 
-                scheduleData={scheduleData}
-                timeSlots={timeSlots}
-                classes={classes}
-                teacherLoad={teacherLoad}
-                title="Class Routine - Session 2025-26"
-            />
-          );
-          const asPdf = pdf([]);
-          asPdf.updateContainer(doc);
-          const blob = await asPdf.toBlob();
-
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.setAttribute('download', 'routine.pdf');
-          document.body.appendChild(link);
-          link.click();
-          link.parentNode?.removeChild(link);
-          URL.revokeObjectURL(url);
-      } catch (error) {
-          console.error("Failed to generate PDF", error);
-          toast({ variant: "destructive", title: "PDF Generation Failed" });
-      } finally {
-          setIsDownloading(false);
-      }
-  };
+  const FullRoutinePDF = () => (
+    <RoutinePDFDocument
+        scheduleData={scheduleData!}
+        timeSlots={timeSlots}
+        classes={classes}
+        teacherLoad={teacherLoad}
+        title="Class Routine - Session 2025-26"
+    />
+  );
 
 
   const renderCellContent = (day: string, className: string, timeSlot: string) => {
@@ -445,14 +420,27 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
         <CardHeader>
             <div className="flex flex-wrap justify-between items-center gap-4">
                 <CardTitle>View Routine</CardTitle>
-                 <Button size="sm" variant="outline" onClick={handleDownloadPdf} disabled={isDownloading}>
-                    {isDownloading ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                        <FileDown className="mr-2 h-4 w-4" />
-                    )}
-                    {isDownloading ? 'Generating PDF...' : 'Download PDF'}
-                </Button>
+                 <BlobProvider document={<FullRoutinePDF />}>
+                  {({ blob, url, loading, error }) => {
+                    if (error) {
+                      toast({ variant: "destructive", title: "PDF Generation Failed" });
+                      console.error("PDF generation error:", error);
+                      return <span>Error creating PDF</span>;
+                    }
+                    return (
+                      <a href={url!} download="routine.pdf">
+                        <Button size="sm" variant="outline" disabled={loading}>
+                            {loading ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                                <FileDown className="mr-2 h-4 w-4" />
+                            )}
+                            {loading ? 'Generating PDF...' : 'Download PDF'}
+                        </Button>
+                      </a>
+                    );
+                  }}
+                </BlobProvider>
             </div>
             <CardDescription>View, download, or edit your routine. Use the copy icon next to a day's name to paste its schedule to another day.</CardDescription>
         </CardHeader>

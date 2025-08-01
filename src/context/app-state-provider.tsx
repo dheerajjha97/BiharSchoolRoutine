@@ -296,45 +296,47 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     
     let contentHTML = `
-      <h3 style="text-align: center; font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem;">Routine for ${teacherName}</h3>
-      <table style="width: 100%; border-collapse: collapse; font-size: 10pt;">
-          <thead>
-              <tr>
-                  <th style="border: 1px solid #ccc; padding: 4px; text-align: left; font-weight: bold;">Day / Time</th>
-                  ${timeSlots.map(slot => `<th style="border: 1px solid #ccc; padding: 4px; font-weight: bold;">${slot}</th>`).join('')}
-              </tr>
-          </thead>
-          <tbody>
-              ${daysOfWeek.map(day => `
+      <html>
+        <head>
+          <title>Print Routine for ${teacherName}</title>
+          <style>
+            @page { size: A4 landscape; margin: 0.5in; }
+            body { font-family: sans-serif; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            table { width: 100%; border-collapse: collapse; font-size: 10pt; }
+            th, td { border: 1px solid #ccc; padding: 4px; text-align: center; }
+            th { font-weight: bold; }
+            .day-header { text-align: left; font-weight: bold; }
+          </style>
+        </head>
+        <body onload="window.print()">
+          <h3 style="text-align: center; font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem;">Routine for ${teacherName}</h3>
+          <table>
+              <thead>
                   <tr>
-                      <td style="border: 1px solid #ccc; padding: 4px; font-weight: bold;">${day}</td>
-                      ${timeSlots.map(slot => {
-                          const entry = scheduleByDayTime[day]?.[slot];
-                          return `<td style="border: 1px solid #ccc; padding: 4px; text-align: center;">${entry ? `<div><b>${entry.subject}</b></div><div>${entry.className}</div>` : '---'}</td>`;
-                      }).join('')}
+                      <th>Day / Time</th>
+                      ${timeSlots.map(slot => `<th>${slot}</th>`).join('')}
                   </tr>
-              `).join('')}
-          </tbody>
-      </table>
+              </thead>
+              <tbody>
+                  ${daysOfWeek.map(day => `
+                      <tr>
+                          <td class="day-header">${day}</td>
+                          ${timeSlots.map(slot => {
+                              const entry = scheduleByDayTime[day]?.[slot];
+                              return `<td>${entry ? `<div><b>${entry.subject}</b></div><div>${entry.className}</div>` : '---'}</td>`;
+                          }).join('')}
+                      </tr>
+                  `).join('')}
+              </tbody>
+          </table>
+        </body>
+      </html>
     `;
 
     const newWindow = window.open('', '_blank');
     if (newWindow) {
         newWindow.document.open();
-        newWindow.document.write(`
-            <html>
-                <head>
-                    <title>Print Routine for ${teacherName}</title>
-                    <style>
-                      @page { size: A4 landscape; margin: 0.5in; }
-                      body { font-family: sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                    </style>
-                </head>
-                <body onload="window.print();">
-                    ${contentHTML}
-                </body>
-            </html>
-        `);
+        newWindow.document.write(contentHTML);
         newWindow.document.close();
     }
   };

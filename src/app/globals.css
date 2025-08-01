@@ -70,29 +70,37 @@
     print-color-adjust: exact !important;
   }
   
-  .no-print, .no-print * {
+  .no-print {
     display: none !important;
   }
 
   .printable-area {
+    display: block !important;
     visibility: visible !important;
     position: absolute;
     left: 0;
     top: 0;
     width: 100%;
+    height: auto;
+    box-shadow: none !important;
+    border: none !important;
   }
   
   .printable-area * {
     visibility: visible !important;
   }
-  
-  .printable-area .table {
-    font-size: 9pt;
+
+  .printable-area .table, 
+  .printable-area table {
+    font-size: 8pt; /* Smaller font for print */
+    width: 100%;
+    table-layout: auto;
   }
   
   .printable-area th, .printable-area td {
     border: 1px solid #ccc !important;
-    padding: 4px;
+    padding: 2px 4px;
+    word-break: break-word;
   }
 
   .printable-area tr {

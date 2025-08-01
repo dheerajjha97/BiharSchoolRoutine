@@ -1,7 +1,6 @@
-
 "use client";
 
-import React, { useState, useMemo, useEffect, forwardRef, useCallback } from 'react';
+import React, { useState, useMemo, forwardRef } from 'react';
 import type { GenerateScheduleOutput, ScheduleEntry } from "@/ai/flows/generate-schedule";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -173,7 +172,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
     return new Set<string>(classes.filter(c => getGradeFromClassName(c) !== firstSelectedGrade));
   }, [cellData.classNames, classes]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const currentTeachers = cellData.teacher.split(' & ').map(t => t.trim()).filter(Boolean);
     if (cellData.subject && currentTeachers.some(t => !availableTeachers.includes(t) && t !== 'N/A')) {
         setCellData(prev => ({ ...prev, teacher: '' }));
@@ -450,15 +449,8 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
 
   return (
     <>
-      <div className="printable-area">
-        <h2 className="text-center text-xl font-bold mb-4">{printHeader}</h2>
-        {renderScheduleTable("Secondary", secondaryClasses)}
-        {renderScheduleTable("Senior Secondary", seniorSecondaryClasses)}
-        <TeacherLoad teacherLoad={teacherLoad} onPrintTeacher={onPrintTeacher} />
-      </div>
-
-      <Card className='no-print'>
-        <CardHeader>
+      <Card className='printable-area'>
+        <CardHeader className='no-print'>
             <div className="flex flex-wrap justify-between items-center gap-4">
                 <CardTitle>View Routine</CardTitle>
                 <div className="flex gap-2">
@@ -473,6 +465,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
             </div>
         </CardHeader>
         <CardContent className="p-0">
+          <h2 className="text-center text-xl font-bold mb-4 hidden print:block">{printHeader}</h2>
           <div className="p-4 md:p-6 space-y-6">
                 {renderScheduleTable("Secondary", secondaryClasses)}
                 {renderScheduleTable("Senior Secondary", seniorSecondaryClasses)}

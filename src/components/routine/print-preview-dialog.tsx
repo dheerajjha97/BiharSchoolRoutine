@@ -10,65 +10,35 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Printer, X } from 'lucide-react';
 import { AppStateContext } from '@/context/app-state-provider';
 import { useContext } from 'react';
+import { sortClasses } from '@/lib/utils';
+import type { GenerateScheduleOutput, ScheduleEntry } from '@/ai/flows/generate-schedule';
 
 interface PrintPreviewDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  contentRef: React.RefObject<HTMLDivElement>;
   title: string;
 }
 
 const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-const PrintableTeacherRoutine = React.forwardRef<HTMLDivElement>((props, ref) => {
-    const { appState } = useContext(AppStateContext);
-    const { teacherRoutineForPrint, timeSlots } = appState;
+const toRoman = (num: number): string => {
+    if (num < 1) return "";
+    const romanMap: Record<number, string> = { 10: 'X', 9: 'IX', 5: 'V', 4: 'IV', 1: 'I' };
+    let result = '';
+    for (const val of [10, 9, 5, 4, 1]) {
+        while (num >= val) {
+            result += romanMap[val];
+            num -= val;
+        }
+    }
+    return result;
+};
 
-    if (!teacherRoutineForPrint) return null;
 
-    const { teacherName, schedule } = teacherRoutineForPrint;
-    
-    return (
-        <div ref={ref}>
-            <h3 className="text-xl font-semibold mb-3">{`Routine for ${teacherName}`}</h3>
-             <table className="w-full border-collapse text-xs" style={{ border: '1px solid #ccc', tableLayout: 'fixed' }}>
-                <thead>
-                    <tr>
-                        <th className="border p-1 font-bold text-left" style={{ border: '1px solid #ccc', padding: '4px', backgroundColor: '#f2f2f2' }}>Day / Time</th>
-                        {timeSlots.map(slot => <th key={slot} className="border p-1 font-bold" style={{ border: '1px solid #ccc', padding: '4px', backgroundColor: '#f2f2f2' }}>{slot.replace(/ /g, '')}</th>)}
-                    </tr>
-                </thead>
-                <tbody>
-                    {daysOfWeek.map(day => (
-                        <tr key={day}>
-                            <td className="border p-1 font-bold" style={{ border: '1px solid #ccc', padding: '4px' }}>{day}</td>
-                            {timeSlots.map(slot => {
-                                const entry = schedule[day]?.[slot];
-                                if (entry) {
-                                    return (
-                                        <td key={slot} className="border p-1 text-center" style={{ border: '1px solid #ccc', padding: '4px' }}>
-                                            <div className="font-semibold">{entry.subject}</div>
-                                            <div className="text-gray-600 text-[10px]">{entry.className}</div>
-                                        </td>
-                                    );
-                                }
-                                return <td key={slot} className="border p-1 text-center" style={{ border: '1px solid #ccc', padding: '4px' }}>---</td>;
-                            })}
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
-    );
-});
-PrintableTeacherRoutine.displayName = "PrintableTeacherRoutine";
-
-const PrintPreviewDialog: React.FC<PrintPreviewDialogProps> = ({ isOpen, onOpenChange, contentRef, title }) => {
+const PrintPreviewDialog: React.FC<PrintPreviewDialogProps> = ({ isOpen, onOpenChange, title }) => {
   const { appState, updateState } = useContext(AppStateContext);
-  const { teacherRoutineForPrint } = appState;
+  const { teacherRoutineForPrint, routine, timeSlots, classes, teacherLoad } = appState;
 
-  const teacherContentRef = useRef<HTMLDivElement>(null);
-  
   const [scale, setScale] = useState(100);
   const [margins, setMargins] = useState({ top: 1, right: 1, bottom: 1, left: 1 });
   const [orientation, setOrientation] = useState<'landscape' | 'portrait'>('landscape');
@@ -78,26 +48,147 @@ const PrintPreviewDialog: React.FC<PrintPreviewDialogProps> = ({ isOpen, onOpenC
     if (isOpen) {
       setPreviewKey(prev => prev + 1); 
     } else {
-      if (appState.teacherRoutineForPrint) {
+      if (teacherRoutineForPrint) {
         updateState('teacherRoutineForPrint', null);
       }
     }
-  }, [isOpen, updateState, appState.teacherRoutineForPrint]);
+  }, [isOpen, updateState, teacherRoutineForPrint]);
+
+  const instructionalSlotMap = useMemo(() => {
+    const map: { [timeSlot: string]: number } = {};
+    let periodCounter = 1;
+    timeSlots.forEach(slot => {
+        if (!routine?.schedule?.find(e => e.timeSlot === slot && (e.subject === 'Prayer' || e.subject === 'Lunch'))) {
+            map[slot] = periodCounter++;
+        }
+    });
+    return map;
+  }, [timeSlots, routine]);
+
+  const generatePrintHTML = (): string => {
+      let contentHTML = '';
+
+      if (teacherRoutineForPrint) {
+          const { teacherName, schedule } = teacherRoutineForPrint;
+          contentHTML = `
+              <h3 class="table-title">Routine for ${teacherName}</h3>
+              <table class="routine-table">
+                  <thead>
+                      <tr>
+                          <th>Day / Time</th>
+                          ${timeSlots.map(slot => `<th>${slot.replace(/ /g, '')}</th>`).join('')}
+                      </tr>
+                  </thead>
+                  <tbody>
+                      ${daysOfWeek.map(day => `
+                          <tr>
+                              <td class="day-cell">${day}</td>
+                              ${timeSlots.map(slot => {
+                                  const entry = schedule[day]?.[slot];
+                                  return `<td class="cell">${entry ? `<div class="subject">${entry.subject}</div><div class="class-name">${entry.className}</div>` : '---'}</td>`;
+                              }).join('')}
+                          </tr>
+                      `).join('')}
+                  </tbody>
+              </table>
+          `;
+      } else if (routine?.schedule) {
+            const gridSchedule: Record<string, Record<string, Record<string, ScheduleEntry[]>>> = {};
+            daysOfWeek.forEach(day => {
+                gridSchedule[day] = {};
+                classes.forEach(c => {
+                    gridSchedule[day][c] = {};
+                    timeSlots.forEach(slot => { gridSchedule[day][c][slot] = []; });
+                });
+            });
+            routine.schedule.forEach(entry => {
+                entry.className.split(' & ').map(c => c.trim()).forEach(className => {
+                    if (gridSchedule[entry.day]?.[className]?.[entry.timeSlot]) {
+                      gridSchedule[entry.day][className][entry.timeSlot].push(entry);
+                    }
+                });
+            });
+
+            const sorted = sortClasses([...classes]);
+            const getGrade = (c: string) => (c.match(/\d+/) || [])[0] || null;
+            const secondary = sorted.filter(c => ['9', '10'].includes(getGrade(c) || ''));
+            const seniorSecondary = sorted.filter(c => ['11', '12'].includes(getGrade(c) || ''));
+            
+            const generateClassTable = (title: string, displayClasses: string[]): string => {
+                if(displayClasses.length === 0) return '';
+                return `
+                    <div class="page-break">
+                        <h3 class="table-title">${title}</h3>
+                        <table class="routine-table">
+                            <thead>
+                                <tr>
+                                    <th class="day-header">Day</th>
+                                    <th class="class-header">Class</th>
+                                    ${timeSlots.map(slot => `<th><div>${slot}</div><div class="roman">${instructionalSlotMap[slot] ? toRoman(instructionalSlotMap[slot]) : '-'}</div></th>`).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>
+                            ${daysOfWeek.map(day => 
+                                displayClasses.map((className, classIndex) => `
+                                    <tr>
+                                        ${classIndex === 0 ? `<td class="day-cell" rowspan="${displayClasses.length}">${day}</td>` : ''}
+                                        <td class="class-cell">${className}</td>
+                                        ${timeSlots.map(timeSlot => {
+                                            const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
+                                            const cellContent = entries.map(e => {
+                                                if (e.subject === '---') return '<span class="empty-cell">---</span>';
+                                                return `<div class="subject">${e.subject}</div><div class="teacher">${e.teacher || 'N/A'}</div>${e.className.includes('&') ? '<div class="combined">(Combined)</div>' : ''}`;
+                                            }).join('');
+                                            return `<td class="cell">${cellContent || '---'}</td>`;
+                                        }).join('')}
+                                    </tr>
+                                `).join('')
+                            ).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            };
+            
+            const generateTeacherLoadTable = (): string => {
+                 const teachers = Object.keys(teacherLoad).sort();
+                 if (teachers.length === 0) return '';
+                 return `
+                    <div class="page-break">
+                         <h3 class="table-title">Teacher Workload Summary</h3>
+                         <table class="routine-table teacher-load">
+                            <thead>
+                                <tr>
+                                    <th>Teacher</th>
+                                    ${["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Total"].map(d => `<th>${d.substring(0,3)}</th>`).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${teachers.map(teacher => `
+                                    <tr>
+                                        <td class="teacher-name">${teacher}</td>
+                                        ${["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Total"].map(day => 
+                                            `<td>${teacherLoad[teacher]?.[day as keyof typeof teacherLoad[string]] ?? 0}</td>`
+                                        ).join('')}
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                         </table>
+                    </div>
+                 `;
+            };
+
+            contentHTML += generateClassTable("Secondary", secondary);
+            contentHTML += generateClassTable("Senior Secondary", seniorSecondary);
+            contentHTML += generateTeacherLoadTable();
+      }
+
+      return contentHTML;
+  };
+  
 
   const handlePrint = () => {
-    let contentToPrintElement: HTMLElement | null = null;
-    if (teacherRoutineForPrint && teacherContentRef.current) {
-        contentToPrintElement = teacherContentRef.current;
-    } else if (contentRef.current) {
-        contentToPrintElement = contentRef.current;
-    }
-    
-    if (!contentToPrintElement) {
-        console.error("No content to print.");
-        return;
-    }
-
-    const contentHTML = contentToPrintElement.innerHTML;
+    const contentHTML = generatePrintHTML();
     
     const pageStyle = `
       @page {
@@ -114,41 +205,41 @@ const PrintPreviewDialog: React.FC<PrintPreviewDialogProps> = ({ isOpen, onOpenC
         transform-origin: top left;
         width: ${scale === 100 ? '100%' : 'auto'};
       }
-      table {
+      .routine-table {
         width: 100%;
         border-collapse: collapse;
         font-size: 8pt;
+        table-layout: fixed;
       }
-      th, td {
+      .routine-table th, .routine-table td {
         border: 1px solid #ccc !important;
         padding: 2px;
         text-align: center;
-        page-break-inside: avoid;
+        word-wrap: break-word;
       }
-      tr {
-        page-break-inside: avoid;
-        page-break-after: auto;
-      }
-      thead {
-        display: table-header-group;
-      }
-      th {
+       .routine-table th {
         font-weight: bold;
         background-color: #f2f2f2 !important;
       }
-      .break-after-page {
+      .routine-table .day-cell, .routine-table .class-cell, .routine-table .teacher-name {
+          font-weight: bold;
+          font-size: 9pt;
+      }
+      .routine-table .subject { font-weight: 600; }
+      .routine-table .teacher, .routine-table .class-name, .routine-table .roman { font-size: 7pt; color: #555; }
+      .routine-table .combined { font-size: 6pt; font-style: italic; }
+      .page-break {
         page-break-after: always;
       }
-      h3 {
+      .page-break:last-child {
+        page-break-after: avoid;
+      }
+      .table-title {
         font-size: 14pt;
         font-weight: 600;
         text-align: center;
         margin-bottom: 0.5rem;
       }
-      .text-gray-600 { color: #555; }
-      .text-\\[10px\\] { font-size: 10px; }
-      .font-semibold { font-weight: 600; }
-      .mb-3 { margin-bottom: 1rem; }
     `;
 
     const iframe = document.createElement('iframe');
@@ -175,12 +266,16 @@ const PrintPreviewDialog: React.FC<PrintPreviewDialogProps> = ({ isOpen, onOpenC
         `);
         doc.close();
         
-        iframe.contentWindow?.focus();
-        
         setTimeout(() => {
+          try {
+            iframe.contentWindow?.focus();
             iframe.contentWindow?.print();
+          } catch(e) {
+            console.error("Print failed:", e);
+          } finally {
             document.body.removeChild(iframe);
-        }, 500);
+          }
+        }, 500); 
     }
   };
 
@@ -201,13 +296,7 @@ const PrintPreviewDialog: React.FC<PrintPreviewDialogProps> = ({ isOpen, onOpenC
   };
   
   const renderContent = () => {
-    if (teacherRoutineForPrint) {
-        return <PrintableTeacherRoutine ref={teacherContentRef} />;
-    }
-    if (contentRef.current) {
-      return <div dangerouslySetInnerHTML={{ __html: contentRef.current.innerHTML }} />;
-    }
-    return null;
+    return <div dangerouslySetInnerHTML={{ __html: generatePrintHTML() }} />;
   };
 
   return (
@@ -303,3 +392,6 @@ const PrintPreviewDialog: React.FC<PrintPreviewDialogProps> = ({ isOpen, onOpenC
 };
 
 export default PrintPreviewDialog;
+
+
+    

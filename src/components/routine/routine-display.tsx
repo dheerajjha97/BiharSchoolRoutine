@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Download, Trash2, Check, AlertTriangle, Copy, Printer } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from '../ui/checkbox';
-import { cn } from '@/lib/utils';
+import { cn, sortClasses } from '@/lib/utils';
 import { Separator } from '../ui/separator';
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -54,23 +54,18 @@ type CellData = {
 const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 const getGradeFromClassName = (className: string): string | null => {
+    if (typeof className !== 'string') return null;
     const match = className.match(/\d+/);
     return match ? match[0] : null;
 };
 
-const sortClasses = (a: string, b: string): number => {
-  const gradeA = parseInt(getGradeFromClassName(a) || '0', 10);
-  const gradeB = parseInt(getGradeFromClassName(b) || '0', 10);
-  if (gradeA !== gradeB) return gradeA - gradeB;
-  return a.localeCompare(b);
-};
-
 const categorizeClasses = (classes: string[]) => {
-    const secondary = classes.filter(c => ['9', '10'].includes(getGradeFromClassName(c) || ''));
-    const seniorSecondary = classes.filter(c => ['11', '12'].includes(getGradeFromClassName(c) || ''));
+    const sorted = [...classes].sort(sortClasses);
+    const secondary = sorted.filter(c => ['9', '10'].includes(getGradeFromClassName(c) || ''));
+    const seniorSecondary = sorted.filter(c => ['11', '12'].includes(getGradeFromClassName(c) || ''));
     return { 
-        secondaryClasses: secondary.sort(sortClasses), 
-        seniorSecondaryClasses: seniorSecondary.sort(sortClasses) 
+        secondaryClasses: secondary, 
+        seniorSecondaryClasses: seniorSecondary 
     };
 };
 
@@ -96,11 +91,9 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
   const [currentCell, setCurrentCell] = useState<{ day: string; timeSlot: string; className: string; entry: ScheduleEntry | null } | null>(null);
   const [cellData, setCellData] = useState<CellData>({ subject: "", classNames: [], teacher: "" });
   
-  const printContentRef = useRef<HTMLDivElement>(null);
   const printTitleRef = useRef<string>('');
 
-  const sortedClasses = useMemo(() => [...classes].sort(sortClasses), [classes]);
-  const { secondaryClasses, seniorSecondaryClasses } = useMemo(() => categorizeClasses(sortedClasses), [sortedClasses]);
+  const { secondaryClasses, seniorSecondaryClasses } = useMemo(() => categorizeClasses(classes), [classes]);
 
   const instructionalSlotMap = useMemo(() => {
     const map: { [timeSlot: string]: number } = {};
@@ -256,7 +249,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
   
     const newEntryData = {
         subject: cellData.subject,
-        className: cellData.classNames.sort(sortClasses).join(' & '),
+        className: [...cellData.classNames].sort(sortClasses).join(' & '),
         teacher: cellData.teacher
     };
 
@@ -484,11 +477,11 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
             </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="space-y-6" ref={printContentRef}>
-            {renderScheduleTable("Secondary", secondaryClasses)}
-            {renderScheduleTable("Senior Secondary", seniorSecondaryClasses)}
-            <TeacherLoad teacherLoad={teacherLoad} onPrintTeacher={handlePrintTeacher} />
-          </div>
+          <div className="p-4 md:p-6 space-y-6">
+                {renderScheduleTable("Secondary", secondaryClasses)}
+                {renderScheduleTable("Senior Secondary", seniorSecondaryClasses)}
+                <TeacherLoad teacherLoad={teacherLoad} onPrintTeacher={handlePrintTeacher} />
+            </div>
         </CardContent>
       </Card>
       
@@ -568,7 +561,6 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
          <PrintPreviewDialog
             isOpen={isPrintDialogOpen}
             onOpenChange={setIsPrintDialogOpen}
-            contentRef={printContentRef}
             title={printTitleRef.current}
          />
       )}

@@ -1,3 +1,4 @@
+
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 
@@ -49,3 +50,17 @@ export function sortTimeSlots(timeSlots: string[]): string[] {
     return timeA - timeB;
   });
 }
+
+const getGradeFromClassName = (className: string): string | null => {
+    if (typeof className !== 'string') return null;
+    const match = className.match(/\d+/);
+    return match ? match[0] : null;
+};
+
+export const sortClasses = (a: string, b: string): number => {
+  const gradeA = parseInt(getGradeFromClassName(a) || '0', 10);
+  const gradeB = parseInt(getGradeFromClassName(b) || '0', 10);
+  if (gradeA !== gradeB) return gradeA - gradeB;
+  return a.localeCompare(b);
+};
+    

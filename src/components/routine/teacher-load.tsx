@@ -21,7 +21,7 @@ export default function TeacherLoad({ teacherLoad, onPrintTeacher }: TeacherLoad
   }
 
   return (
-    <div className="px-6 md:px-0">
+    <div className="px-6 md:px-0 break-after-page">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

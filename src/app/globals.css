@@ -59,61 +59,47 @@
   }
 }
 
-.printable-area {
-  display: none;
-}
-
 @media print {
   @page {
     size: A4 landscape;
     margin: 0.5in;
   }
   
-  body * {
-    visibility: hidden;
+  body {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
   
   .no-print, .no-print * {
     display: none !important;
   }
 
-  .printable-area, .printable-area * {
-    visibility: visible;
-  }
-  
   .printable-area {
+    visibility: visible !important;
     position: absolute;
     left: 0;
     top: 0;
     width: 100%;
   }
-
-  .print-header {
-    text-align: center;
-    font-size: 1.5rem;
-    font-weight: bold;
-    margin-bottom: 1rem;
+  
+  .printable-area * {
+    visibility: visible !important;
   }
-
-  .printable-area .table, 
-  .printable-area .table thead, 
-  .printable-area .table tbody,
-  .printable-area .table th, 
-  .printable-area .table td, 
-  .printable-area .table tr {
-    border: 1px solid #ccc;
-  }
-
-  .printable-area th, .printable-area td {
-    padding: 4px;
+  
+  .printable-area .table {
     font-size: 9pt;
   }
-
-  .printable-area .break-after-page {
-    page-break-after: always;
+  
+  .printable-area th, .printable-area td {
+    border: 1px solid #ccc !important;
+    padding: 4px;
   }
 
   .printable-area tr {
     page-break-inside: avoid;
+  }
+  
+  .printable-area .break-after-page {
+    page-break-after: always;
   }
 }

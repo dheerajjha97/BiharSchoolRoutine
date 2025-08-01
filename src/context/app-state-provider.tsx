@@ -296,38 +296,26 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     
     let contentHTML = `
-      <h3 class="table-title">Routine for ${teacherName}</h3>
-      <table class="routine-table">
+      <h3 style="text-align: center; font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem;">Routine for ${teacherName}</h3>
+      <table style="width: 100%; border-collapse: collapse; font-size: 10pt;">
           <thead>
               <tr>
-                  <th>Day / Time</th>
-                  ${timeSlots.map(slot => `<th>${slot.replace(/ /g, '')}</th>`).join('')}
+                  <th style="border: 1px solid #ccc; padding: 4px; text-align: left; font-weight: bold;">Day / Time</th>
+                  ${timeSlots.map(slot => `<th style="border: 1px solid #ccc; padding: 4px; font-weight: bold;">${slot}</th>`).join('')}
               </tr>
           </thead>
           <tbody>
               ${daysOfWeek.map(day => `
                   <tr>
-                      <td class="day-cell">${day}</td>
+                      <td style="border: 1px solid #ccc; padding: 4px; font-weight: bold;">${day}</td>
                       ${timeSlots.map(slot => {
                           const entry = scheduleByDayTime[day]?.[slot];
-                          return `<td class="cell">${entry ? `<div class="subject">${entry.subject}</div><div class="class-name">${entry.className}</div>` : '---'}</td>`;
+                          return `<td style="border: 1px solid #ccc; padding: 4px; text-align: center;">${entry ? `<div><b>${entry.subject}</b></div><div>${entry.className}</div>` : '---'}</td>`;
                       }).join('')}
                   </tr>
               `).join('')}
           </tbody>
       </table>
-    `;
-
-    const pageStyle = `
-      @page { size: landscape; margin: 0.5in; }
-      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-      .routine-table { width: 100%; border-collapse: collapse; font-size: 8pt; table-layout: fixed; }
-      .routine-table th, .routine-table td { border: 1px solid #ccc !important; padding: 2px; text-align: center; word-wrap: break-word; }
-      .routine-table th { font-weight: bold; background-color: #f2f2f2 !important; }
-      .routine-table .day-cell, .routine-table .class-cell, .routine-table .teacher-name { font-weight: bold; font-size: 9pt; }
-      .routine-table .subject { font-weight: 600; }
-      .routine-table .teacher, .routine-table .class-name { font-size: 7pt; color: #555; }
-      .table-title { font-size: 14pt; font-weight: 600; text-align: center; margin-bottom: 0.5rem; }
     `;
 
     const newWindow = window.open('', '_blank');
@@ -337,16 +325,17 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
             <html>
                 <head>
                     <title>Print Routine for ${teacherName}</title>
-                    <style>${pageStyle}</style>
+                    <style>
+                      @page { size: A4 landscape; margin: 0.5in; }
+                      body { font-family: sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    </style>
                 </head>
-                <body>${contentHTML}</body>
+                <body onload="window.print();">
+                    ${contentHTML}
+                </body>
             </html>
         `);
         newWindow.document.close();
-        setTimeout(() => {
-            newWindow.print();
-            newWindow.close();
-        }, 500);
     }
   };
 

@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo, useEffect, forwardRef, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useEffect, forwardRef, useCallback } from 'react';
 import type { GenerateScheduleOutput, ScheduleEntry } from "@/ai/flows/generate-schedule";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -450,6 +450,13 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
 
   return (
     <>
+      <div className="printable-area">
+        <h2 className="text-center text-xl font-bold mb-4">{printHeader}</h2>
+        {renderScheduleTable("Secondary", secondaryClasses)}
+        {renderScheduleTable("Senior Secondary", seniorSecondaryClasses)}
+        <TeacherLoad teacherLoad={teacherLoad} onPrintTeacher={onPrintTeacher} />
+      </div>
+
       <Card className='no-print'>
         <CardHeader>
             <div className="flex flex-wrap justify-between items-center gap-4">
@@ -474,14 +481,6 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
         </CardContent>
       </Card>
       
-      <div className="printable-area">
-          <h2 className="print-header">{printHeader}</h2>
-          {renderScheduleTable("Secondary", secondaryClasses)}
-          {renderScheduleTable("Senior Secondary", seniorSecondaryClasses)}
-          <TeacherLoad teacherLoad={teacherLoad} onPrintTeacher={onPrintTeacher} />
-      </div>
-
-
       {isCellDialogOpen && (
         <Dialog open={isCellDialogOpen} onOpenChange={setIsCellDialogOpen}>
           <DialogContent className="sm:max-w-lg">

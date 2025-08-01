@@ -122,7 +122,7 @@ export default function Home() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 no-print">
        <PageHeader 
           title="Dashboard"
           description="Generate, view, and manage your school's class routine."

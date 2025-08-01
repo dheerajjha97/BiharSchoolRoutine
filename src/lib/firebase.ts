@@ -11,6 +11,11 @@ const firebaseConfig: FirebaseOptions = {
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
+// Validate environment variables
+if (!firebaseConfig.apiKey) {
+    throw new Error("Missing Firebase API Key. Please set NEXT_PUBLIC_FIREBASE_API_KEY in your .env file.");
+}
+
 // Initialize Firebase
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);

@@ -7,7 +7,7 @@ import type { GenerateScheduleOutput } from "@/ai/flows/generate-schedule";
 import type { SubjectCategory, SubjectPriority } from "@/lib/schedule-generator";
 import { sortTimeSlots } from "@/lib/utils";
 import { auth } from "@/lib/firebase";
-import { onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, type User, type AuthCredential } from "firebase/auth";
+import { onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, type User } from "firebase/auth";
 import { GoogleDriveService } from "@/lib/google-drive-service";
 
 type Unavailability = {
@@ -79,15 +79,6 @@ const DEFAULT_APP_STATE: AppState = {
   teacherLoad: {},
 };
 
-const getAccessToken = (credential: AuthCredential | null): string | null => {
-    if (!credential) return null;
-    // This is a simplified way. In a real app, you might need to handle token refresh.
-    // The `gapi` library handles this more gracefully if initialized correctly.
-    // For this implementation, we assume the token from sign-in is sufficient.
-    return (credential as any).accessToken || null;
-}
-
-
 export const AppStateProvider = ({ children }: { children: React.ReactNode }) => {
   const [appState, setAppState] = useState<AppState>(DEFAULT_APP_STATE);
   const [isLoading, setIsLoading] = useState(false);
@@ -140,10 +131,9 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       }
     } catch (error: any) {
       console.error("Failed to save state to Google Drive:", error);
-      if (error.status === 401) { // Handle token expiration
+      if (error.status === 401 || (error.result?.error?.code === 401) ) { // Handle token expiration
          toast({ variant: "destructive", title: "Authentication Error", description: "Please log out and log in again to refresh your session." });
-         driveServiceRef.current = null;
-         setUser(null);
+         handleLogout(false); // Logout without saving again
       } else {
         toast({ variant: "destructive", title: "Sync Failed", description: "Could not save data to Google Drive." });
       }
@@ -197,6 +187,20 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       }
   }, [toast]);
 
+  const handleLogout = useCallback(async (withSave = true) => {
+    setIsAuthLoading(true);
+    if (withSave && user) {
+        toast({ title: "Saving your work...", description: "Saving your final changes to Google Drive before logging out." });
+        await saveStateToDrive(true); // Final save before logout
+    }
+    await signOut(auth);
+    setAppState(DEFAULT_APP_STATE);
+    driveServiceRef.current = null;
+    setUser(null);
+    setIsAuthLoading(false);
+    toast({ title: "Logged Out", description: "You have been successfully logged out." });
+  }, [user, saveStateToDrive, toast]);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setIsAuthLoading(true);
@@ -210,8 +214,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         } catch (error) {
             console.error("Error initializing Google Drive service:", error);
             toast({ variant: "destructive", title: "Google Drive Error", description: "Could not connect to Google Drive."});
-            setUser(null);
-            driveServiceRef.current = null;
+            handleLogout(false);
         }
       } else {
         setUser(null);
@@ -221,7 +224,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       setIsAuthLoading(false);
     });
     return () => unsubscribe();
-  }, [loadStateFromDrive, toast]);
+  }, [loadStateFromDrive, toast, handleLogout]);
 
   const updateState = useCallback(<K extends keyof AppState>(key: K, value: AppState[K]) => {
     setAppState(prevState => {
@@ -246,22 +249,12 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     provider.addScope('https://www.googleapis.com/auth/drive.file');
     try {
       await signInWithPopup(auth, provider);
+      // onAuthStateChanged will handle the rest
     } catch (error) {
       console.error("Google Sign-In Error:", error);
       toast({ variant: "destructive", title: "Login Failed", description: "Could not sign in with Google." });
       setIsAuthLoading(false);
     }
-  };
-
-  const handleLogout = async () => {
-    setIsAuthLoading(true);
-    toast({ title: "Saving your work...", description: "Saving your final changes to Google Drive before logging out." });
-    await saveStateToDrive(true); // Final save before logout
-    await signOut(auth);
-    setAppState(DEFAULT_APP_STATE);
-    driveServiceRef.current = null;
-    setIsAuthLoading(false);
-    toast({ title: "Logged Out", description: "You have been successfully logged out." });
   };
   
   return (
@@ -275,7 +268,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         isSyncing,
         user,
         handleGoogleSignIn,
-        handleLogout,
+        handleLogout: () => handleLogout(true),
     }}>
       {children}
     </AppStateContext.Provider>

@@ -2,7 +2,6 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from 'react';
-import dynamic from 'next/dynamic';
 import type { GenerateScheduleOutput, ScheduleEntry } from "@/ai/flows/generate-schedule";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -30,11 +29,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import TeacherLoad from './teacher-load';
 import { PDFDownloadLink } from '@react-pdf/renderer';
+import RoutinePDFDocument from './RoutinePDFDocument';
 import type { TeacherLoad as TeacherLoadType } from '@/context/app-state-provider';
-
-const RoutinePDFDocument = dynamic(() => import('./RoutinePDFDocument'), {
-  ssr: false,
-});
 
 interface RoutineDisplayProps {
   scheduleData: GenerateScheduleOutput | null;
@@ -93,6 +89,11 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   const [isCellDialogOpen, setIsCellDialogOpen] = useState(false);
   const [currentCell, setCurrentCell] = useState<{ day: string; timeSlot: string; className: string; entry: ScheduleEntry | null } | null>(null);
   const [cellData, setCellData] = useState<CellData>({ subject: "", classNames: [], teacher: "" });
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
   
 
   const { secondaryClasses, seniorSecondaryClasses } = useMemo(() => categorizeClasses(classes), [classes]);
@@ -414,25 +415,27 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
         <CardHeader>
             <div className="flex flex-wrap justify-between items-center gap-4">
                 <CardTitle>View Routine</CardTitle>
-                 <PDFDownloadLink
-                    document={
-                        <RoutinePDFDocument 
-                            scheduleData={scheduleData}
-                            timeSlots={timeSlots}
-                            classes={classes}
-                            teacherLoad={teacherLoad}
-                            title="Class Routine - Session 2025-26"
-                        />
-                    }
-                    fileName="routine.pdf"
-                >
-                    {({ loading }) => (
-                        <Button size="sm" variant="outline" disabled={loading}>
-                            <FileDown className="mr-2 h-4 w-4" />
-                            {loading ? 'Generating PDF...' : 'Download PDF'}
-                        </Button>
-                    )}
-                </PDFDownloadLink>
+                {isClient && (
+                  <PDFDownloadLink
+                      document={isClient ? (
+                          <RoutinePDFDocument 
+                              scheduleData={scheduleData}
+                              timeSlots={timeSlots}
+                              classes={classes}
+                              teacherLoad={teacherLoad}
+                              title="Class Routine - Session 2025-26"
+                          />
+                      ) : <></>}
+                      fileName="routine.pdf"
+                  >
+                      {({ loading }) => (
+                          <Button size="sm" variant="outline" disabled={loading}>
+                              <FileDown className="mr-2 h-4 w-4" />
+                              {loading ? 'Generating PDF...' : 'Download PDF'}
+                          </Button>
+                      )}
+                  </PDFDownloadLink>
+                )}
             </div>
             <CardDescription>View, download, or edit your routine. Use the copy icon next to a day's name to paste its schedule to another day.</CardDescription>
         </CardHeader>
@@ -525,3 +528,5 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 };
 
 export default RoutineDisplay;
+
+    

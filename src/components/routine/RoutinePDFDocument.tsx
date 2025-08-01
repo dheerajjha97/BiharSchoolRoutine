@@ -138,6 +138,7 @@ const RoutinePDFDocument = ({ scheduleData, timeSlots, classes, teacherLoad, tit
     const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     
     const getGradeFromClassName = (className: string): string | null => {
+        if (typeof className !== 'string') return null;
         const match = className.match(/\d+/);
         return match ? match[0] : null;
     };
@@ -315,3 +316,5 @@ const RoutinePDFDocument = ({ scheduleData, timeSlots, classes, teacherLoad, tit
 };
 
 export default RoutinePDFDocument;
+
+    

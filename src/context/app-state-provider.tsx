@@ -87,7 +87,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   const [user, setUser] = useState<User | null>(null);
   const { toast } = useToast();
   const driveServiceRef = useRef<GoogleDriveService | null>(null);
-  const stateRef = useRef(appState); // Ref to hold the latest state for debouncing
+  const stateRef = useRef(appState);
 
   useEffect(() => {
     stateRef.current = appState;
@@ -131,9 +131,9 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       }
     } catch (error: any) {
       console.error("Failed to save state to Google Drive:", error);
-      if (error.status === 401 || (error.result?.error?.code === 401) ) { // Handle token expiration
+      if (error.status === 401 || (error.result?.error?.code === 401) ) { 
          toast({ variant: "destructive", title: "Authentication Error", description: "Please log out and log in again to refresh your session." });
-         handleLogout(false); // Logout without saving again
+         handleLogout(false);
       } else {
         toast({ variant: "destructive", title: "Sync Failed", description: "Could not save data to Google Drive." });
       }
@@ -143,14 +143,13 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   }, [toast]);
   
   const debouncedSave = useRef(
-    // A simple debounce implementation
     (() => {
       let timeout: NodeJS.Timeout;
       return () => {
         clearTimeout(timeout);
         timeout = setTimeout(() => {
           saveStateToDrive(false);
-        }, 5000); // Save 5 seconds after the last change
+        }, 5000); 
       };
     })()
   ).current;
@@ -189,9 +188,9 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 
   const handleLogout = useCallback(async (withSave = true) => {
     setIsAuthLoading(true);
-    if (withSave && user) {
+    if (withSave && user && driveServiceRef.current?.isReady()) {
         toast({ title: "Saving your work...", description: "Saving your final changes to Google Drive before logging out." });
-        await saveStateToDrive(true); // Final save before logout
+        await saveStateToDrive(true); 
     }
     await signOut(auth);
     setAppState(DEFAULT_APP_STATE);
@@ -207,10 +206,11 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       if (user) {
         setUser(user);
         try {
-            const driveService = new GoogleDriveService();
-            await driveService.init(user);
-            driveServiceRef.current = driveService;
-            await loadStateFromDrive(driveService);
+            if (!driveServiceRef.current) {
+                driveServiceRef.current = new GoogleDriveService();
+            }
+            await driveServiceRef.current.init();
+            await loadStateFromDrive(driveServiceRef.current);
         } catch (error) {
             console.error("Error initializing Google Drive service:", error);
             toast({ variant: "destructive", title: "Google Drive Error", description: "Could not connect to Google Drive."});
@@ -219,7 +219,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       } else {
         setUser(null);
         driveServiceRef.current = null;
-        setAppState(DEFAULT_APP_STATE); // Reset to default state on logout
+        setAppState(DEFAULT_APP_STATE);
       }
       setIsAuthLoading(false);
     });
@@ -251,13 +251,14 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       await signInWithPopup(auth, provider);
       // onAuthStateChanged will handle the rest
     } catch (error: any) {
-      if (error.code === 'auth/popup-closed-by-user') {
+       if (error.code === 'auth/popup-closed-by-user') {
         console.log("Sign-in popup closed by user.");
+        // Don't show a toast for this expected user action.
       } else {
         console.error("Google Sign-In Error:", error);
         toast({ variant: "destructive", title: "Login Failed", description: "Could not sign in with Google." });
       }
-      setIsAuthLoading(false);
+      setIsAuthLoading(false); // Make sure to turn off loading on error
     }
   };
   

@@ -1,5 +1,4 @@
 
-import type { User } from 'firebase/auth';
 import type { AppState } from '@/context/app-state-provider';
 
 const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
@@ -11,53 +10,98 @@ declare global {
   interface Window {
     gapi: any;
     google: any;
+    tokenClient: any;
   }
 }
 
 export class GoogleDriveService {
-  private gapiInited = false;
-  private gisInited = false;
-  private tokenClient: any = null;
+  private gapiReady = false;
+  private gisReady = false;
 
   constructor() {
     this.loadGapiScript();
+    this.loadGisScript();
   }
 
   private loadGapiScript() {
-    if (document.getElementById('gapi-script')) return;
-    const script = document.createElement('script');
-    script.id = 'gapi-script';
-    script.src = 'https://apis.google.com/js/api.js';
-    script.async = true;
-    script.defer = true;
-    script.onload = () => window.gapi.load('client', () => this.initializeGapiClient());
-    document.body.appendChild(script);
-  }
-
-  private async initializeGapiClient() {
-    await window.gapi.client.init({
-      apiKey: process.env.NEXT_PUBLIC_GOOGLE_API_KEY,
-      discoveryDocs: [DISCOVERY_DOC],
+    return new Promise<void>((resolve) => {
+      if (typeof window !== 'undefined' && window.gapi) {
+        this.gapiReady = true;
+        resolve();
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://apis.google.com/js/api.js';
+      script.async = true;
+      script.defer = true;
+      script.onload = () => {
+        window.gapi.load('client', async () => {
+          await window.gapi.client.init({
+            apiKey: process.env.NEXT_PUBLIC_GOOGLE_API_KEY,
+            discoveryDocs: [DISCOVERY_DOC],
+          });
+          this.gapiReady = true;
+          resolve();
+        });
+      };
+      document.body.appendChild(script);
     });
-    this.gapiInited = true;
   }
 
-  public async init(user: User) {
-    await new Promise<void>(resolve => {
-        const interval = setInterval(() => {
-            if(this.gapiInited) {
-                clearInterval(interval);
-                resolve();
+  private loadGisScript() {
+    return new Promise<void>((resolve) => {
+       if (typeof window !== 'undefined' && window.google) {
+        this.gisReady = true;
+        resolve();
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      script.onload = () => {
+        window.tokenClient = window.google.accounts.oauth2.initTokenClient({
+          client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+          scope: SCOPES,
+          callback: '', // Callback is handled by the Promise in getToken
+        });
+        this.gisReady = true;
+        resolve();
+      };
+      document.body.appendChild(script);
+    });
+  }
+
+  public async init() {
+    await Promise.all([this.loadGapiScript(), this.loadGisScript()]);
+    await this.getToken();
+  }
+  
+  private async getToken() {
+      return new Promise<void>((resolve, reject) => {
+        const token = window.gapi.client.getToken();
+        if (token) {
+            return resolve();
+        }
+        
+        window.tokenClient.callback = (resp: any) => {
+            if (resp.error) {
+                return reject(resp);
             }
-        }, 100);
+            window.gapi.client.setToken(resp);
+            resolve();
+        };
+
+        if (!window.gapi.client.getToken()) {
+            window.tokenClient.requestAccessToken({ prompt: 'consent' });
+        } else {
+            resolve();
+        }
     });
-
-    const accessToken = await user.getIdToken(true);
-    window.gapi.client.setToken({ access_token: accessToken });
   }
-
+  
   public isReady(): boolean {
-    return this.gapiInited && !!window.gapi.client.getToken();
+    return this.gapiReady && this.gisReady && !!window.gapi.client.getToken();
   }
 
   private async getFileId(): Promise<string | null> {
@@ -108,6 +152,8 @@ export class GoogleDriveService {
     const blob = new Blob([backupData], { type: BACKUP_MIME_TYPE });
     
     const form = new FormData();
+    const token = window.gapi.client.getToken();
+    if (!token) throw new Error("Not authenticated with Google Drive");
 
     if (fileId) {
       // Update existing file
@@ -120,7 +166,7 @@ export class GoogleDriveService {
       
       await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`, {
         method: 'PATCH',
-        headers: new Headers({ 'Authorization': 'Bearer ' + window.gapi.client.getToken().access_token }),
+        headers: new Headers({ 'Authorization': 'Bearer ' + token.access_token }),
         body: form,
       });
 
@@ -129,14 +175,14 @@ export class GoogleDriveService {
       const metadata = {
         name: BACKUP_FILE_NAME,
         mimeType: BACKUP_MIME_TYPE,
-        parents: ['appDataFolder'], // Store in app-specific folder if possible, otherwise 'root'
+        parents: ['root'], // Using 'root' instead of 'appDataFolder' for user visibility
       };
       form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
       form.append('file', blob);
 
       await fetch(`https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart`, {
         method: 'POST',
-        headers: new Headers({ 'Authorization': 'Bearer ' + window.gapi.client.getToken().access_token }),
+        headers: new Headers({ 'Authorization': 'Bearer ' + token.access_token }),
         body: form,
       });
     }

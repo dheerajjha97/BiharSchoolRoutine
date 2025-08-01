@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Page, Text, View, Document, StyleSheet, Font } from '@react-pdf/renderer';
 import type { GenerateScheduleOutput, ScheduleEntry } from "@/ai/flows/generate-schedule";
@@ -150,18 +149,14 @@ const RoutinePDFDocument = ({ scheduleData, timeSlots, classes, teacherLoad, tit
       return a.localeCompare(b);
     };
 
-    const categorizeClasses = (classes: string[]) => {
-        const sorted = [...classes].sort(sortClasses);
-        const secondary = sorted.filter(c => ['9', '10'].includes(getGradeFromClassName(c) || ''));
-        const seniorSecondary = sorted.filter(c => ['11', '12'].includes(getGradeFromClassName(c) || ''));
-        return { 
-            secondaryClasses: secondary, 
-            seniorSecondaryClasses: seniorSecondary 
-        };
-    };
-
     const { secondaryClasses, seniorSecondaryClasses } = !singleTeacherData
-        ? categorizeClasses(classes)
+        ? (() => {
+            const sorted = [...classes].sort(sortClasses);
+            return {
+                secondaryClasses: sorted.filter(c => ['9', '10'].includes(getGradeFromClassName(c) || '')),
+                seniorSecondaryClasses: sorted.filter(c => ['11', '12'].includes(getGradeFromClassName(c) || ''))
+            };
+        })()
         : { secondaryClasses: [], seniorSecondaryClasses: [] };
 
     const instructionalSlotMap: { [timeSlot: string]: number } = {};
@@ -264,7 +259,7 @@ const RoutinePDFDocument = ({ scheduleData, timeSlots, classes, teacherLoad, tit
     
     const renderSingleTeacherSchedule = () => {
         if (!singleTeacherData) return null;
-        const { teacherName, schedule } = singleTeacherData;
+        const { schedule } = singleTeacherData;
         
         return (
              <View style={styles.table}>

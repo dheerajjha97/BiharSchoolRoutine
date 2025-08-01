@@ -313,16 +313,18 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                     const subjectDiv = contentWrapper.querySelector('div:first-child');
                     const teacherDiv = contentWrapper.querySelector('div:nth-child(2)');
 
-                    if (subjectDiv && teacherDiv) {
-                        const subjectText = subjectDiv.textContent || '';
-                        const teacherText = teacherDiv.textContent || '';
-                        
-                        // Re-create the inner HTML with new styling
-                        contentWrapper.innerHTML = `
-                            <div style="font-weight: bold; font-size: 12px;">${subjectText}</div>
-                            <div style="font-size: 10px;">${teacherText}</div>
-                        `;
-                    }
+                    const subjectText = subjectDiv?.textContent || '';
+                    const teacherText = teacherDiv?.textContent || '';
+                    
+                    // Clear the original content and remove any background classes
+                    contentWrapper.innerHTML = '';
+                    contentWrapper.className = '';
+                    
+                    // Re-create the inner HTML with new styling
+                    contentWrapper.innerHTML = `
+                        <div style="font-weight: bold; font-size: 12px;">${subjectText}</div>
+                        <div style="font-size: 10px;">${teacherText}</div>
+                    `;
                 }
             }
         });
@@ -425,7 +427,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                 <TableHead className="font-bold min-w-[100px] sticky left-0 bg-primary text-primary-foreground z-10">Day</TableHead>
                 <TableHead className="font-bold min-w-[120px] sticky left-[100px] bg-primary text-primary-foreground z-10">Class</TableHead>
                 {timeSlots.map(slot => (
-                  <TableHead key={slot} className="text-center font-bold text-xs min-w-[110px] p-1 bg-primary text-primary-foreground">
+                  <TableHead key={slot} className="text-center font-bold text-xs min-w-[90px] p-1 bg-primary text-primary-foreground">
                       <div>{slot}</div>
                       <div className="font-normal text-primary-foreground/80">{instructionalSlotMap[slot] ? toRoman(instructionalSlotMap[slot]) : '-'}</div>
                   </TableHead>

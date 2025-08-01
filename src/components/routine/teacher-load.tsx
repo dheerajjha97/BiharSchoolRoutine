@@ -43,6 +43,23 @@ export default function TeacherLoad({ teacherLoad }: TeacherLoadProps) {
     const clonedElement = originalElement.cloneNode(true) as HTMLElement;
     pdfContainer.appendChild(clonedElement);
     
+     // Apply Excel-like styling
+    const table = clonedElement.querySelector('table');
+    if(table) {
+        table.style.borderCollapse = 'collapse';
+        table.style.width = '100%';
+        table.querySelectorAll('th, td').forEach(cell => {
+            const el = cell as HTMLElement;
+            el.style.border = '1px solid black';
+            el.style.padding = '4px';
+        });
+        table.querySelectorAll('th').forEach(th => {
+            const el = th as HTMLElement;
+            el.style.backgroundColor = 'hsl(217, 33%, 54%)'; // Primary color
+            el.style.color = 'hsl(210, 40%, 98%)'; // Primary foreground
+        });
+    }
+
     // Remove sticky positioning from headers in the clone
     clonedElement.querySelectorAll('th, td').forEach(el => {
         (el as HTMLElement).style.position = 'static';

@@ -129,7 +129,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
     });
 
     scheduleData.schedule.forEach(entry => {
-        const key = `${entry.day}-${entry.timeSlot}`;
+        const key = `${entry.day}-${timeSlot}`;
         entry.teacher.split(' & ').map(t => t.trim()).filter(t => t && t !== "N/A").forEach(teacher => {
             if (clashes.has(`teacher-${key}-${teacher}`)) clashes.add(`${key}-${entry.className}-${teacher}`);
         });
@@ -294,6 +294,32 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
     const clonedElement = originalElement.cloneNode(true) as HTMLElement;
     pdfContainer.appendChild(clonedElement);
 
+    // Apply Excel-like styling
+    const table = clonedElement.querySelector('table');
+    if(table) {
+        table.style.borderCollapse = 'collapse';
+        table.style.width = '100%';
+        table.querySelectorAll('th, td').forEach(cell => {
+            const el = cell as HTMLElement;
+            el.style.border = '1px solid black';
+            el.style.padding = '4px';
+            el.style.textAlign = 'center';
+            // Remove app-specific styling from content cells
+            if(el.tagName === 'TD') {
+                const contentDiv = el.querySelector('div > div.w-full.text-center');
+                if(contentDiv) {
+                    contentDiv.className = '';
+                    contentDiv.setAttribute('style', 'font-size: 10px; line-height: 1.2;');
+                }
+            }
+        });
+        table.querySelectorAll('th').forEach(th => {
+            const el = th as HTMLElement;
+            el.style.backgroundColor = 'hsl(217, 33%, 54%)'; // Primary color
+            el.style.color = 'hsl(210, 40%, 98%)'; // Primary foreground
+        });
+    }
+
     // Remove sticky positioning from headers in the clone
     clonedElement.querySelectorAll('th, td').forEach(el => {
         (el as HTMLElement).style.position = 'static';
@@ -382,13 +408,13 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
         <div className="border rounded-lg bg-card overflow-x-auto" id={tableId}>
           <Table>
             <TableHeader>
-              <TableRow className="hover:bg-primary">
-                <TableHead className="font-bold min-w-[100px] sticky left-0 bg-primary text-primary-foreground z-10">Day</TableHead>
-                <TableHead className="font-bold min-w-[120px] sticky left-[100px] bg-primary text-primary-foreground z-10">Class</TableHead>
+              <TableRow className="hover:bg-card">
+                <TableHead className="font-bold min-w-[100px] sticky left-0 bg-card z-10">Day</TableHead>
+                <TableHead className="font-bold min-w-[120px] sticky left-[100px] bg-card z-10">Class</TableHead>
                 {timeSlots.map(slot => (
-                  <TableHead key={slot} className="text-center font-bold text-xs min-w-[110px] p-1 bg-primary text-primary-foreground">
+                  <TableHead key={slot} className="text-center font-bold text-xs min-w-[110px] p-1">
                       <div>{slot}</div>
-                      <div className="font-normal text-primary-foreground/80">{instructionalSlotMap[slot] ? toRoman(instructionalSlotMap[slot]) : '-'}</div>
+                      <div className="font-normal text-muted-foreground">{instructionalSlotMap[slot] ? toRoman(instructionalSlotMap[slot]) : '-'}</div>
                   </TableHead>
                 ))}
               </TableRow>
@@ -580,5 +606,3 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 };
 
 export default RoutineDisplay;
-
-    

@@ -189,7 +189,11 @@ const PrintPreviewDialog: React.FC<PrintPreviewDialogProps> = ({ isOpen, onOpenC
     const margin_x_mm = (margins.left + margins.right) * 10;
     const dpi = 96; 
     const a4_width_px = (a4_width_mm - margin_x_mm) * dpi / 25.4;
-    return 800 / a4_width_px;
+    
+    // A reasonable width for the preview container in the dialog
+    const containerWidth = (window.innerWidth * 0.9 > 800) ? 800 : window.innerWidth * 0.7;
+
+    return containerWidth / a4_width_px;
   }, [orientation, margins]);
 
   const handleMarginChange = (name: keyof typeof margins, value: number) => {
@@ -261,18 +265,25 @@ const PrintPreviewDialog: React.FC<PrintPreviewDialogProps> = ({ isOpen, onOpenC
                     width: orientation === 'landscape' ? '29.7cm' : '21cm',
                     height: orientation === 'landscape' ? '21cm' : '29.7cm',
                     transform: `scale(${previewScale})`,
-                    transformOrigin: 'top left',
+                    transformOrigin: 'top center',
                 }}
              >
                 <div
                     className="p-4 overflow-hidden"
                      style={{
                         padding: `${margins.top}cm ${margins.right}cm ${margins.bottom}cm ${margins.left}cm`,
+                        height: '100%',
+                        width: '100%',
                     }}
                 >
                     <div 
                       key={previewKey} 
-                      style={{ transform: `scale(${scale / 100})`, transformOrigin: 'top left' }}
+                      style={{ 
+                          transform: `scale(${scale / 100})`, 
+                          transformOrigin: 'top left',
+                          width: `${100 * (100 / scale)}%`,
+                          height: `${100 * (100/scale)}%`,
+                       }}
                     >
                         <h2 className="text-2xl font-bold text-center mb-4">{title}</h2>
                         {renderContent()}

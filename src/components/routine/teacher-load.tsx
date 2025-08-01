@@ -27,17 +27,29 @@ export default function TeacherLoad({ teacherLoad }: TeacherLoadProps) {
   }
   
   const handleDownloadPdf = async (elementId: string, fileName: string) => {
-    const input = document.getElementById(elementId);
-    if (!input) {
+    const element = document.getElementById(elementId);
+    if (!element) {
       toast({ variant: 'destructive', title: "Error", description: "Could not find element to print."});
       return;
+    }
+    
+    const scrollContainer = element.querySelector<HTMLDivElement>('.relative.w-full.overflow-auto');
+    const originalOverflow = scrollContainer ? scrollContainer.style.overflow : '';
+    if (scrollContainer) {
+      scrollContainer.style.overflow = 'visible';
     }
 
     setIsDownloading(true);
     try {
-      const canvas = await html2canvas(input, {
+      const canvas = await html2canvas(element, {
         scale: 2,
+        useCORS: true,
+        width: element.scrollWidth,
+        height: element.scrollHeight,
+        windowWidth: element.scrollWidth,
+        windowHeight: element.scrollHeight,
       });
+      
       const imgData = canvas.toDataURL('image/png');
       
       const pdf = new jsPDF('p', 'mm', 'a4'); 
@@ -46,8 +58,8 @@ export default function TeacherLoad({ teacherLoad }: TeacherLoadProps) {
       
       const imgWidth = canvas.width;
       const imgHeight = canvas.height;
-      
       const ratio = imgWidth / imgHeight;
+
       let finalImgWidth = pdfWidth - 20;
       let finalImgHeight = finalImgWidth / ratio;
 
@@ -65,6 +77,9 @@ export default function TeacherLoad({ teacherLoad }: TeacherLoadProps) {
       console.error(error);
       toast({ variant: 'destructive', title: "PDF Download Failed" });
     } finally {
+      if (scrollContainer) {
+        scrollContainer.style.overflow = originalOverflow;
+      }
       setIsDownloading(false);
     }
   }

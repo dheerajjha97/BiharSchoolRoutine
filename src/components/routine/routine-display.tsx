@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, Trash2, Check, AlertTriangle, Copy, FileDown, Loader2 } from "lucide-react";
+import { Trash2, Check, AlertTriangle, Copy, FileDown, Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from '../ui/checkbox';
 import { cn, sortClasses } from '@/lib/utils';
@@ -277,28 +277,39 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   };
   
   const handleDownloadPdf = async (elementId: string, fileName: string) => {
-    const input = document.getElementById(elementId);
-    if (!input) {
+    const element = document.getElementById(elementId);
+    if (!element) {
       toast({ variant: 'destructive', title: "Error", description: "Could not find element to print."});
       return;
+    }
+    
+    const scrollContainer = element.querySelector<HTMLDivElement>('.relative.w-full.overflow-auto');
+    const originalOverflow = scrollContainer ? scrollContainer.style.overflow : '';
+    if (scrollContainer) {
+      scrollContainer.style.overflow = 'visible';
     }
 
     setIsDownloading(true);
     try {
-      const canvas = await html2canvas(input, {
-        scale: 2, // Higher scale for better quality
+      const canvas = await html2canvas(element, {
+          scale: 2,
+          useCORS: true,
+          width: element.scrollWidth,
+          height: element.scrollHeight,
+          windowWidth: element.scrollWidth,
+          windowHeight: element.scrollHeight,
       });
+
       const imgData = canvas.toDataURL('image/png');
       
-      // A4 dimensions in mm: 297 x 210
-      const pdf = new jsPDF('l', 'mm', 'a4'); 
+      const pdf = new jsPDF('l', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
       
       const imgWidth = canvas.width;
       const imgHeight = canvas.height;
-      
       const ratio = imgWidth / imgHeight;
+
       let finalImgWidth = pdfWidth - 20; // with margin
       let finalImgHeight = finalImgWidth / ratio;
 
@@ -316,6 +327,9 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
       console.error(error);
       toast({ variant: 'destructive', title: "PDF Download Failed" });
     } finally {
+      if (scrollContainer) {
+        scrollContainer.style.overflow = originalOverflow;
+      }
       setIsDownloading(false);
     }
   }
@@ -360,9 +374,9 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
     if (displayClasses.length === 0) return null;
   
     return (
-      <div className="break-after-page" id={tableId}>
+      <div className="break-after-page" >
         <h3 className="text-xl font-semibold mb-3 px-6 md:px-0">{title}</h3>
-        <div className="border rounded-lg bg-card overflow-x-auto">
+        <div className="border rounded-lg bg-card overflow-x-auto" id={tableId}>
           <Table>
             <TableHeader>
               <TableRow>
@@ -468,7 +482,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
                     {secondaryClasses.length > 0 && <DropdownMenuItem onClick={() => handleDownloadPdf('routine-table-secondary', 'secondary-routine.pdf')}>Secondary Routine</DropdownMenuItem>}
-                    {seniorSecondaryClasses.length > 0 && <DropdownMenuItem onClick={() => handleDownloadPdf('routine-table-senior', 'senior-secondary-routine.pdf')}>Senior Secondary Routine</DropdownMenuItem>}
+                    {seniorSecondaryClasses.length > 0 && <DropdownMenuItem onClick={() => handleDownloadPdf('routine-table-senior-secondary', 'senior-secondary-routine.pdf')}>Senior Secondary Routine</DropdownMenuItem>}
                   </DropdownMenuContent>
                 </DropdownMenu>
             </div>
@@ -477,7 +491,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
         <CardContent className="p-0">
           <div className="p-4 md:p-6 space-y-6">
                 {renderScheduleTable("Secondary", secondaryClasses, "routine-table-secondary")}
-                {renderScheduleTable("Senior Secondary", seniorSecondaryClasses, "routine-table-senior")}
+                {renderScheduleTable("Senior Secondary", seniorSecondaryClasses, "routine-table-senior-secondary")}
                 <TeacherLoad 
                     teacherLoad={teacherLoad}
                 />

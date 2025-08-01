@@ -382,13 +382,13 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
         <div className="border rounded-lg bg-card overflow-x-auto" id={tableId}>
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead className="font-bold min-w-[100px] sticky left-0 bg-card z-10">Day</TableHead>
-                <TableHead className="font-bold min-w-[120px] sticky left-[100px] bg-card z-10">Class</TableHead>
+              <TableRow className="hover:bg-primary">
+                <TableHead className="font-bold min-w-[100px] sticky left-0 bg-primary text-primary-foreground z-10">Day</TableHead>
+                <TableHead className="font-bold min-w-[120px] sticky left-[100px] bg-primary text-primary-foreground z-10">Class</TableHead>
                 {timeSlots.map(slot => (
-                  <TableHead key={slot} className="text-center font-bold text-xs min-w-[110px] p-1">
+                  <TableHead key={slot} className="text-center font-bold text-xs min-w-[110px] p-1 bg-primary text-primary-foreground">
                       <div>{slot}</div>
-                      <div className="font-normal text-muted-foreground">{instructionalSlotMap[slot] ? toRoman(instructionalSlotMap[slot]) : '-'}</div>
+                      <div className="font-normal text-primary-foreground/80">{instructionalSlotMap[slot] ? toRoman(instructionalSlotMap[slot]) : '-'}</div>
                   </TableHead>
                 ))}
               </TableRow>
@@ -580,3 +580,5 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 };
 
 export default RoutineDisplay;
+
+    

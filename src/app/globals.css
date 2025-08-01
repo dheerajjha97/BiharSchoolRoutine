@@ -73,7 +73,7 @@
   .no-print {
     display: none !important;
   }
-
+  
   .printable-area {
     display: block !important;
     visibility: visible !important;
@@ -82,19 +82,24 @@
     top: 0;
     width: 100%;
     height: auto;
-    box-shadow: none !important;
-    border: none !important;
   }
   
   .printable-area * {
     visibility: visible !important;
   }
+  
+  .printable-area, .printable-area * {
+      color: #000 !important;
+      background-color: transparent !important;
+      box-shadow: none !important;
+      border-color: #ccc !important;
+  }
 
   .printable-area .table, 
   .printable-area table {
-    font-size: 8pt; /* Smaller font for print */
+    font-size: 8pt;
     width: 100%;
-    table-layout: auto;
+    border-collapse: collapse;
   }
   
   .printable-area th, .printable-area td {

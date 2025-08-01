@@ -8,6 +8,7 @@ import { AppStateContext } from "@/context/app-state-provider";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
 import {
   Menu,
   BookOpenCheck,
@@ -64,6 +65,22 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 
+  const userProfileSection = user ? (
+    <div className="mt-auto p-4">
+      <Separator className="my-4" />
+      <div className="flex items-center gap-3">
+        <Avatar>
+          <AvatarImage src={user.photoURL || undefined} alt={user.displayName || user.email || 'User'} />
+          <AvatarFallback>{user.displayName?.charAt(0) || user.email?.charAt(0)}</AvatarFallback>
+        </Avatar>
+        <div className="flex flex-col text-sm">
+          <span className="font-semibold text-card-foreground">{user.displayName}</span>
+          <span className="text-muted-foreground truncate">{user.email}</span>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   const sidebarContent = (
     <div className="flex h-full flex-col">
       <div className="flex-1 overflow-y-auto p-4 pt-0">
@@ -84,6 +101,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
       </div>
+      {userProfileSection}
     </div>
   );
 
@@ -115,6 +133,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
       </div>
+       {userProfileSection}
     </div>
   );
 

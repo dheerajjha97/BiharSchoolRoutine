@@ -302,9 +302,8 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
         clonedElement.querySelectorAll('th, td').forEach(cell => {
             const el = cell as HTMLElement;
             el.style.border = '1px solid black';
-            el.style.padding = '4px';
+            el.style.padding = '2px';
             el.style.textAlign = 'center';
-            el.style.minHeight = '40px';
             el.style.verticalAlign = 'middle';
             
             if(el.tagName === 'TD') {

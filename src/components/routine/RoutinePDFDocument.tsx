@@ -160,7 +160,9 @@ const RoutinePDFDocument = ({ scheduleData, timeSlots, classes, teacherLoad, tit
         };
     };
 
-    const { secondaryClasses, seniorSecondaryClasses } = categorizeClasses(classes);
+    const { secondaryClasses, seniorSecondaryClasses } = !singleTeacherData
+        ? categorizeClasses(classes)
+        : { secondaryClasses: [], seniorSecondaryClasses: [] };
 
     const instructionalSlotMap: { [timeSlot: string]: number } = {};
     let periodCounter = 1;

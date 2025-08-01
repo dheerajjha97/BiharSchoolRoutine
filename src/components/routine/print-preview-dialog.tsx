@@ -118,13 +118,13 @@ const PrintPreviewDialog: React.FC<PrintPreviewDialogProps> = ({ isOpen, onOpenC
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl h-[90vh] flex flex-col">
+      <DialogContent className="max-w-7xl h-[95vh] flex flex-col">
         <style>{pageStyle}</style>
         <DialogHeader className="no-print">
           <DialogTitle>Print Preview: {title}</DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-[300px_1fr] gap-6 flex-1 overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 flex-1 overflow-hidden">
           {/* Controls Panel */}
           <div className="bg-gray-50 p-4 rounded-lg flex flex-col gap-6 overflow-y-auto no-print">
             <div>
@@ -202,7 +202,7 @@ const PrintPreviewDialog: React.FC<PrintPreviewDialogProps> = ({ isOpen, onOpenC
 
         </div>
 
-        <DialogFooter className="no-print">
+        <DialogFooter className="no-print pt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}><X className="mr-2 h-4 w-4" /> Cancel</Button>
           <Button onClick={handlePrint}><Printer className="mr-2 h-4 w-4" /> Print</Button>
         </DialogFooter>

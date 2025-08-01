@@ -6,68 +6,89 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Users, FileDown, Loader2 } from "lucide-react";
 import { Button } from "../ui/button";
-import { BlobProvider } from '@react-pdf/renderer';
-import type { GenerateScheduleOutput } from '@/ai/flows/generate-schedule';
-import RoutinePDFDocument from './RoutinePDFDocument';
 import { useToast } from '@/hooks/use-toast';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 
 interface TeacherLoadProps {
   teacherLoad: Record<string, Record<string, number>>;
-  scheduleData: GenerateScheduleOutput;
-  timeSlots: string[];
 }
 
 const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Total"];
 
-export default function TeacherLoad({ teacherLoad, scheduleData, timeSlots }: TeacherLoadProps) {
+export default function TeacherLoad({ teacherLoad }: TeacherLoadProps) {
   const teachers = Object.keys(teacherLoad).sort();
   const { toast } = useToast();
-  const [isClient, setIsClient] = useState(false);
-
-  React.useEffect(() => {
-    setIsClient(true);
-  }, []);
-
+  const [isDownloading, setIsDownloading] = useState(false);
 
   if (teachers.length === 0) {
     return null;
   }
   
-  const getSingleTeacherData = (teacherName: string) => {
-    const teacherScheduleEntries = scheduleData.schedule.filter(entry => entry.teacher.includes(teacherName));
-    const scheduleByDayTime: Record<string, Record<string, { className: string, subject: string }>> = {};
-      teacherScheduleEntries.forEach(entry => {
-          if (!scheduleByDayTime[entry.day]) scheduleByDayTime[entry.day] = {};
-          scheduleByDayTime[entry.day][entry.timeSlot] = { className: entry.className, subject: entry.subject };
+  const handleDownloadPdf = async (elementId: string, fileName: string) => {
+    const input = document.getElementById(elementId);
+    if (!input) {
+      toast({ variant: 'destructive', title: "Error", description: "Could not find element to print."});
+      return;
+    }
+
+    setIsDownloading(true);
+    try {
+      const canvas = await html2canvas(input, {
+        scale: 2,
       });
-    return {
-      teacherName,
-      schedule: scheduleByDayTime,
+      const imgData = canvas.toDataURL('image/png');
+      
+      const pdf = new jsPDF('p', 'mm', 'a4'); 
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      
+      const ratio = imgWidth / imgHeight;
+      let finalImgWidth = pdfWidth - 20;
+      let finalImgHeight = finalImgWidth / ratio;
+
+      if (finalImgHeight > pdfHeight - 20) {
+        finalImgHeight = pdfHeight - 20;
+        finalImgWidth = finalImgHeight * ratio;
+      }
+      
+      const x = (pdfWidth - finalImgWidth) / 2;
+      const y = (pdfHeight - finalImgHeight) / 2;
+      
+      pdf.addImage(imgData, 'PNG', x, y, finalImgWidth, finalImgHeight);
+      pdf.save(fileName);
+    } catch (error) {
+      console.error(error);
+      toast({ variant: 'destructive', title: "PDF Download Failed" });
+    } finally {
+      setIsDownloading(false);
     }
   }
-  
-  const SingleTeacherPDF = ({ teacher }: { teacher: string }) => (
-      <RoutinePDFDocument
-        scheduleData={scheduleData}
-        timeSlots={timeSlots}
-        classes={[]}
-        teacherLoad={{}}
-        title={`Routine for ${teacher}`}
-        singleTeacherData={getSingleTeacherData(teacher)}
-      />
-  );
 
 
   return (
     <div className="px-6 md:px-0 break-after-page">
-      <Card>
+      <Card id="teacher-load-table">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2">
               <Users className="h-5 w-5 text-primary" />
-              Teacher Workload
-          </CardTitle>
-          <CardDescription>Number of classes assigned per teacher per day. You can download individual routines from here.</CardDescription>
+              <CardTitle>Teacher Workload</CardTitle>
+            </div>
+            <Button size="sm" variant="outline" disabled={isDownloading} onClick={() => handleDownloadPdf('teacher-load-table', 'teacher-workload.pdf')}>
+              {isDownloading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <FileDown className="mr-2 h-4 w-4" />
+              )}
+              {isDownloading ? 'Generating...' : 'Download PDF'}
+            </Button>
+          </div>
+          <CardDescription>Number of classes assigned per teacher per day.</CardDescription>
         </CardHeader>
         <CardContent>
           <h3 className="hidden">Teacher Workload Summary</h3>
@@ -79,7 +100,6 @@ export default function TeacherLoad({ teacherLoad, scheduleData, timeSlots }: Te
                   {daysOfWeek.map(day => (
                     <TableHead key={day} className="text-center font-semibold">{day.substring(0, 3)}</TableHead>
                   ))}
-                  <TableHead className="text-right font-semibold">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -91,29 +111,6 @@ export default function TeacherLoad({ teacherLoad, scheduleData, timeSlots }: Te
                         {teacherLoad[teacher]?.[day] ?? 0}
                       </TableCell>
                     ))}
-                    <TableCell className="text-right">
-                       {isClient && (
-                          <BlobProvider document={<SingleTeacherPDF teacher={teacher} />}>
-                            {({ blob, url, loading, error }) => {
-                                if (error) {
-                                    console.error("PDF generation error:", error);
-                                    return <span>Error</span>
-                                }
-                                return (
-                                    <a href={url!} download={`routine-${teacher.replace(/\s+/g, '-')}.pdf`}>
-                                        <Button variant="ghost" size="icon" disabled={loading}>
-                                            {loading ? (
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                            ) : (
-                                                <FileDown className="h-4 w-4" />
-                                            )}
-                                        </Button>
-                                    </a>
-                                )
-                            }}
-                          </BlobProvider>
-                       )}
-                      </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

@@ -28,9 +28,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import TeacherLoad from './teacher-load';
-import { BlobProvider } from '@react-pdf/renderer';
-import RoutinePDFDocument from './RoutinePDFDocument';
 import type { TeacherLoad as TeacherLoadType } from '@/context/app-state-provider';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface RoutineDisplayProps {
   scheduleData: GenerateScheduleOutput | null;
@@ -89,11 +89,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   const [isCellDialogOpen, setIsCellDialogOpen] = React.useState(false);
   const [currentCell, setCurrentCell] = React.useState<{ day: string; timeSlot: string; className: string; entry: ScheduleEntry | null } | null>(null);
   const [cellData, setCellData] = React.useState<CellData>({ subject: "", classNames: [], teacher: "" });
-  const [isClient, setIsClient] = useState(false);
-
-  React.useEffect(() => {
-    setIsClient(true);
-  }, []);
+  const [isDownloading, setIsDownloading] = React.useState(false);
   
   const { secondaryClasses, seniorSecondaryClasses } = useMemo(() => categorizeClasses(classes), [classes]);
 
@@ -279,16 +275,50 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 
     onScheduleChange([...scheduleWithoutDestination, ...newDestinationEntries]);
   };
+  
+  const handleDownloadPdf = async (elementId: string, fileName: string) => {
+    const input = document.getElementById(elementId);
+    if (!input) {
+      toast({ variant: 'destructive', title: "Error", description: "Could not find element to print."});
+      return;
+    }
 
-  const FullRoutinePDF = () => (
-    <RoutinePDFDocument
-        scheduleData={scheduleData!}
-        timeSlots={timeSlots}
-        classes={classes}
-        teacherLoad={teacherLoad}
-        title="Class Routine - Session 2025-26"
-    />
-  );
+    setIsDownloading(true);
+    try {
+      const canvas = await html2canvas(input, {
+        scale: 2, // Higher scale for better quality
+      });
+      const imgData = canvas.toDataURL('image/png');
+      
+      // A4 dimensions in mm: 297 x 210
+      const pdf = new jsPDF('l', 'mm', 'a4'); 
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      
+      const ratio = imgWidth / imgHeight;
+      let finalImgWidth = pdfWidth - 20; // with margin
+      let finalImgHeight = finalImgWidth / ratio;
+
+      if (finalImgHeight > pdfHeight - 20) {
+        finalImgHeight = pdfHeight - 20;
+        finalImgWidth = finalImgHeight * ratio;
+      }
+      
+      const x = (pdfWidth - finalImgWidth) / 2;
+      const y = (pdfHeight - finalImgHeight) / 2;
+      
+      pdf.addImage(imgData, 'PNG', x, y, finalImgWidth, finalImgHeight);
+      pdf.save(fileName);
+    } catch (error) {
+      console.error(error);
+      toast({ variant: 'destructive', title: "PDF Download Failed" });
+    } finally {
+      setIsDownloading(false);
+    }
+  }
 
 
   const renderCellContent = (day: string, className: string, timeSlot: string) => {
@@ -326,11 +356,11 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
     );
   };
 
-  const renderScheduleTable = (title: string, displayClasses: string[]) => {
+  const renderScheduleTable = (title: string, displayClasses: string[], tableId: string) => {
     if (displayClasses.length === 0) return null;
   
     return (
-      <div className="break-after-page">
+      <div className="break-after-page" id={tableId}>
         <h3 className="text-xl font-semibold mb-3 px-6 md:px-0">{title}</h3>
         <div className="border rounded-lg bg-card overflow-x-auto">
           <Table>
@@ -425,40 +455,31 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
         <CardHeader>
             <div className="flex flex-wrap justify-between items-center gap-4">
                 <CardTitle>View Routine</CardTitle>
-                 {isClient && (
-                    <BlobProvider document={<FullRoutinePDF />}>
-                      {({ blob, url, loading, error }) => {
-                        if (error) {
-                          console.error("PDF generation error:", error);
-                          toast({ variant: "destructive", title: "PDF Generation Failed" });
-                          return <span>Error creating PDF</span>;
-                        }
-                        return (
-                          <a href={url!} download="routine.pdf">
-                            <Button size="sm" variant="outline" disabled={loading}>
-                                {loading ? (
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                ) : (
-                                    <FileDown className="mr-2 h-4 w-4" />
-                                )}
-                                {loading ? 'Generating PDF...' : 'Download PDF'}
-                            </Button>
-                          </a>
-                        );
-                      }}
-                    </BlobProvider>
-                 )}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" variant="outline" disabled={isDownloading}>
+                      {isDownloading ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <FileDown className="mr-2 h-4 w-4" />
+                      )}
+                      {isDownloading ? 'Generating PDF...' : 'Download PDF'}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    {secondaryClasses.length > 0 && <DropdownMenuItem onClick={() => handleDownloadPdf('routine-table-secondary', 'secondary-routine.pdf')}>Secondary Routine</DropdownMenuItem>}
+                    {seniorSecondaryClasses.length > 0 && <DropdownMenuItem onClick={() => handleDownloadPdf('routine-table-senior', 'senior-secondary-routine.pdf')}>Senior Secondary Routine</DropdownMenuItem>}
+                  </DropdownMenuContent>
+                </DropdownMenu>
             </div>
             <CardDescription>View, download, or edit your routine. Use the copy icon next to a day's name to paste its schedule to another day.</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           <div className="p-4 md:p-6 space-y-6">
-                {renderScheduleTable("Secondary", secondaryClasses)}
-                {renderScheduleTable("Senior Secondary", seniorSecondaryClasses)}
+                {renderScheduleTable("Secondary", secondaryClasses, "routine-table-secondary")}
+                {renderScheduleTable("Senior Secondary", seniorSecondaryClasses, "routine-table-senior")}
                 <TeacherLoad 
-                    teacherLoad={teacherLoad} 
-                    scheduleData={scheduleData} 
-                    timeSlots={timeSlots}
+                    teacherLoad={teacherLoad}
                 />
             </div>
         </CardContent>

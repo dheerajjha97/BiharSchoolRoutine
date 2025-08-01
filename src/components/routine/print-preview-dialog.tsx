@@ -2,7 +2,6 @@
 "use client";
 
 import React, { useRef, useState, useMemo, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -32,28 +31,28 @@ const PrintableTeacherRoutine = React.forwardRef<HTMLDivElement>((props, ref) =>
     return (
         <div ref={ref}>
             <h3 className="text-xl font-semibold mb-3">{`Routine for ${teacherName}`}</h3>
-             <table className="w-full border-collapse text-xs">
+             <table className="w-full border-collapse text-xs" style={{ border: '1px solid #ccc', tableLayout: 'fixed' }}>
                 <thead>
                     <tr>
-                        <th className="border p-1 font-bold text-left">Day / Time</th>
-                        {timeSlots.map(slot => <th key={slot} className="border p-1 font-bold">{slot.replace(/ /g, '')}</th>)}
+                        <th className="border p-1 font-bold text-left" style={{ border: '1px solid #ccc', padding: '4px', backgroundColor: '#f2f2f2' }}>Day / Time</th>
+                        {timeSlots.map(slot => <th key={slot} className="border p-1 font-bold" style={{ border: '1px solid #ccc', padding: '4px', backgroundColor: '#f2f2f2' }}>{slot.replace(/ /g, '')}</th>)}
                     </tr>
                 </thead>
                 <tbody>
                     {daysOfWeek.map(day => (
                         <tr key={day}>
-                            <td className="border p-1 font-bold">{day}</td>
+                            <td className="border p-1 font-bold" style={{ border: '1px solid #ccc', padding: '4px' }}>{day}</td>
                             {timeSlots.map(slot => {
                                 const entry = schedule[day]?.[slot];
                                 if (entry) {
                                     return (
-                                        <td key={slot} className="border p-1 text-center">
+                                        <td key={slot} className="border p-1 text-center" style={{ border: '1px solid #ccc', padding: '4px' }}>
                                             <div className="font-semibold">{entry.subject}</div>
                                             <div className="text-gray-600 text-[10px]">{entry.className}</div>
                                         </td>
                                     );
                                 }
-                                return <td key={slot} className="border p-1 text-center">---</td>;
+                                return <td key={slot} className="border p-1 text-center" style={{ border: '1px solid #ccc', padding: '4px' }}>---</td>;
                             })}
                         </tr>
                     ))}
@@ -63,33 +62,6 @@ const PrintableTeacherRoutine = React.forwardRef<HTMLDivElement>((props, ref) =>
     );
 });
 PrintableTeacherRoutine.displayName = "PrintableTeacherRoutine";
-
-const PrintableContentPortal = ({ children }: { children: React.ReactNode }) => {
-  const [container, setContainer] = useState<HTMLElement | null>(null);
-
-  useEffect(() => {
-    let portalRoot = document.getElementById('printable-area');
-    if (!portalRoot) {
-      portalRoot = document.createElement('div');
-      portalRoot.id = 'printable-area';
-      portalRoot.className = 'hidden'; 
-      document.body.appendChild(portalRoot);
-    }
-    setContainer(portalRoot);
-
-    return () => {
-      if (portalRoot && document.body.contains(portalRoot)) {
-        // Don't remove on unmount, just clear content
-        // This avoids issues with React lifecycle and print jobs
-      }
-    };
-  }, []);
-
-  if (!container) return null;
-
-  return createPortal(children, container);
-};
-
 
 const PrintPreviewDialog: React.FC<PrintPreviewDialogProps> = ({ isOpen, onOpenChange, contentRef, title }) => {
   const { appState, updateState } = useContext(AppStateContext);
@@ -106,23 +78,98 @@ const PrintPreviewDialog: React.FC<PrintPreviewDialogProps> = ({ isOpen, onOpenC
     if (isOpen) {
       setPreviewKey(prev => prev + 1); 
     } else {
-      updateState('teacherRoutineForPrint', null);
+      // Clear the temporary print state when dialog closes
+      if (appState.teacherRoutineForPrint) {
+        updateState('teacherRoutineForPrint', null);
+      }
     }
-  }, [isOpen, updateState]);
-  
-  const pageStyle = useMemo(() => `
-    @page {
-      size: ${orientation};
-      margin: ${margins.top}cm ${margins.right}cm ${margins.bottom}cm ${margins.left}cm;
-    }
-    body {
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-  `, [margins, orientation]);
+  }, [isOpen, updateState, appState.teacherRoutineForPrint]);
 
   const handlePrint = () => {
-      window.print();
+    let contentToPrintElement: HTMLElement | null = null;
+    if (teacherRoutineForPrint && teacherContentRef.current) {
+      contentToPrintElement = teacherContentRef.current;
+    } else if (contentRef.current) {
+      contentToPrintElement = contentRef.current;
+    }
+    
+    if (!contentToPrintElement) {
+        console.error("No content to print.");
+        return;
+    }
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+        alert("Please allow popups for this site to print.");
+        return;
+    }
+
+    const contentHTML = contentToPrintElement.innerHTML;
+    const pageStyle = `
+      <style>
+        @page {
+          size: ${orientation};
+          margin: ${margins.top}cm ${margins.right}cm ${margins.bottom}cm ${margins.left}cm;
+        }
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        #printable-content {
+          transform: scale(${scale / 100});
+          transform-origin: top left;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 8pt;
+        }
+        th, td {
+          border: 1px solid #ccc !important;
+          padding: 2px;
+          text-align: center;
+        }
+        th {
+          font-weight: bold;
+          background-color: #f2f2f2 !important;
+        }
+        .break-after-page {
+          page-break-after: always;
+        }
+        h3 {
+          font-size: 14pt;
+          font-weight: 600;
+          text-align: center;
+          margin-bottom: 0.5rem;
+        }
+        .text-gray-600 { color: #555; }
+        .text-\\[10px\\] { font-size: 10px; }
+        .font-semibold { font-weight: 600; }
+        .mb-3 { margin-bottom: 1rem; }
+      </style>
+    `;
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>${title}</title>
+          ${pageStyle}
+        </head>
+        <body>
+          <h2 style="text-align: center; font-size: 18pt; font-weight: bold; margin-bottom: 1rem;">${title}</h2>
+          <div id="printable-content">${contentHTML}</div>
+        </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+    
+    // Use timeout to ensure content is loaded before printing
+    setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+    }, 500); // 500ms delay
   };
 
   const previewScale = useMemo(() => {
@@ -147,21 +194,9 @@ const PrintPreviewDialog: React.FC<PrintPreviewDialogProps> = ({ isOpen, onOpenC
     return null;
   };
 
-  const contentToPrint = (
-    <>
-      <style>{pageStyle}</style>
-      <h2 className="text-2xl font-bold text-center mb-4">{title}</h2>
-      <div style={{ transform: `scale(${scale / 100})`, transformOrigin: 'top left' }}>
-          {renderContent()}
-      </div>
-    </>
-  );
-
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-7xl h-[95vh] flex flex-col">
-        {isOpen && <PrintableContentPortal>{contentToPrint}</PrintableContentPortal>}
-
         <DialogHeader className="no-print">
           <DialogTitle>Print Preview: {title}</DialogTitle>
         </DialogHeader>
@@ -235,7 +270,7 @@ const PrintPreviewDialog: React.FC<PrintPreviewDialogProps> = ({ isOpen, onOpenC
           </div>
         </div>
 
-        <DialogFooter className="no-print pt-4">
+        <DialogFooter className="no-print pt-4 border-t mt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}><X className="mr-2 h-4 w-4" /> Cancel</Button>
           <Button onClick={handlePrint}><Printer className="mr-2 h-4 w-4" /> Print</Button>
         </DialogFooter>

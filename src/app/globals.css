@@ -59,8 +59,61 @@
   }
 }
 
+.printable-area {
+  display: none;
+}
+
 @media print {
-  .no-print {
+  @page {
+    size: A4 landscape;
+    margin: 0.5in;
+  }
+  
+  body * {
+    visibility: hidden;
+  }
+  
+  .no-print, .no-print * {
     display: none !important;
+  }
+
+  .printable-area, .printable-area * {
+    visibility: visible;
+  }
+  
+  .printable-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  .print-header {
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 1rem;
+  }
+
+  .printable-area .table, 
+  .printable-area .table thead, 
+  .printable-area .table tbody,
+  .printable-area .table th, 
+  .printable-area .table td, 
+  .printable-area .table tr {
+    border: 1px solid #ccc;
+  }
+
+  .printable-area th, .printable-area td {
+    padding: 4px;
+    font-size: 9pt;
+  }
+
+  .printable-area .break-after-page {
+    page-break-after: always;
+  }
+
+  .printable-area tr {
+    page-break-inside: avoid;
   }
 }

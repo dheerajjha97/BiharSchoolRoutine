@@ -5,7 +5,7 @@ import { createContext, useState, useEffect, useMemo, useRef, useCallback, Chang
 import { useToast } from "@/hooks/use-toast";
 import type { GenerateScheduleOutput, ScheduleEntry } from "@/ai/flows/generate-schedule";
 import type { SubjectCategory, SubjectPriority } from "@/lib/schedule-generator";
-import { sortTimeSlots } from "@/lib/utils";
+import { sortClasses, sortTimeSlots } from "@/lib/utils";
 
 type Unavailability = {
   teacher: string;
@@ -279,20 +279,76 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       toast({ title: "Routine Cleared", description: "The generated routine has been removed." });
   }, [updateState, toast]);
   
-  const handlePrintTeacherRoutine = useCallback((teacherName: string) => {
-    if (!appState.routine?.schedule) {
+  const handlePrintTeacherRoutine = (teacherName: string) => {
+    const { routine, timeSlots } = appState;
+    if (!routine?.schedule) {
         toast({ variant: "destructive", title: "No routine available to print." });
         return;
     }
-    const teacherScheduleEntries = appState.routine.schedule.filter(entry => entry.teacher.includes(teacherName));
-    const scheduleByDayTime: TeacherRoutine['schedule'] = {};
+
+    const teacherScheduleEntries = routine.schedule.filter(entry => entry.teacher.includes(teacherName));
+    const scheduleByDayTime: Record<string, Record<string, { className: string, subject: string }>> = {};
     teacherScheduleEntries.forEach(entry => {
         if (!scheduleByDayTime[entry.day]) scheduleByDayTime[entry.day] = {};
         scheduleByDayTime[entry.day][entry.timeSlot] = { className: entry.className, subject: entry.subject };
     });
+
+    const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     
-    updateState('teacherRoutineForPrint', { teacherName, schedule: scheduleByDayTime });
-  }, [appState.routine, updateState, toast]);
+    let contentHTML = `
+      <h3 class="table-title">Routine for ${teacherName}</h3>
+      <table class="routine-table">
+          <thead>
+              <tr>
+                  <th>Day / Time</th>
+                  ${timeSlots.map(slot => `<th>${slot.replace(/ /g, '')}</th>`).join('')}
+              </tr>
+          </thead>
+          <tbody>
+              ${daysOfWeek.map(day => `
+                  <tr>
+                      <td class="day-cell">${day}</td>
+                      ${timeSlots.map(slot => {
+                          const entry = scheduleByDayTime[day]?.[slot];
+                          return `<td class="cell">${entry ? `<div class="subject">${entry.subject}</div><div class="class-name">${entry.className}</div>` : '---'}</td>`;
+                      }).join('')}
+                  </tr>
+              `).join('')}
+          </tbody>
+      </table>
+    `;
+
+    const pageStyle = `
+      @page { size: landscape; margin: 0.5in; }
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      .routine-table { width: 100%; border-collapse: collapse; font-size: 8pt; table-layout: fixed; }
+      .routine-table th, .routine-table td { border: 1px solid #ccc !important; padding: 2px; text-align: center; word-wrap: break-word; }
+      .routine-table th { font-weight: bold; background-color: #f2f2f2 !important; }
+      .routine-table .day-cell, .routine-table .class-cell, .routine-table .teacher-name { font-weight: bold; font-size: 9pt; }
+      .routine-table .subject { font-weight: 600; }
+      .routine-table .teacher, .routine-table .class-name { font-size: 7pt; color: #555; }
+      .table-title { font-size: 14pt; font-weight: 600; text-align: center; margin-bottom: 0.5rem; }
+    `;
+
+    const newWindow = window.open('', '_blank');
+    if (newWindow) {
+        newWindow.document.open();
+        newWindow.document.write(`
+            <html>
+                <head>
+                    <title>Print Routine for ${teacherName}</title>
+                    <style>${pageStyle}</style>
+                </head>
+                <body>${contentHTML}</body>
+            </html>
+        `);
+        newWindow.document.close();
+        setTimeout(() => {
+            newWindow.print();
+            newWindow.close();
+        }, 500);
+    }
+  };
 
   return (
     <AppStateContext.Provider value={{ appState, updateState, updateConfig, isLoading, setIsLoading, handleSaveConfig, handleImportConfig, handleSaveBackup, handleImportBackup, handleClearRoutine, handlePrintTeacherRoutine }}>

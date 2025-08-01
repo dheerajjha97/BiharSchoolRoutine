@@ -27,7 +27,6 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import PrintPreviewDialog from './print-preview-dialog';
 import TeacherLoad from './teacher-load';
 
 interface RoutineDisplayProps {
@@ -87,12 +86,9 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
   const { toast } = useToast();
   
   const [isCellDialogOpen, setIsCellDialogOpen] = useState(false);
-  const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
   const [currentCell, setCurrentCell] = useState<{ day: string; timeSlot: string; className: string; entry: ScheduleEntry | null } | null>(null);
   const [cellData, setCellData] = useState<CellData>({ subject: "", classNames: [], teacher: "" });
   
-  const printTitleRef = useRef<string>('');
-
   const { secondaryClasses, seniorSecondaryClasses } = useMemo(() => categorizeClasses(classes), [classes]);
 
   const instructionalSlotMap = useMemo(() => {
@@ -185,8 +181,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
   }, [cellData.subject, availableTeachers, cellData.teacher]);
   
   const handlePrint = () => {
-    printTitleRef.current = printHeader;
-    setIsPrintDialogOpen(true);
+    window.print();
   };
 
   const handleExport = () => {
@@ -428,12 +423,6 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
       </div>
     );
   };
-
-  const handlePrintTeacher = (teacher: string) => {
-    onPrintTeacher(teacher);
-    printTitleRef.current = `Routine for ${teacher}`;
-    setIsPrintDialogOpen(true);
-  };
   
   if (!scheduleData || !scheduleData.schedule || scheduleData.schedule.length === 0) {
     return (
@@ -461,7 +450,7 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
 
   return (
     <>
-      <Card>
+      <Card className='no-print'>
         <CardHeader>
             <div className="flex flex-wrap justify-between items-center gap-4">
                 <CardTitle>View Routine</CardTitle>
@@ -480,11 +469,19 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
           <div className="p-4 md:p-6 space-y-6">
                 {renderScheduleTable("Secondary", secondaryClasses)}
                 {renderScheduleTable("Senior Secondary", seniorSecondaryClasses)}
-                <TeacherLoad teacherLoad={teacherLoad} onPrintTeacher={handlePrintTeacher} />
+                <TeacherLoad teacherLoad={teacherLoad} onPrintTeacher={onPrintTeacher} />
             </div>
         </CardContent>
       </Card>
       
+      <div className="printable-area">
+          <h2 className="print-header">{printHeader}</h2>
+          {renderScheduleTable("Secondary", secondaryClasses)}
+          {renderScheduleTable("Senior Secondary", seniorSecondaryClasses)}
+          <TeacherLoad teacherLoad={teacherLoad} onPrintTeacher={onPrintTeacher} />
+      </div>
+
+
       {isCellDialogOpen && (
         <Dialog open={isCellDialogOpen} onOpenChange={setIsCellDialogOpen}>
           <DialogContent className="sm:max-w-lg">
@@ -555,14 +552,6 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      )}
-
-      {isPrintDialogOpen && (
-         <PrintPreviewDialog
-            isOpen={isPrintDialogOpen}
-            onOpenChange={setIsPrintDialogOpen}
-            title={printTitleRef.current}
-         />
       )}
     </>
   );

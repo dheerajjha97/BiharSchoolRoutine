@@ -250,9 +250,13 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     try {
       await signInWithPopup(auth, provider);
       // onAuthStateChanged will handle the rest
-    } catch (error) {
-      console.error("Google Sign-In Error:", error);
-      toast({ variant: "destructive", title: "Login Failed", description: "Could not sign in with Google." });
+    } catch (error: any) {
+      if (error.code === 'auth/popup-closed-by-user') {
+        console.log("Sign-in popup closed by user.");
+      } else {
+        console.error("Google Sign-In Error:", error);
+        toast({ variant: "destructive", title: "Login Failed", description: "Could not sign in with Google." });
+      }
       setIsAuthLoading(false);
     }
   };

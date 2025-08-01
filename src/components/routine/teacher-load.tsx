@@ -9,6 +9,8 @@ import { Button } from "../ui/button";
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { Label } from '../ui/label';
+import { Textarea } from '../ui/textarea';
 
 
 interface TeacherLoadProps {
@@ -21,6 +23,7 @@ export default function TeacherLoad({ teacherLoad }: TeacherLoadProps) {
   const teachers = Object.keys(teacherLoad).sort();
   const { toast } = useToast();
   const [isDownloading, setIsDownloading] = useState(false);
+  const [pdfHeader, setPdfHeader] = useState("");
 
   if (teachers.length === 0) {
     return null;
@@ -43,7 +46,6 @@ export default function TeacherLoad({ teacherLoad }: TeacherLoadProps) {
     const clonedElement = originalElement.cloneNode(true) as HTMLElement;
     pdfContainer.appendChild(clonedElement);
     
-     // Apply Excel-like styling
     const table = clonedElement.querySelector('table');
     if(table) {
         table.style.borderCollapse = 'collapse';
@@ -55,12 +57,11 @@ export default function TeacherLoad({ teacherLoad }: TeacherLoadProps) {
         });
         table.querySelectorAll('th').forEach(th => {
             const el = th as HTMLElement;
-            el.style.backgroundColor = 'hsl(217, 33%, 54%)'; // Primary color
-            el.style.color = 'hsl(210, 40%, 98%)'; // Primary foreground
+            el.style.backgroundColor = 'hsl(217, 33%, 54%)';
+            el.style.color = 'hsl(210, 40%, 98%)';
         });
     }
 
-    // Remove sticky positioning from headers in the clone
     clonedElement.querySelectorAll('th, td').forEach(el => {
         (el as HTMLElement).style.position = 'static';
     });
@@ -87,10 +88,27 @@ export default function TeacherLoad({ teacherLoad }: TeacherLoadProps) {
             finalImgWidth = finalImgHeight * ratio;
         }
 
-        const x = (pdfWidth - finalImgWidth) / 2;
-        const y = (pdfHeight - finalImgHeight) / 2;
+        let y = (pdfHeight - finalImgHeight) / 2;
 
-        pdf.addImage(imgData, 'PNG', x, y, finalImgWidth, finalImgHeight);
+        if (pdfHeader.trim()) {
+            const headerLines = pdfHeader.trim().split('\n');
+            pdf.setFontSize(14);
+            pdf.text(headerLines, pdfWidth / 2, 15, { align: 'center' });
+            y = 15 + (headerLines.length * 7) + 5; 
+        }
+
+        const tableTopMargin = y > 0 ? y : 10;
+        const availableHeight = pdfHeight - tableTopMargin - 10;
+        
+        finalImgHeight = finalImgWidth / ratio;
+        if(finalImgHeight > availableHeight){
+            finalImgHeight = availableHeight;
+            finalImgWidth = finalImgHeight * ratio;
+        }
+
+        const x = (pdfWidth - finalImgWidth) / 2;
+
+        pdf.addImage(imgData, 'PNG', x, tableTopMargin, finalImgWidth, finalImgHeight);
         pdf.save(fileName);
 
     } catch (error) {
@@ -105,14 +123,16 @@ export default function TeacherLoad({ teacherLoad }: TeacherLoadProps) {
 
   return (
     <div className="px-6 md:px-0 break-after-page">
-      {/* Hidden container for PDF generation */}
       <div id="pdf-container-teacher" className="absolute -left-[9999px] top-auto" aria-hidden="true"></div>
       <Card id="teacher-load-table">
         <CardHeader>
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-primary" />
-              <CardTitle>Teacher Workload</CardTitle>
+          <div className="flex flex-wrap justify-between items-start gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                <CardTitle>Teacher Workload</CardTitle>
+              </div>
+              <CardDescription>Number of classes assigned per teacher per day.</CardDescription>
             </div>
             <Button size="sm" variant="outline" disabled={isDownloading} onClick={() => handleDownloadPdf('teacher-load-table', 'teacher-workload.pdf')}>
               {isDownloading ? (
@@ -123,7 +143,16 @@ export default function TeacherLoad({ teacherLoad }: TeacherLoadProps) {
               {isDownloading ? 'Generating...' : 'Download PDF'}
             </Button>
           </div>
-          <CardDescription>Number of classes assigned per teacher per day.</CardDescription>
+           <div className='pt-4'>
+                <Label htmlFor="pdf-header-teacher">PDF Header (Optional)</Label>
+                <Textarea 
+                    id="pdf-header-teacher"
+                    placeholder="e.g. Teacher Workload Summary"
+                    value={pdfHeader}
+                    onChange={(e) => setPdfHeader(e.target.value)}
+                    className="mt-1"
+                />
+            </div>
         </CardHeader>
         <CardContent>
           <h3 className="hidden">Teacher Workload Summary</h3>

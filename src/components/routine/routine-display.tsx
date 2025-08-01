@@ -31,6 +31,7 @@ import TeacherLoad from './teacher-load';
 import type { TeacherLoad as TeacherLoadType } from '@/context/app-state-provider';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { Textarea } from '../ui/textarea';
 
 interface RoutineDisplayProps {
   scheduleData: GenerateScheduleOutput | null;
@@ -90,6 +91,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   const [currentCell, setCurrentCell] = React.useState<{ day: string; timeSlot: string; className: string; entry: ScheduleEntry | null } | null>(null);
   const [cellData, setCellData] = React.useState<CellData>({ subject: "", classNames: [], teacher: "" });
   const [isDownloading, setIsDownloading] = React.useState(false);
+  const [pdfHeader, setPdfHeader] = React.useState("");
   
   const { secondaryClasses, seniorSecondaryClasses } = useMemo(() => categorizeClasses(classes), [classes]);
 
@@ -290,11 +292,9 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
         return;
     }
     
-    // Clone the element and clean it for printing
     const clonedElement = originalElement.cloneNode(true) as HTMLElement;
     pdfContainer.appendChild(clonedElement);
 
-    // Apply Excel-like styling and reformat content
     const table = clonedElement.querySelector('table');
     if(table) {
         table.style.borderCollapse = 'collapse';
@@ -307,19 +307,16 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
             el.style.verticalAlign = 'middle';
             
             if(el.tagName === 'TD') {
-                const contentWrapper = el.querySelector('div > div'); // Find the content wrapper
+                const contentWrapper = el.querySelector('div > div');
                 if (contentWrapper) {
                     const subjectDiv = contentWrapper.querySelector('div:first-child');
                     const teacherDiv = contentWrapper.querySelector('div:nth-child(2)');
-
                     const subjectText = subjectDiv?.textContent || '';
                     const teacherText = teacherDiv?.textContent || '';
                     
-                    // Clear the original content and remove any background classes
                     contentWrapper.innerHTML = '';
                     contentWrapper.className = '';
                     
-                    // Re-create the inner HTML with new styling
                     contentWrapper.innerHTML = `
                         <div style="font-weight: bold; font-size: 12px;">${subjectText}</div>
                         <div style="font-size: 10px;">${teacherText}</div>
@@ -329,12 +326,11 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
         });
         table.querySelectorAll('th').forEach(th => {
             const el = th as HTMLElement;
-            el.style.backgroundColor = 'hsl(217, 33%, 54%)'; // Primary color
-            el.style.color = 'hsl(210, 40%, 98%)'; // Primary foreground
+            el.style.backgroundColor = 'hsl(217, 33%, 54%)';
+            el.style.color = 'hsl(210, 40%, 98%)';
         });
     }
 
-    // Remove sticky positioning from headers in the clone
     clonedElement.querySelectorAll('th, td').forEach(el => {
         (el as HTMLElement).style.position = 'static';
     });
@@ -361,17 +357,33 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
             finalImgWidth = finalImgHeight * ratio;
         }
 
-        const x = (pdfWidth - finalImgWidth) / 2;
-        const y = (pdfHeight - finalImgHeight) / 2;
+        let y = (pdfHeight - finalImgHeight) / 2;
 
-        pdf.addImage(imgData, 'PNG', x, y, finalImgWidth, finalImgHeight);
+        if (pdfHeader.trim()) {
+            const headerLines = pdfHeader.trim().split('\n');
+            pdf.setFontSize(14);
+            pdf.text(headerLines, pdfWidth / 2, 15, { align: 'center' });
+            y = 15 + (headerLines.length * 7) + 5; 
+        }
+
+        const tableTopMargin = y > 0 ? y : 10;
+        const availableHeight = pdfHeight - tableTopMargin - 10;
+        
+        finalImgHeight = finalImgWidth / ratio;
+        if(finalImgHeight > availableHeight){
+            finalImgHeight = availableHeight;
+            finalImgWidth = finalImgHeight * ratio;
+        }
+        
+        const x = (pdfWidth - finalImgWidth) / 2;
+
+        pdf.addImage(imgData, 'PNG', x, tableTopMargin, finalImgWidth, finalImgHeight);
         pdf.save(fileName);
 
     } catch (error) {
         console.error(error);
         toast({ variant: 'destructive', title: "PDF Download Failed" });
     } finally {
-        // Clean up the container
         pdfContainer.innerHTML = '';
         setIsDownloading(false);
     }
@@ -423,12 +435,12 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-card">
-                <TableHead className="font-bold min-w-[100px] sticky left-0 bg-primary text-primary-foreground z-10">Day</TableHead>
-                <TableHead className="font-bold min-w-[120px] sticky left-[100px] bg-primary text-primary-foreground z-10">Class</TableHead>
+                <TableHead className="font-bold min-w-[100px] sticky left-0 bg-card z-10">Day</TableHead>
+                <TableHead className="font-bold min-w-[120px] sticky left-[100px] bg-card z-10">Class</TableHead>
                 {timeSlots.map(slot => (
-                  <TableHead key={slot} className="text-center font-bold text-xs min-w-[90px] p-1 bg-primary text-primary-foreground">
+                  <TableHead key={slot} className="text-center font-bold text-xs min-w-[90px] p-1">
                       <div>{slot}</div>
-                      <div className="font-normal text-primary-foreground/80">{instructionalSlotMap[slot] ? toRoman(instructionalSlotMap[slot]) : '-'}</div>
+                      <div className="font-normal text-muted-foreground">{instructionalSlotMap[slot] ? toRoman(instructionalSlotMap[slot]) : '-'}</div>
                   </TableHead>
                 ))}
               </TableRow>
@@ -510,8 +522,11 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
     <>
       <Card>
         <CardHeader>
-            <div className="flex flex-wrap justify-between items-center gap-4">
-                <CardTitle>View Routine</CardTitle>
+            <div className="flex flex-wrap justify-between items-start gap-4">
+                <div>
+                    <CardTitle>View Routine</CardTitle>
+                    <CardDescription>View, download, or edit your routine. Use the copy icon next to a day's name to paste its schedule to another day.</CardDescription>
+                </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button size="sm" variant="outline" disabled={isDownloading}>
@@ -529,10 +544,18 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                   </DropdownMenuContent>
                 </DropdownMenu>
             </div>
-            <CardDescription>View, download, or edit your routine. Use the copy icon next to a day's name to paste its schedule to another day.</CardDescription>
+            <div className='pt-4'>
+                <Label htmlFor="pdf-header">PDF Header (Optional)</Label>
+                <Textarea 
+                    id="pdf-header"
+                    placeholder="e.g. My School Name&#10;Academic Year: 2024-25"
+                    value={pdfHeader}
+                    onChange={(e) => setPdfHeader(e.target.value)}
+                    className="mt-1"
+                />
+            </div>
         </CardHeader>
         <CardContent className="p-0">
-          {/* Hidden container for PDF generation */}
           <div id="pdf-container" className="absolute -left-[9999px] top-auto" aria-hidden="true"></div>
           <div className="p-4 md:p-6 space-y-6">
                 {renderScheduleTable("Secondary", secondaryClasses, "routine-table-secondary")}
@@ -620,5 +643,3 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 };
 
 export default RoutineDisplay;
-
-    

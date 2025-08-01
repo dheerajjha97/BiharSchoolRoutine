@@ -27,66 +27,69 @@ export default function TeacherLoad({ teacherLoad }: TeacherLoadProps) {
   }
   
   const handleDownloadPdf = async (elementId: string, fileName: string) => {
-    const element = document.getElementById(elementId);
-    if (!element) {
-      toast({ variant: 'destructive', title: "Error", description: "Could not find element to print."});
-      return;
+    const originalElement = document.getElementById(elementId);
+    if (!originalElement) {
+        toast({ variant: 'destructive', title: "Error", description: "Could not find element to print." });
+        return;
     }
-    
-    const scrollContainer = element.querySelector<HTMLDivElement>('.relative.w-full.overflow-auto');
-    const originalOverflow = scrollContainer ? scrollContainer.style.overflow : '';
-    if (scrollContainer) {
-      scrollContainer.style.overflow = 'visible';
-    }
-
     setIsDownloading(true);
+
+    const pdfContainer = document.getElementById('pdf-container-teacher');
+    if (!pdfContainer) {
+        setIsDownloading(false);
+        return;
+    }
+
+    const clonedElement = originalElement.cloneNode(true) as HTMLElement;
+    pdfContainer.appendChild(clonedElement);
+    
+    // Remove sticky positioning from headers in the clone
+    clonedElement.querySelectorAll('th, td').forEach(el => {
+        (el as HTMLElement).style.position = 'static';
+    });
+    
     try {
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        width: element.scrollWidth,
-        height: element.scrollHeight,
-        windowWidth: element.scrollWidth,
-        windowHeight: element.scrollHeight,
-      });
-      
-      const imgData = canvas.toDataURL('image/png');
-      
-      const pdf = new jsPDF('p', 'mm', 'a4'); 
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-      const ratio = imgWidth / imgHeight;
+        const canvas = await html2canvas(clonedElement, {
+            scale: 2,
+            useCORS: true,
+        });
+        
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4'); 
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const imgWidth = canvas.width;
+        const imgHeight = canvas.height;
+        const ratio = imgWidth / imgHeight;
 
-      let finalImgWidth = pdfWidth - 20;
-      let finalImgHeight = finalImgWidth / ratio;
+        let finalImgWidth = pdfWidth - 20;
+        let finalImgHeight = finalImgWidth / ratio;
 
-      if (finalImgHeight > pdfHeight - 20) {
-        finalImgHeight = pdfHeight - 20;
-        finalImgWidth = finalImgHeight * ratio;
-      }
-      
-      const x = (pdfWidth - finalImgWidth) / 2;
-      const y = (pdfHeight - finalImgHeight) / 2;
-      
-      pdf.addImage(imgData, 'PNG', x, y, finalImgWidth, finalImgHeight);
-      pdf.save(fileName);
+        if (finalImgHeight > pdfHeight - 20) {
+            finalImgHeight = pdfHeight - 20;
+            finalImgWidth = finalImgHeight * ratio;
+        }
+
+        const x = (pdfWidth - finalImgWidth) / 2;
+        const y = (pdfHeight - finalImgHeight) / 2;
+
+        pdf.addImage(imgData, 'PNG', x, y, finalImgWidth, finalImgHeight);
+        pdf.save(fileName);
+
     } catch (error) {
-      console.error(error);
-      toast({ variant: 'destructive', title: "PDF Download Failed" });
+        console.error(error);
+        toast({ variant: 'destructive', title: "PDF Download Failed" });
     } finally {
-      if (scrollContainer) {
-        scrollContainer.style.overflow = originalOverflow;
-      }
-      setIsDownloading(false);
+        pdfContainer.innerHTML = '';
+        setIsDownloading(false);
     }
   }
 
 
   return (
     <div className="px-6 md:px-0 break-after-page">
+      {/* Hidden container for PDF generation */}
+      <div id="pdf-container-teacher" className="absolute -left-[9999px] top-auto" aria-hidden="true"></div>
       <Card id="teacher-load-table">
         <CardHeader>
           <div className="flex justify-between items-center">

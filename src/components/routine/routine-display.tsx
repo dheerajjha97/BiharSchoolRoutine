@@ -277,60 +277,63 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   };
   
   const handleDownloadPdf = async (elementId: string, fileName: string) => {
-    const element = document.getElementById(elementId);
-    if (!element) {
-      toast({ variant: 'destructive', title: "Error", description: "Could not find element to print."});
-      return;
+    const originalElement = document.getElementById(elementId);
+    if (!originalElement) {
+        toast({ variant: 'destructive', title: "Error", description: "Could not find element to print." });
+        return;
+    }
+    setIsDownloading(true);
+
+    const pdfContainer = document.getElementById('pdf-container');
+    if (!pdfContainer) {
+        setIsDownloading(false);
+        return;
     }
     
-    const scrollContainer = element.querySelector<HTMLDivElement>('.relative.w-full.overflow-auto');
-    const originalOverflow = scrollContainer ? scrollContainer.style.overflow : '';
-    if (scrollContainer) {
-      scrollContainer.style.overflow = 'visible';
-    }
+    // Clone the element and clean it for printing
+    const clonedElement = originalElement.cloneNode(true) as HTMLElement;
+    pdfContainer.appendChild(clonedElement);
 
-    setIsDownloading(true);
+    // Remove sticky positioning from headers in the clone
+    clonedElement.querySelectorAll('th, td').forEach(el => {
+        (el as HTMLElement).style.position = 'static';
+    });
+
     try {
-      const canvas = await html2canvas(element, {
-          scale: 2,
-          useCORS: true,
-          width: element.scrollWidth,
-          height: element.scrollHeight,
-          windowWidth: element.scrollWidth,
-          windowHeight: element.scrollHeight,
-      });
+        const canvas = await html2canvas(clonedElement, {
+            scale: 2,
+            useCORS: true,
+        });
 
-      const imgData = canvas.toDataURL('image/png');
-      
-      const pdf = new jsPDF('l', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-      const ratio = imgWidth / imgHeight;
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('l', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const imgWidth = canvas.width;
+        const imgHeight = canvas.height;
+        const ratio = imgWidth / imgHeight;
 
-      let finalImgWidth = pdfWidth - 20; // with margin
-      let finalImgHeight = finalImgWidth / ratio;
+        let finalImgWidth = pdfWidth - 20;
+        let finalImgHeight = finalImgWidth / ratio;
 
-      if (finalImgHeight > pdfHeight - 20) {
-        finalImgHeight = pdfHeight - 20;
-        finalImgWidth = finalImgHeight * ratio;
-      }
-      
-      const x = (pdfWidth - finalImgWidth) / 2;
-      const y = (pdfHeight - finalImgHeight) / 2;
-      
-      pdf.addImage(imgData, 'PNG', x, y, finalImgWidth, finalImgHeight);
-      pdf.save(fileName);
+        if (finalImgHeight > pdfHeight - 20) {
+            finalImgHeight = pdfHeight - 20;
+            finalImgWidth = finalImgHeight * ratio;
+        }
+
+        const x = (pdfWidth - finalImgWidth) / 2;
+        const y = (pdfHeight - finalImgHeight) / 2;
+
+        pdf.addImage(imgData, 'PNG', x, y, finalImgWidth, finalImgHeight);
+        pdf.save(fileName);
+
     } catch (error) {
-      console.error(error);
-      toast({ variant: 'destructive', title: "PDF Download Failed" });
+        console.error(error);
+        toast({ variant: 'destructive', title: "PDF Download Failed" });
     } finally {
-      if (scrollContainer) {
-        scrollContainer.style.overflow = originalOverflow;
-      }
-      setIsDownloading(false);
+        // Clean up the container
+        pdfContainer.innerHTML = '';
+        setIsDownloading(false);
     }
   }
 
@@ -489,6 +492,8 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
             <CardDescription>View, download, or edit your routine. Use the copy icon next to a day's name to paste its schedule to another day.</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
+          {/* Hidden container for PDF generation */}
+          <div id="pdf-container" className="absolute -left-[9999px] top-auto" aria-hidden="true"></div>
           <div className="p-4 md:p-6 space-y-6">
                 {renderScheduleTable("Secondary", secondaryClasses, "routine-table-secondary")}
                 {renderScheduleTable("Senior Secondary", seniorSecondaryClasses, "routine-table-senior-secondary")}

@@ -1,7 +1,7 @@
 
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Users, FileDown, Loader2 } from "lucide-react";
@@ -23,6 +23,12 @@ const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Sat
 export default function TeacherLoad({ teacherLoad, scheduleData, timeSlots }: TeacherLoadProps) {
   const teachers = Object.keys(teacherLoad).sort();
   const { toast } = useToast();
+  const [isClient, setIsClient] = useState(false);
+
+  React.useEffect(() => {
+    setIsClient(true);
+  }, []);
+
 
   if (teachers.length === 0) {
     return null;
@@ -86,24 +92,27 @@ export default function TeacherLoad({ teacherLoad, scheduleData, timeSlots }: Te
                       </TableCell>
                     ))}
                     <TableCell className="text-right">
-                       <BlobProvider document={<SingleTeacherPDF teacher={teacher} />}>
-                        {({ blob, url, loading, error }) => {
-                            if (error) {
-                                return <span>Error</span>
-                            }
-                            return (
-                                <a href={url!} download={`routine-${teacher.replace(/\s+/g, '-')}.pdf`}>
-                                    <Button variant="ghost" size="icon" disabled={loading}>
-                                        {loading ? (
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                        ) : (
-                                            <FileDown className="h-4 w-4" />
-                                        )}
-                                    </Button>
-                                </a>
-                            )
-                        }}
-                       </BlobProvider>
+                       {isClient && (
+                          <BlobProvider document={<SingleTeacherPDF teacher={teacher} />}>
+                            {({ blob, url, loading, error }) => {
+                                if (error) {
+                                    console.error("PDF generation error:", error);
+                                    return <span>Error</span>
+                                }
+                                return (
+                                    <a href={url!} download={`routine-${teacher.replace(/\s+/g, '-')}.pdf`}>
+                                        <Button variant="ghost" size="icon" disabled={loading}>
+                                            {loading ? (
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                            ) : (
+                                                <FileDown className="h-4 w-4" />
+                                            )}
+                                        </Button>
+                                    </a>
+                                )
+                            }}
+                          </BlobProvider>
+                       )}
                       </TableCell>
                   </TableRow>
                 ))}

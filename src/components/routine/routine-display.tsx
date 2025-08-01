@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import type { GenerateScheduleOutput, ScheduleEntry } from "@/ai/flows/generate-schedule";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -89,6 +89,11 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   const [isCellDialogOpen, setIsCellDialogOpen] = React.useState(false);
   const [currentCell, setCurrentCell] = React.useState<{ day: string; timeSlot: string; className: string; entry: ScheduleEntry | null } | null>(null);
   const [cellData, setCellData] = React.useState<CellData>({ subject: "", classNames: [], teacher: "" });
+  const [isClient, setIsClient] = useState(false);
+
+  React.useEffect(() => {
+    setIsClient(true);
+  }, []);
   
   const { secondaryClasses, seniorSecondaryClasses } = useMemo(() => categorizeClasses(classes), [classes]);
 
@@ -420,27 +425,29 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
         <CardHeader>
             <div className="flex flex-wrap justify-between items-center gap-4">
                 <CardTitle>View Routine</CardTitle>
-                 <BlobProvider document={<FullRoutinePDF />}>
-                  {({ blob, url, loading, error }) => {
-                    if (error) {
-                      toast({ variant: "destructive", title: "PDF Generation Failed" });
-                      console.error("PDF generation error:", error);
-                      return <span>Error creating PDF</span>;
-                    }
-                    return (
-                      <a href={url!} download="routine.pdf">
-                        <Button size="sm" variant="outline" disabled={loading}>
-                            {loading ? (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                                <FileDown className="mr-2 h-4 w-4" />
-                            )}
-                            {loading ? 'Generating PDF...' : 'Download PDF'}
-                        </Button>
-                      </a>
-                    );
-                  }}
-                </BlobProvider>
+                 {isClient && (
+                    <BlobProvider document={<FullRoutinePDF />}>
+                      {({ blob, url, loading, error }) => {
+                        if (error) {
+                          console.error("PDF generation error:", error);
+                          toast({ variant: "destructive", title: "PDF Generation Failed" });
+                          return <span>Error creating PDF</span>;
+                        }
+                        return (
+                          <a href={url!} download="routine.pdf">
+                            <Button size="sm" variant="outline" disabled={loading}>
+                                {loading ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                    <FileDown className="mr-2 h-4 w-4" />
+                                )}
+                                {loading ? 'Generating PDF...' : 'Download PDF'}
+                            </Button>
+                          </a>
+                        );
+                      }}
+                    </BlobProvider>
+                 )}
             </div>
             <CardDescription>View, download, or edit your routine. Use the copy icon next to a day's name to paste its schedule to another day.</CardDescription>
         </CardHeader>

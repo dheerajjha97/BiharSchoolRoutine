@@ -43,8 +43,9 @@
     "date-fns": "^3.6.0",
     "dotenv": "^16.5.0",
     "embla-carousel-react": "^8.6.0",
-    "firebase": "^11.9.1",
+    "firebase": "^10.12.3",
     "genkit": "^1.14.1",
+    "googleapis": "^140.0.1",
     "html2canvas": "^1.4.1",
     "jspdf": "^2.5.1",
     "lucide-react": "^0.475.0",
@@ -60,6 +61,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@types/gapi": "^0.0.47",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",

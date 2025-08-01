@@ -7,26 +7,16 @@ import { useContext, useState } from "react";
 import { AppStateContext } from "@/context/app-state-provider";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Menu,
   BookOpenCheck,
   LayoutDashboard,
   Database,
   SlidersHorizontal,
-  Save,
-  Trash2,
-  FileDown,
-  FileUp,
-  FileCog,
-  FolderCog,
+  LogIn,
+  LogOut,
+  Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -39,45 +29,41 @@ const navItems = [
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const { 
-    handleImportConfig, 
-    handleSaveConfig,
-    handleSaveBackup,
-    handleImportBackup,
-    handleClearRoutine,
+  const {
+    user,
+    handleGoogleSignIn,
+    handleLogout,
+    isAuthLoading,
+    isSyncing,
   } = useContext(AppStateContext);
 
-  const fileMenuContent = (closeSheet?: () => void) => (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="justify-start w-full gap-2">
-          <Save className="h-4 w-4" /> File
+  const authControls = (
+    <div className="flex items-center gap-4">
+      {isSyncing && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
+      {user ? (
+        <>
+          <Avatar>
+            <AvatarImage src={user.photoURL || undefined} alt={user.displayName || user.email || 'User'} />
+            <AvatarFallback>{user.displayName?.charAt(0) || user.email?.charAt(0)}</AvatarFallback>
+          </Avatar>
+          <Button variant="outline" size="sm" onClick={handleLogout} disabled={isAuthLoading}>
+            <LogOut className="mr-2 h-4 w-4" />
+            Logout
+          </Button>
+        </>
+      ) : (
+        <Button onClick={handleGoogleSignIn} disabled={isAuthLoading}>
+          {isAuthLoading ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <LogIn className="mr-2 h-4 w-4" />
+          )}
+          Login with Google
         </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56" align="end">
-        <DropdownMenuLabel>Backup</DropdownMenuLabel>
-        <DropdownMenuItem onClick={() => { handleSaveBackup(); closeSheet?.(); }}>
-          <FileDown className="mr-2 h-4 w-4" />
-          <span>Save Backup</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => { handleImportBackup(); closeSheet?.(); }}>
-          <FileUp className="mr-2 h-4 w-4" />
-          <span>Load Backup</span>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuLabel>Configuration</DropdownMenuLabel>
-         <DropdownMenuItem onClick={() => { handleSaveConfig(); closeSheet?.(); }}>
-          <FileCog className="mr-2 h-4 w-4" />
-          <span>Save Config Only</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => { handleImportConfig(); closeSheet?.(); }}>
-          <FolderCog className="mr-2 h-4 w-4" />
-          <span>Load Config Only</span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+      )}
+    </div>
   );
-  
+
   const sidebarContent = (
     <div className="flex h-full flex-col">
       <div className="flex-1 overflow-y-auto p-4 pt-0">
@@ -98,17 +84,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
       </div>
-       <div className="mt-auto p-4 border-t">
-         <div className="grid">
-          {fileMenuContent()}
-        </div>
-      </div>
     </div>
   );
-  
+
   const mobileSidebarContent = (
-     <div className="flex h-full flex-col">
-       <SheetHeader className="border-b p-4">
+    <div className="flex h-full flex-col">
+      <SheetHeader className="border-b p-4">
         <SheetTitle>
           <Link href="/" onClick={() => setIsSheetOpen(false)} className="flex items-center gap-2 font-semibold">
             <BookOpenCheck className="h-6 w-6 text-primary" />
@@ -134,11 +115,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
       </div>
-       <div className="mt-auto p-4 border-t">
-         <div className="grid">
-            {fileMenuContent(() => setIsSheetOpen(false))}
-         </div>
-      </div>
     </div>
   );
 
@@ -158,8 +134,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="flex flex-col p-0">
-               <SheetHeader className="sr-only">
-                  <SheetTitle>Navigation Menu</SheetTitle>
+              <SheetHeader className="sr-only">
+                <SheetTitle>Navigation Menu</SheetTitle>
               </SheetHeader>
               {mobileSidebarContent}
             </SheetContent>
@@ -171,24 +147,22 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </h1>
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-end">
-          <Button variant="destructive" size="sm" onClick={handleClearRoutine}>
-            <Trash2 className="mr-2 h-4 w-4" /> Clear Routine
-          </Button>
+          {authControls}
         </div>
       </header>
       <div className="flex-1 w-full overflow-x-auto">
         <div className="grid min-h-full lg:grid-cols-[280px_1fr] min-w-[1200px]">
           <div className="hidden border-r bg-card text-card-foreground lg:flex lg:flex-col no-print">
-              <div className="flex h-16 items-center border-b px-6">
-                  <Link href="/" className="flex items-center gap-2 font-semibold">
-                      <BookOpenCheck className="h-6 w-6 text-primary" />
-                      <span>BiharSchoolRoutine</span>
-                  </Link>
-              </div>
-              {sidebarContent}
+            <div className="flex h-16 items-center border-b px-6">
+              <Link href="/" className="flex items-center gap-2 font-semibold">
+                <BookOpenCheck className="h-6 w-6 text-primary" />
+                <span>BiharSchoolRoutine</span>
+              </Link>
+            </div>
+            {sidebarContent}
           </div>
           <main className="flex-1 bg-background p-4 md:p-6 overflow-y-auto">
-              {children}
+            {children}
           </main>
         </div>
       </div>

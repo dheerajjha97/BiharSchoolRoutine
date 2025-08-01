@@ -1,11 +1,14 @@
 
 "use client";
 
-import { createContext, useState, useEffect, useMemo, useRef, useCallback, ChangeEvent } from "react";
+import { createContext, useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import type { GenerateScheduleOutput } from "@/ai/flows/generate-schedule";
 import type { SubjectCategory, SubjectPriority } from "@/lib/schedule-generator";
 import { sortTimeSlots } from "@/lib/utils";
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, type User, type AuthCredential } from "firebase/auth";
+import { GoogleDriveService } from "@/lib/google-drive-service";
 
 type Unavailability = {
   teacher: string;
@@ -45,29 +48,20 @@ interface AppStateContextType {
   updateConfig: <K extends keyof SchoolConfig>(key: K, value: SchoolConfig[K]) => void;
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
-  handleSaveConfig: () => void;
-  handleImportConfig: () => void;
-  handleSaveBackup: () => void;
-  handleImportBackup: () => void;
-  handleClearRoutine: () => void;
+  isAuthLoading: boolean;
+  isSyncing: boolean;
+  user: User | null;
+  handleGoogleSignIn: () => void;
+  handleLogout: () => void;
 }
 
 export const AppStateContext = createContext<AppStateContextType>({} as AppStateContextType);
 
 const DEFAULT_APP_STATE: AppState = {
-  teachers: ["Mr. Sharma", "Mrs. Gupta", "Mr. Singh", "Ms. Verma", "Mr. Khan", "Mrs. Roy"],
-  classes: ["Class 9A", "Class 9B", "Class 10A", "Class 11 Science", "Class 12 Science", "Class 12 Commerce"],
-  subjects: ["Math", "Science", "Social Sc.", "English", "Hindi", "Physics", "Chemistry", "Biology", "Accountancy", "Business St.", "History", "Pol. Science", "Sanskrit", "Computer"],
-  timeSlots: [
-    "09:00 AM - 09:15 AM",
-    "09:15 AM - 10:00 AM",
-    "10:00 AM - 10:45 AM",
-    "10:45 AM - 11:30 AM",
-    "11:30 AM - 12:15 PM",
-    "12:15 PM - 01:00 PM",
-    "01:00 PM - 01:45 PM",
-    "01:45 PM - 02:30 PM"
-  ],
+  teachers: [],
+  classes: [],
+  subjects: [],
+  timeSlots: [],
   config: {
     classRequirements: {},
     subjectPriorities: {},
@@ -75,8 +69,8 @@ const DEFAULT_APP_STATE: AppState = {
     teacherSubjects: {},
     teacherClasses: {},
     subjectCategories: {},
-    prayerTimeSlot: "09:00 AM - 09:15 AM",
-    lunchTimeSlot: "12:15 PM - 01:00 PM",
+    prayerTimeSlot: "",
+    lunchTimeSlot: "",
     preventConsecutiveClasses: true,
     enableCombinedClasses: false,
     dailyPeriodQuota: 5,
@@ -85,13 +79,28 @@ const DEFAULT_APP_STATE: AppState = {
   teacherLoad: {},
 };
 
+const getAccessToken = (credential: AuthCredential | null): string | null => {
+    if (!credential) return null;
+    // This is a simplified way. In a real app, you might need to handle token refresh.
+    // The `gapi` library handles this more gracefully if initialized correctly.
+    // For this implementation, we assume the token from sign-in is sufficient.
+    return (credential as any).accessToken || null;
+}
+
+
 export const AppStateProvider = ({ children }: { children: React.ReactNode }) => {
   const [appState, setAppState] = useState<AppState>(DEFAULT_APP_STATE);
   const [isLoading, setIsLoading] = useState(false);
-  const [isStateLoaded, setIsStateLoaded] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
   const { toast } = useToast();
-  const configInputRef = useRef<HTMLInputElement>(null);
-  const backupInputRef = useRef<HTMLInputElement>(null);
+  const driveServiceRef = useRef<GoogleDriveService | null>(null);
+  const stateRef = useRef(appState); // Ref to hold the latest state for debouncing
+
+  useEffect(() => {
+    stateRef.current = appState;
+  }, [appState]);
 
   const calculatedTeacherLoad = useMemo(() => {
     const load: TeacherLoad = {};
@@ -118,47 +127,102 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   }, [appState.routine, appState.teachers]);
 
   useEffect(() => {
+    updateState('teacherLoad', calculatedTeacherLoad);
+  }, [calculatedTeacherLoad]);
+
+  const saveStateToDrive = useCallback(async (showToast = false) => {
+    if (!driveServiceRef.current || !driveServiceRef.current.isReady()) return;
+    setIsSyncing(true);
     try {
-      const savedStateJSON = localStorage.getItem("biharSchoolRoutineState_v2");
-      if (savedStateJSON) {
-        const savedState: AppState = JSON.parse(savedStateJSON);
-        if (savedState && savedState.config) {
-          const mergedConfig = { ...DEFAULT_APP_STATE.config, ...savedState.config };
-          const mergedState = { ...DEFAULT_APP_STATE, ...savedState, config: mergedConfig };
+      await driveServiceRef.current.saveBackup(stateRef.current);
+      if (showToast) {
+        toast({ title: "Progress Saved", description: "Your data has been saved to Google Drive." });
+      }
+    } catch (error: any) {
+      console.error("Failed to save state to Google Drive:", error);
+      if (error.status === 401) { // Handle token expiration
+         toast({ variant: "destructive", title: "Authentication Error", description: "Please log out and log in again to refresh your session." });
+         driveServiceRef.current = null;
+         setUser(null);
+      } else {
+        toast({ variant: "destructive", title: "Sync Failed", description: "Could not save data to Google Drive." });
+      }
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [toast]);
+  
+  const debouncedSave = useRef(
+    // A simple debounce implementation
+    (() => {
+      let timeout: NodeJS.Timeout;
+      return () => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+          saveStateToDrive(false);
+        }, 5000); // Save 5 seconds after the last change
+      };
+    })()
+  ).current;
+
+  useEffect(() => {
+    if (user && driveServiceRef.current?.isReady()) {
+      debouncedSave();
+    }
+  }, [appState, user, debouncedSave]);
+  
+  const loadStateFromDrive = useCallback(async (driveService: GoogleDriveService) => {
+      setIsLoading(true);
+      try {
+        toast({ title: "Loading data...", description: "Fetching your saved data from Google Drive." });
+        const loadedState = await driveService.loadBackup();
+        if (loadedState) {
+          const mergedConfig = { ...DEFAULT_APP_STATE.config, ...loadedState.config };
+          const mergedState = { ...DEFAULT_APP_STATE, ...loadedState, config: mergedConfig };
           if(mergedState.timeSlots) {
             mergedState.timeSlots = sortTimeSlots(mergedState.timeSlots);
           }
           setAppState(mergedState);
+          toast({ title: "Data Loaded Successfully", description: "Your data has been restored from Google Drive." });
+        } else {
+            setAppState(DEFAULT_APP_STATE);
+            toast({ title: "No backup found", description: "Starting with a fresh slate. Your work will be saved automatically." });
         }
+      } catch (error) {
+        console.error("Failed to load state from Google Drive:", error);
+        toast({ variant: "destructive", title: "Load Failed", description: "Could not load data from Google Drive. Starting with a blank slate." });
+        setAppState(DEFAULT_APP_STATE);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error("Failed to load state from localStorage:", error);
-      toast({ variant: "destructive", title: "Could not load saved data", description: "Starting with default settings." });
-    } finally {
-      setIsStateLoaded(true);
-    }
   }, [toast]);
-  
-  useEffect(() => {
-    if (isStateLoaded) {
-      updateState('teacherLoad', calculatedTeacherLoad);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [calculatedTeacherLoad, isStateLoaded]);
 
   useEffect(() => {
-    if (isStateLoaded) {
-      try {
-        const stateToSave = { ...appState, teacherLoad: {} }; // Don't save computed state
-        const appStateJSON = JSON.stringify(stateToSave);
-        localStorage.setItem("biharSchoolRoutineState_v2", appStateJSON);
-      } catch (error) {
-        console.error("Failed to save state to localStorage:", error);
-         toast({ variant: "destructive", title: "Could not save progress" });
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setIsAuthLoading(true);
+      if (user) {
+        setUser(user);
+        try {
+            const driveService = new GoogleDriveService();
+            await driveService.init(user);
+            driveServiceRef.current = driveService;
+            await loadStateFromDrive(driveService);
+        } catch (error) {
+            console.error("Error initializing Google Drive service:", error);
+            toast({ variant: "destructive", title: "Google Drive Error", description: "Could not connect to Google Drive."});
+            setUser(null);
+            driveServiceRef.current = null;
+        }
+      } else {
+        setUser(null);
+        driveServiceRef.current = null;
+        setAppState(DEFAULT_APP_STATE); // Reset to default state on logout
       }
-    }
-  }, [appState, isStateLoaded, toast]);
-  
+      setIsAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, [loadStateFromDrive, toast]);
+
   const updateState = useCallback(<K extends keyof AppState>(key: K, value: AppState[K]) => {
     setAppState(prevState => {
       const newState = { ...prevState, [key]: value };
@@ -176,117 +240,44 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     }));
   }, []);
 
-  const handleSaveConfig = useCallback(() => {
+  const handleGoogleSignIn = async () => {
+    setIsAuthLoading(true);
+    const provider = new GoogleAuthProvider();
+    provider.addScope('https://www.googleapis.com/auth/drive.file');
     try {
-      const configToSave = appState.config;
-      const jsonString = JSON.stringify(configToSave, null, 2);
-      const blob = new Blob([jsonString], { type: "application/json" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = "school-config.json";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      toast({ title: "Configuration saved successfully!" });
+      await signInWithPopup(auth, provider);
     } catch (error) {
-      toast({ variant: "destructive", title: "Save failed" });
-    }
-  }, [appState.config, toast]);
-  
-  const handleFileLoadConfig = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    try {
-      const text = await file.text();
-      const loadedConfig: Partial<SchoolConfig> = JSON.parse(text);
-      if (typeof loadedConfig !== 'object' || loadedConfig === null) throw new Error("Invalid config file format.");
-      
-      const newConfig = { ...appState.config, ...loadedConfig };
-      setAppState(prevState => ({ ...prevState, config: newConfig }));
-
-      toast({ title: "Configuration loaded successfully!" });
-    } catch (error) {
-      toast({ variant: "destructive", title: "Load failed", description: "Could not parse the configuration file." });
-    } finally {
-        if(configInputRef.current) configInputRef.current.value = "";
+      console.error("Google Sign-In Error:", error);
+      toast({ variant: "destructive", title: "Login Failed", description: "Could not sign in with Google." });
+      setIsAuthLoading(false);
     }
   };
 
-  const handleImportConfig = useCallback(() => {
-    configInputRef.current?.click();
-  }, []);
-  
-  const handleSaveBackup = useCallback(() => {
-    try {
-      const stateToSave = { ...appState, teacherLoad: {} };
-      const jsonString = JSON.stringify(stateToSave, null, 2);
-      const blob = new Blob([jsonString], { type: "application/json" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = "school-backup.json";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      toast({ title: "Backup saved successfully!" });
-    } catch (error) {
-      toast({ variant: "destructive", title: "Backup save failed" });
-    }
-  }, [appState, toast]);
-
-  const handleFileLoadBackup = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    try {
-      const text = await file.text();
-      const loadedState: Partial<AppState> = JSON.parse(text);
-
-      if (typeof loadedState !== 'object' || loadedState === null || !loadedState.config || !loadedState.teachers) {
-          throw new Error("Invalid backup file format.");
-      }
-      
-      const mergedConfig = { ...DEFAULT_APP_STATE.config, ...loadedState.config };
-      const mergedState = { ...DEFAULT_APP_STATE, ...loadedState, config: mergedConfig };
-      if(mergedState.timeSlots) {
-        mergedState.timeSlots = sortTimeSlots(mergedState.timeSlots);
-      }
-      setAppState(mergedState);
-
-      toast({ title: "Backup loaded successfully!" });
-    } catch (error) {
-      toast({ variant: "destructive", title: "Backup load failed", description: "Could not parse the backup file." });
-    } finally {
-        if(backupInputRef.current) backupInputRef.current.value = "";
-    }
+  const handleLogout = async () => {
+    setIsAuthLoading(true);
+    toast({ title: "Saving your work...", description: "Saving your final changes to Google Drive before logging out." });
+    await saveStateToDrive(true); // Final save before logout
+    await signOut(auth);
+    setAppState(DEFAULT_APP_STATE);
+    driveServiceRef.current = null;
+    setIsAuthLoading(false);
+    toast({ title: "Logged Out", description: "You have been successfully logged out." });
   };
-
-  const handleImportBackup = useCallback(() => {
-    backupInputRef.current?.click();
-  }, []);
   
-  const handleClearRoutine = useCallback(() => {
-      updateState('routine', null);
-      toast({ title: "Routine Cleared", description: "The generated routine has been removed." });
-  }, [updateState, toast]);
-
   return (
-    <AppStateContext.Provider value={{ appState, updateState, updateConfig, isLoading, setIsLoading, handleSaveConfig, handleImportConfig, handleSaveBackup, handleImportBackup, handleClearRoutine }}>
+    <AppStateContext.Provider value={{ 
+        appState, 
+        updateState, 
+        updateConfig, 
+        isLoading, 
+        setIsLoading,
+        isAuthLoading,
+        isSyncing,
+        user,
+        handleGoogleSignIn,
+        handleLogout,
+    }}>
       {children}
-      <input
-        type="file"
-        ref={configInputRef}
-        onChange={handleFileLoadConfig}
-        className="hidden"
-        accept="application/json"
-      />
-      <input
-        type="file"
-        ref={backupInputRef}
-        onChange={handleFileLoadBackup}
-        className="hidden"
-        accept="application/json"
-      />
     </AppStateContext.Provider>
   );
 };

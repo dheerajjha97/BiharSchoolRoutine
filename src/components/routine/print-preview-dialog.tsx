@@ -109,7 +109,7 @@ const PrintPreviewDialog: React.FC<PrintPreviewDialogProps> = ({ isOpen, onOpenC
                 });
             });
 
-            const sorted = sortClasses([...classes]);
+            const sorted = [...classes].sort(sortClasses);
             const getGrade = (c: string) => (c.match(/\d+/) || [])[0] || null;
             const secondary = sorted.filter(c => ['9', '10'].includes(getGrade(c) || ''));
             const seniorSecondary = sorted.filter(c => ['11', '12'].includes(getGrade(c) || ''));
@@ -392,6 +392,5 @@ const PrintPreviewDialog: React.FC<PrintPreviewDialogProps> = ({ isOpen, onOpenC
 };
 
 export default PrintPreviewDialog;
-
 
     

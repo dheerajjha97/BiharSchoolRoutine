@@ -304,12 +304,14 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
             el.style.border = '1px solid black';
             el.style.padding = '4px';
             el.style.textAlign = 'center';
+            el.style.minHeight = '40px'; // Adjust row height
+            el.style.verticalAlign = 'middle';
             // Remove app-specific styling from content cells
             if(el.tagName === 'TD') {
                 const contentDiv = el.querySelector('div > div.w-full.text-center');
                 if(contentDiv) {
                     contentDiv.className = '';
-                    contentDiv.setAttribute('style', 'font-size: 10px; line-height: 1.2;');
+                    contentDiv.setAttribute('style', 'font-size: 10px; line-height: 1.2; display: flex; align-items: center; justify-content: center; height: 100%;');
                 }
             }
         });

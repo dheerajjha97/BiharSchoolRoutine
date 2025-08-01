@@ -42,10 +42,28 @@ export default function TeacherLoad({ teacherLoad }: TeacherLoadProps) {
         setIsDownloading(false);
         return;
     }
+    
+    const wrapperDiv = document.createElement('div');
+    
+    // Create and style the header div
+    if (pdfHeader.trim()) {
+        const headerDiv = document.createElement('div');
+        headerDiv.style.textAlign = 'center';
+        headerDiv.style.marginBottom = '20px';
+        headerDiv.style.width = '100%';
+        pdfHeader.trim().split('\n').forEach((line, index) => {
+            const p = document.createElement('p');
+            p.textContent = line;
+            p.style.margin = '0';
+            p.style.padding = '0';
+            p.style.fontSize = index === 0 ? '16px' : '14px';
+            p.style.fontWeight = index === 0 ? 'bold' : 'normal';
+            headerDiv.appendChild(p);
+        });
+        wrapperDiv.appendChild(headerDiv);
+    }
 
     const clonedElement = originalElement.cloneNode(true) as HTMLElement;
-    pdfContainer.appendChild(clonedElement);
-    
     const table = clonedElement.querySelector('table');
     if(table) {
         table.style.borderCollapse = 'collapse';
@@ -66,8 +84,11 @@ export default function TeacherLoad({ teacherLoad }: TeacherLoadProps) {
         (el as HTMLElement).style.position = 'static';
     });
     
+    wrapperDiv.appendChild(clonedElement);
+    pdfContainer.appendChild(wrapperDiv);
+    
     try {
-        const canvas = await html2canvas(clonedElement, {
+        const canvas = await html2canvas(wrapperDiv, {
             scale: 2,
             useCORS: true,
         });
@@ -88,27 +109,10 @@ export default function TeacherLoad({ teacherLoad }: TeacherLoadProps) {
             finalImgWidth = finalImgHeight * ratio;
         }
 
-        let y = (pdfHeight - finalImgHeight) / 2;
-
-        if (pdfHeader.trim()) {
-            const headerLines = pdfHeader.trim().split('\n');
-            pdf.setFontSize(14);
-            pdf.text(headerLines, pdfWidth / 2, 15, { align: 'center' });
-            y = 15 + (headerLines.length * 7) + 5; 
-        }
-
-        const tableTopMargin = y > 0 ? y : 10;
-        const availableHeight = pdfHeight - tableTopMargin - 10;
-        
-        finalImgHeight = finalImgWidth / ratio;
-        if(finalImgHeight > availableHeight){
-            finalImgHeight = availableHeight;
-            finalImgWidth = finalImgHeight * ratio;
-        }
-
         const x = (pdfWidth - finalImgWidth) / 2;
+        const y = (pdfHeight - finalImgHeight) / 2;
 
-        pdf.addImage(imgData, 'PNG', x, tableTopMargin, finalImgWidth, finalImgHeight);
+        pdf.addImage(imgData, 'PNG', x, y, finalImgWidth, finalImgHeight);
         pdf.save(fileName);
 
     } catch (error) {
@@ -185,3 +189,5 @@ export default function TeacherLoad({ teacherLoad }: TeacherLoadProps) {
     </div>
   );
 }
+
+    

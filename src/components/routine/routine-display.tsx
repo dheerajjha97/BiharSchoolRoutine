@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, Trash2, Check, AlertTriangle, Copy, FileDown } from "lucide-react";
+import { Download, Trash2, Check, AlertTriangle, Copy, FileDown, Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from '../ui/checkbox';
 import { cn, sortClasses } from '@/lib/utils';
@@ -28,7 +28,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import TeacherLoad from './teacher-load';
-import { PDFDownloadLink } from '@react-pdf/renderer';
+import { pdf } from '@react-pdf/renderer';
 import RoutinePDFDocument from './RoutinePDFDocument';
 import type { TeacherLoad as TeacherLoadType } from '@/context/app-state-provider';
 
@@ -89,11 +89,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   const [isCellDialogOpen, setIsCellDialogOpen] = useState(false);
   const [currentCell, setCurrentCell] = useState<{ day: string; timeSlot: string; className: string; entry: ScheduleEntry | null } | null>(null);
   const [cellData, setCellData] = useState<CellData>({ subject: "", classNames: [], teacher: "" });
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
+  const [isDownloading, setIsDownloading] = useState(false);
   
 
   const { secondaryClasses, seniorSecondaryClasses } = useMemo(() => categorizeClasses(classes), [classes]);
@@ -281,6 +277,40 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
     onScheduleChange([...scheduleWithoutDestination, ...newDestinationEntries]);
   };
 
+  const handleDownloadPdf = async () => {
+      if (!scheduleData) return;
+      setIsDownloading(true);
+      try {
+          const doc = (
+            <RoutinePDFDocument 
+                scheduleData={scheduleData}
+                timeSlots={timeSlots}
+                classes={classes}
+                teacherLoad={teacherLoad}
+                title="Class Routine - Session 2025-26"
+            />
+          );
+          const asPdf = pdf([]);
+          asPdf.updateContainer(doc);
+          const blob = await asPdf.toBlob();
+
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.setAttribute('download', 'routine.pdf');
+          document.body.appendChild(link);
+          link.click();
+          link.parentNode?.removeChild(link);
+          URL.revokeObjectURL(url);
+      } catch (error) {
+          console.error("Failed to generate PDF", error);
+          toast({ variant: "destructive", title: "PDF Generation Failed" });
+      } finally {
+          setIsDownloading(false);
+      }
+  };
+
+
   const renderCellContent = (day: string, className: string, timeSlot: string) => {
     const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
     const isClashed = entries.some(entry => 
@@ -415,27 +445,14 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
         <CardHeader>
             <div className="flex flex-wrap justify-between items-center gap-4">
                 <CardTitle>View Routine</CardTitle>
-                {isClient && (
-                  <PDFDownloadLink
-                      document={isClient ? (
-                          <RoutinePDFDocument 
-                              scheduleData={scheduleData}
-                              timeSlots={timeSlots}
-                              classes={classes}
-                              teacherLoad={teacherLoad}
-                              title="Class Routine - Session 2025-26"
-                          />
-                      ) : <></>}
-                      fileName="routine.pdf"
-                  >
-                      {({ loading }) => (
-                          <Button size="sm" variant="outline" disabled={loading}>
-                              <FileDown className="mr-2 h-4 w-4" />
-                              {loading ? 'Generating PDF...' : 'Download PDF'}
-                          </Button>
-                      )}
-                  </PDFDownloadLink>
-                )}
+                 <Button size="sm" variant="outline" onClick={handleDownloadPdf} disabled={isDownloading}>
+                    {isDownloading ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                        <FileDown className="mr-2 h-4 w-4" />
+                    )}
+                    {isDownloading ? 'Generating PDF...' : 'Download PDF'}
+                </Button>
             </div>
             <CardDescription>View, download, or edit your routine. Use the copy icon next to a day's name to paste its schedule to another day.</CardDescription>
         </CardHeader>
@@ -528,5 +545,3 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 };
 
 export default RoutineDisplay;
-
-    

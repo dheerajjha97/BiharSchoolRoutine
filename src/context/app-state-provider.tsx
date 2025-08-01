@@ -231,6 +231,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       const stateToSave = { ...appState, teacherLoad: {}, teacherRoutineForPrint: null }; // Don't save computed/temporary state
       const jsonString = JSON.stringify(stateToSave, null, 2);
       const blob = new Blob([jsonString], { type: "application/json" });
+      const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
       link.download = "school-backup.json";
       document.body.appendChild(link);

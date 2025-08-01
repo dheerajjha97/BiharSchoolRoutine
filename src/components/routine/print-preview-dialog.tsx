@@ -78,7 +78,6 @@ const PrintPreviewDialog: React.FC<PrintPreviewDialogProps> = ({ isOpen, onOpenC
     if (isOpen) {
       setPreviewKey(prev => prev + 1); 
     } else {
-      // Clear the temporary print state when dialog closes
       if (appState.teacherRoutineForPrint) {
         updateState('teacherRoutineForPrint', null);
       }
@@ -88,9 +87,9 @@ const PrintPreviewDialog: React.FC<PrintPreviewDialogProps> = ({ isOpen, onOpenC
   const handlePrint = () => {
     let contentToPrintElement: HTMLElement | null = null;
     if (teacherRoutineForPrint && teacherContentRef.current) {
-      contentToPrintElement = teacherContentRef.current;
+        contentToPrintElement = teacherContentRef.current;
     } else if (contentRef.current) {
-      contentToPrintElement = contentRef.current;
+        contentToPrintElement = contentRef.current;
     }
     
     if (!contentToPrintElement) {
@@ -98,78 +97,91 @@ const PrintPreviewDialog: React.FC<PrintPreviewDialogProps> = ({ isOpen, onOpenC
         return;
     }
 
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-        alert("Please allow popups for this site to print.");
-        return;
-    }
-
     const contentHTML = contentToPrintElement.innerHTML;
+    
     const pageStyle = `
-      <style>
-        @page {
-          size: ${orientation};
-          margin: ${margins.top}cm ${margins.right}cm ${margins.bottom}cm ${margins.left}cm;
-        }
-        body {
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-        }
-        #printable-content {
-          transform: scale(${scale / 100});
-          transform-origin: top left;
-        }
-        table {
-          width: 100%;
-          border-collapse: collapse;
-          font-size: 8pt;
-        }
-        th, td {
-          border: 1px solid #ccc !important;
-          padding: 2px;
-          text-align: center;
-        }
-        th {
-          font-weight: bold;
-          background-color: #f2f2f2 !important;
-        }
-        .break-after-page {
-          page-break-after: always;
-        }
-        h3 {
-          font-size: 14pt;
-          font-weight: 600;
-          text-align: center;
-          margin-bottom: 0.5rem;
-        }
-        .text-gray-600 { color: #555; }
-        .text-\\[10px\\] { font-size: 10px; }
-        .font-semibold { font-weight: 600; }
-        .mb-3 { margin-bottom: 1rem; }
-      </style>
+      @page {
+        size: ${orientation};
+        margin: ${margins.top}cm ${margins.right}cm ${margins.bottom}cm ${margins.left}cm;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      #printable-content {
+        transform: scale(${scale / 100});
+        transform-origin: top left;
+        width: ${scale === 100 ? '100%' : 'auto'};
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 8pt;
+      }
+      th, td {
+        border: 1px solid #ccc !important;
+        padding: 2px;
+        text-align: center;
+        page-break-inside: avoid;
+      }
+      tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+      }
+      thead {
+        display: table-header-group;
+      }
+      th {
+        font-weight: bold;
+        background-color: #f2f2f2 !important;
+      }
+      .break-after-page {
+        page-break-after: always;
+      }
+      h3 {
+        font-size: 14pt;
+        font-weight: 600;
+        text-align: center;
+        margin-bottom: 0.5rem;
+      }
+      .text-gray-600 { color: #555; }
+      .text-\\[10px\\] { font-size: 10px; }
+      .font-semibold { font-weight: 600; }
+      .mb-3 { margin-bottom: 1rem; }
     `;
 
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>${title}</title>
-          ${pageStyle}
-        </head>
-        <body>
-          <h2 style="text-align: center; font-size: 18pt; font-weight: bold; margin-bottom: 1rem;">${title}</h2>
-          <div id="printable-content">${contentHTML}</div>
-        </body>
-      </html>
-    `);
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
 
-    printWindow.document.close();
-    
-    // Use timeout to ensure content is loaded before printing
-    setTimeout(() => {
-        printWindow.print();
-        printWindow.close();
-    }, 500); // 500ms delay
+    const doc = iframe.contentWindow?.document;
+    if (doc) {
+        doc.open();
+        doc.write(`
+            <html>
+                <head>
+                    <title>${title}</title>
+                    <style>${pageStyle}</style>
+                </head>
+                <body>
+                    <h2 style="text-align: center; font-size: 18pt; font-weight: bold; margin-bottom: 1rem;">${title}</h2>
+                    <div id="printable-content">${contentHTML}</div>
+                </body>
+            </html>
+        `);
+        doc.close();
+        
+        iframe.contentWindow?.focus();
+        
+        setTimeout(() => {
+            iframe.contentWindow?.print();
+            document.body.removeChild(iframe);
+        }, 500);
+    }
   };
 
   const previewScale = useMemo(() => {
@@ -253,7 +265,7 @@ const PrintPreviewDialog: React.FC<PrintPreviewDialogProps> = ({ isOpen, onOpenC
                 }}
              >
                 <div
-                    className="p-4"
+                    className="p-4 overflow-hidden"
                      style={{
                         padding: `${margins.top}cm ${margins.right}cm ${margins.bottom}cm ${margins.left}cm`,
                     }}

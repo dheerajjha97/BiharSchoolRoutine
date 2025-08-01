@@ -317,9 +317,10 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 
     const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     let printContent = '';
+    let title = "Class Routine – Session 2025–26";
 
     if (teacherName) {
-      // Print single teacher routine
+      title = `Routine for ${teacherName}`;
       const teacherScheduleEntries = routine.schedule.filter(entry => entry.teacher.includes(teacherName));
       const scheduleByDayTime: Record<string, Record<string, { className: string, subject: string }>> = {};
       teacherScheduleEntries.forEach(entry => {
@@ -327,7 +328,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
           scheduleByDayTime[entry.day][entry.timeSlot] = { className: entry.className, subject: entry.subject };
       });
        printContent = `
-          <h2>Routine for ${teacherName}</h2>
+          <h2>${title}</h2>
           <table>
               <thead>
                   <tr>
@@ -341,7 +342,8 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
                           <td class="day-header">${day}</td>
                           ${timeSlots.map(slot => {
                               const entry = scheduleByDayTime[day]?.[slot];
-                              return `<td>${entry ? `<div><b>${entry.subject}</b></div><div>${entry.className}</div>` : '---'}</td>`;
+                              const content = entry ? `<div><b>${entry.subject}</b></div><div>${entry.className}</div>` : '---';
+                              return `<td>${content}</td>`;
                           }).join('')}
                       </tr>
                   `).join('')}
@@ -376,11 +378,11 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
           });
       });
 
-      const renderScheduleTable = (title: string, displayClasses: string[]) => {
+      const renderScheduleTable = (tableTitle: string, displayClasses: string[]) => {
         if(displayClasses.length === 0) return '';
         return `
             <div class="break-after-page">
-              <h3>${title}</h3>
+              <h3>${tableTitle}</h3>
               <table>
                 <thead>
                   <tr>
@@ -398,7 +400,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
                         ${timeSlots.map(timeSlot => {
                           const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
                           const cellContent = entries.map(e => {
-                            if (e.subject === '---') return '';
+                            if (e.subject === '---') return '<span class="no-content">---</span>';
                             let content = `<b>${e.subject}</b>`;
                             if (e.teacher !== 'N/A') content += `<br><small>${e.teacher}</small>`;
                             if (e.className.includes('&')) content += `<br><i>(Combined)</i>`;
@@ -416,8 +418,8 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       };
       
       const renderTeacherLoad = () => {
-         const teachers = Object.keys(teacherLoad).sort();
-         if(teachers.length === 0) return '';
+         const sortedTeachers = Object.keys(teacherLoad).sort();
+         if(sortedTeachers.length === 0) return '';
          return `
             <div class="break-after-page">
               <h3>Teacher Workload Summary</h3>
@@ -426,15 +428,13 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
                    <tr>
                     <th>Teacher</th>
                     ${daysOfWeek.map(day => `<th>${day.substring(0,3)}</th>`).join('')}
-                    <th>Total</th>
                   </tr>
                 </thead>
                 <tbody>
-                  ${teachers.map(teacher => `
+                  ${sortedTeachers.map(teacher => `
                     <tr>
                       <td>${teacher}</td>
                       ${daysOfWeek.map(day => `<td>${teacherLoad[teacher]?.[day] ?? 0}</td>`).join('')}
-                       <td>${teacherLoad[teacher]?.['Total'] ?? 0}</td>
                     </tr>
                   `).join('')}
                 </tbody>
@@ -444,7 +444,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       };
 
       printContent = `
-        <h2>Class Routine – Session 2025–26</h2>
+        <h2>${title}</h2>
         ${renderScheduleTable("Secondary", secondaryClasses)}
         ${renderScheduleTable("Senior Secondary", seniorSecondaryClasses)}
         ${renderTeacherLoad()}
@@ -456,18 +456,24 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         newWindow.document.write(`
           <html>
             <head>
-              <title>Print Routine</title>
+              <title>${title}</title>
               <style>
                 @page { size: A4 landscape; margin: 0.5in; }
                 body { font-family: sans-serif; font-size: 9pt; }
-                h2, h3 { text-align: center; }
+                h2, h3 { text-align: center; margin: 1rem 0; }
                 table { width: 100%; border-collapse: collapse; margin-bottom: 2rem; }
                 th, td { border: 1px solid #ccc; padding: 4px; text-align: center; word-break: break-word; }
                 th { font-weight: bold; background-color: #f2f2f2; }
-                td b { font-size: 10pt; }
-                .day-header { text-align: left; font-weight: bold; vertical-align: middle; }
-                .roman { font-size: 8pt; color: #666; }
+                td.day-header { text-align: left; font-weight: bold; vertical-align: middle; font-size: 9pt; }
+                .roman { font-size: 7pt; color: #666; }
+                .no-content { color: #999; }
                 .break-after-page { page-break-after: always; }
+                @media print {
+                  body {
+                    -webkit-print-color-adjust: exact;
+                    print-color-adjust: exact;
+                  }
+                }
               </style>
             </head>
             <body onload="window.print()">
@@ -499,3 +505,5 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     </AppStateContext.Provider>
   );
 };
+
+    

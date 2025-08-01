@@ -294,24 +294,35 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
     const clonedElement = originalElement.cloneNode(true) as HTMLElement;
     pdfContainer.appendChild(clonedElement);
 
-    // Apply Excel-like styling
+    // Apply Excel-like styling and reformat content
     const table = clonedElement.querySelector('table');
     if(table) {
         table.style.borderCollapse = 'collapse';
         table.style.width = '100%';
-        table.querySelectorAll('th, td').forEach(cell => {
+        clonedElement.querySelectorAll('th, td').forEach(cell => {
             const el = cell as HTMLElement;
             el.style.border = '1px solid black';
             el.style.padding = '4px';
             el.style.textAlign = 'center';
-            el.style.minHeight = '40px'; // Adjust row height
+            el.style.minHeight = '40px';
             el.style.verticalAlign = 'middle';
-            // Remove app-specific styling from content cells
+            
             if(el.tagName === 'TD') {
-                const contentDiv = el.querySelector('div > div.w-full.text-center');
-                if(contentDiv) {
-                    contentDiv.className = '';
-                    contentDiv.setAttribute('style', 'font-size: 10px; line-height: 1.2; display: flex; align-items: center; justify-content: center; height: 100%;');
+                const contentWrapper = el.querySelector('div > div'); // Find the content wrapper
+                if (contentWrapper) {
+                    const subjectDiv = contentWrapper.querySelector('div:first-child');
+                    const teacherDiv = contentWrapper.querySelector('div:nth-child(2)');
+
+                    if (subjectDiv && teacherDiv) {
+                        const subjectText = subjectDiv.textContent || '';
+                        const teacherText = teacherDiv.textContent || '';
+                        
+                        // Re-create the inner HTML with new styling
+                        contentWrapper.innerHTML = `
+                            <div style="font-weight: bold; font-size: 12px;">${subjectText}</div>
+                            <div style="font-size: 10px;">${teacherText}</div>
+                        `;
+                    }
                 }
             }
         });
@@ -369,8 +380,8 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   const renderCellContent = (day: string, className: string, timeSlot: string) => {
     const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
     const isClashed = entries.some(entry => 
-        entry.teacher.split(' & ').some(t => clashSet.has(`teacher-${day}-${timeSlot}-${t}`)) ||
-        clashSet.has(`class-${day}-${timeSlot}-${className}`)
+        entry.teacher.split(' & ').some(t => clashSet.has(`teacher-${day}-${entry.timeSlot}-${t}`)) ||
+        clashSet.has(`class-${day}-${entry.timeSlot}-${className}`)
     );
 
     return (
@@ -385,8 +396,8 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                 entries.map((entry, index) => {
                     if (entry.subject === '---') return null;
                     const isClashedEntry = isClashed && (
-                        entry.teacher.split(' & ').some(t => clashSet.has(`teacher-${day}-${timeSlot}-${t}`)) ||
-                        clashSet.has(`class-${day}-${timeSlot}-${className}`)
+                        entry.teacher.split(' & ').some(t => clashSet.has(`teacher-${day}-${entry.timeSlot}-${t}`)) ||
+                        clashSet.has(`class-${day}-${entry.timeSlot}-${className}`)
                     );
                     return (
                         <div key={index} className={cn("w-full text-center p-1 bg-card rounded-md border text-xs", isClashedEntry && "bg-destructive/20")}>
@@ -416,7 +427,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                 {timeSlots.map(slot => (
                   <TableHead key={slot} className="text-center font-bold text-xs min-w-[110px] p-1 bg-primary text-primary-foreground">
                       <div>{slot}</div>
-                      <div className="font-normal text-muted-foreground">{instructionalSlotMap[slot] ? toRoman(instructionalSlotMap[slot]) : '-'}</div>
+                      <div className="font-normal text-primary-foreground/80">{instructionalSlotMap[slot] ? toRoman(instructionalSlotMap[slot]) : '-'}</div>
                   </TableHead>
                 ))}
               </TableRow>

@@ -1,6 +1,7 @@
+
 "use client";
 
-import React, { useState, useMemo, forwardRef } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import type { GenerateScheduleOutput, ScheduleEntry } from "@/ai/flows/generate-schedule";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -10,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, Trash2, Check, AlertTriangle, Copy, Printer } from "lucide-react";
+import { Download, Trash2, Check, AlertTriangle, Copy, FileDown } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from '../ui/checkbox';
 import { cn, sortClasses } from '@/lib/utils';
@@ -27,6 +28,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import TeacherLoad from './teacher-load';
+import { PDFDownloadLink } from '@react-pdf/renderer';
+import RoutinePDFDocument from './RoutinePDFDocument';
+import type { TeacherLoad as TeacherLoadType } from '@/context/app-state-provider';
 
 interface RoutineDisplayProps {
   scheduleData: GenerateScheduleOutput | null;
@@ -37,8 +41,7 @@ interface RoutineDisplayProps {
   teacherSubjects: Record<string, string[]>;
   onScheduleChange: (newSchedule: ScheduleEntry[]) => void;
   dailyPeriodQuota: number;
-  teacherLoad: Record<string, Record<string, number>>;
-  onPrintTeacher: (teacher: string | null) => void;
+  teacherLoad: TeacherLoadType;
 }
 
 type GridSchedule = Record<string, Record<string, Record<string, ScheduleEntry[]>>>;
@@ -80,14 +83,18 @@ const toRoman = (num: number): string => {
     return result;
 };
 
-const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects, teachers, teacherSubjects, onScheduleChange, dailyPeriodQuota, teacherLoad, onPrintTeacher }: RoutineDisplayProps, ref) => {
-  const [printHeader, setPrintHeader] = useState("Class Routine – Session 2025–26");
+const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, teacherSubjects, onScheduleChange, dailyPeriodQuota, teacherLoad }: RoutineDisplayProps) => {
   const { toast } = useToast();
+  const [isClient, setIsClient] = useState(false);
   
   const [isCellDialogOpen, setIsCellDialogOpen] = useState(false);
   const [currentCell, setCurrentCell] = useState<{ day: string; timeSlot: string; className: string; entry: ScheduleEntry | null } | null>(null);
   const [cellData, setCellData] = useState<CellData>({ subject: "", classNames: [], teacher: "" });
   
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   const { secondaryClasses, seniorSecondaryClasses } = useMemo(() => categorizeClasses(classes), [classes]);
 
   const instructionalSlotMap = useMemo(() => {
@@ -178,48 +185,6 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
         setCellData(prev => ({ ...prev, teacher: '' }));
     }
   }, [cellData.subject, availableTeachers, cellData.teacher]);
-  
-  const handleExport = () => {
-    const csvRows: string[] = [];
-    const headers = ['Day', 'Class', ...timeSlots.map(slot => `"${slot} (${instructionalSlotMap[slot] ? toRoman(instructionalSlotMap[slot]) : '-'})"`)];
-    csvRows.push(headers.join(','));
-
-    const processClassesForExport = (displayClasses: string[]) => {
-        daysOfWeek.forEach(day => {
-            displayClasses.forEach((className, classIndex) => {
-                const row = [(classIndex === 0 ? `"${day}"` : '""'), `"${className}"`];
-                timeSlots.forEach(slot => {
-                    const entries = gridSchedule[day]?.[className]?.[slot] || [];
-                    const cellContent = entries.map(e => `${e.subject}${e.teacher && e.teacher !== 'N/A' ? ` (${e.teacher})` : ''}`).join(' / ');
-                    row.push(`"${cellContent.replace(/"/g, '""')}"`);
-                });
-                csvRows.push(row.join(','));
-            });
-            if (displayClasses.length > 0) csvRows.push(Array(headers.length).fill('""').join(','));
-        });
-    };
-    
-    const visibleSections = [
-        {title: "Secondary", classes: secondaryClasses},
-        {title: "Senior Secondary", classes: seniorSecondaryClasses}
-    ];
-
-    visibleSections.forEach((section, sectionIndex) => {
-        if(section.classes.length === 0) return;
-        csvRows.push(`"${section.title}"`);
-        processClassesForExport(section.classes);
-        if (sectionIndex < visibleSections.length - 1 && visibleSections[sectionIndex + 1].classes.length > 0) csvRows.push(Array(headers.length).fill('""').join(','));
-    });
-
-    const csvString = csvRows.join('\n');
-    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `school-routine.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
   
   const handleCellClick = (day: string, timeSlot: string, className: string, entry: ScheduleEntry | null) => {
     setCurrentCell({ day, timeSlot, className, entry });
@@ -449,18 +414,39 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
         <CardHeader>
             <div className="flex flex-wrap justify-between items-center gap-4">
                 <CardTitle>View Routine</CardTitle>
-                <div className="flex gap-2">
-                    <Button onClick={() => onPrintTeacher(null)} size="sm" variant="outline"><Printer className="mr-2 h-4 w-4" /> Print All</Button>
-                    <Button onClick={handleExport} size="sm" variant="outline"><Download className="mr-2 h-4 w-4" /> Export CSV</Button>
-                </div>
+                 {isClient && (
+                    <PDFDownloadLink
+                        document={
+                            <RoutinePDFDocument 
+                                scheduleData={scheduleData}
+                                timeSlots={timeSlots}
+                                classes={classes}
+                                teacherLoad={teacherLoad}
+                                title="Class Routine - Session 2025-26"
+                            />
+                        }
+                        fileName="routine.pdf"
+                    >
+                        {({ loading }) => (
+                            <Button size="sm" variant="outline" disabled={loading}>
+                                <FileDown className="mr-2 h-4 w-4" />
+                                {loading ? 'Generating PDF...' : 'Download PDF'}
+                            </Button>
+                        )}
+                    </PDFDownloadLink>
+                )}
             </div>
-            <CardDescription>View, print, export, or edit your routine. Use the copy icon next to a day's name to paste its schedule to another day.</CardDescription>
+            <CardDescription>View, download, or edit your routine. Use the copy icon next to a day's name to paste its schedule to another day.</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           <div className="p-4 md:p-6 space-y-6">
                 {renderScheduleTable("Secondary", secondaryClasses)}
                 {renderScheduleTable("Senior Secondary", seniorSecondaryClasses)}
-                <TeacherLoad teacherLoad={teacherLoad} onPrintTeacher={onPrintTeacher} />
+                <TeacherLoad 
+                    teacherLoad={teacherLoad} 
+                    scheduleData={scheduleData} 
+                    timeSlots={timeSlots}
+                />
             </div>
         </CardContent>
       </Card>
@@ -538,7 +524,6 @@ const RoutineDisplay = forwardRef(({ scheduleData, timeSlots, classes, subjects,
       )}
     </>
   );
-});
+};
 
-RoutineDisplay.displayName = 'RoutineDisplay';
 export default RoutineDisplay;

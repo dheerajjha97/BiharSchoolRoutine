@@ -16,7 +16,7 @@ import PageHeader from "@/components/app/page-header";
 const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export default function Home() {
-  const { appState, updateState, isLoading, setIsLoading, handlePrintTeacherRoutine } = useContext(AppStateContext);
+  const { appState, updateState, isLoading, setIsLoading } = useContext(AppStateContext);
   const { toast } = useToast();
 
   const handleGenerateRoutine = async () => {
@@ -122,7 +122,7 @@ export default function Home() {
   };
 
   return (
-    <div className="space-y-6 no-print">
+    <div className="space-y-6">
        <PageHeader 
           title="Dashboard"
           description="Generate, view, and manage your school's class routine."
@@ -172,7 +172,6 @@ export default function Home() {
           teacherSubjects={appState.config.teacherSubjects}
           dailyPeriodQuota={appState.config.dailyPeriodQuota}
           teacherLoad={appState.teacherLoad}
-          onPrintTeacher={handlePrintTeacherRoutine}
         />
     </div>
   );

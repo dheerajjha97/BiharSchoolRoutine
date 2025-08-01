@@ -1,23 +1,46 @@
 
 "use client";
 
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, Printer } from "lucide-react";
+import { Users, FileDown } from "lucide-react";
 import { Button } from "../ui/button";
+import { PDFDownloadLink } from '@react-pdf/renderer';
+import RoutinePDFDocument from './RoutinePDFDocument';
+import type { GenerateScheduleOutput } from '@/ai/flows/generate-schedule';
 
 interface TeacherLoadProps {
   teacherLoad: Record<string, Record<string, number>>;
-  onPrintTeacher: (teacher: string) => void;
+  scheduleData: GenerateScheduleOutput;
+  timeSlots: string[];
 }
 
 const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Total"];
 
-export default function TeacherLoad({ teacherLoad, onPrintTeacher }: TeacherLoadProps) {
+export default function TeacherLoad({ teacherLoad, scheduleData, timeSlots }: TeacherLoadProps) {
+  const [isClient, setIsClient] = useState(false);
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   const teachers = Object.keys(teacherLoad).sort();
 
   if (teachers.length === 0) {
     return null;
+  }
+  
+  const getSingleTeacherData = (teacherName: string) => {
+    const teacherScheduleEntries = scheduleData.schedule.filter(entry => entry.teacher.includes(teacherName));
+    const scheduleByDayTime: Record<string, Record<string, { className: string, subject: string }>> = {};
+      teacherScheduleEntries.forEach(entry => {
+          if (!scheduleByDayTime[entry.day]) scheduleByDayTime[entry.day] = {};
+          scheduleByDayTime[entry.day][entry.timeSlot] = { className: entry.className, subject: entry.subject };
+      });
+    return {
+      teacherName,
+      schedule: scheduleByDayTime,
+    }
   }
 
   return (
@@ -28,7 +51,7 @@ export default function TeacherLoad({ teacherLoad, onPrintTeacher }: TeacherLoad
               <Users className="h-5 w-5 text-primary" />
               Teacher Workload
           </CardTitle>
-          <CardDescription>Number of classes assigned per teacher per day. You can print individual routines from here.</CardDescription>
+          <CardDescription>Number of classes assigned per teacher per day. You can download individual routines from here.</CardDescription>
         </CardHeader>
         <CardContent>
           <h3 className="hidden">Teacher Workload Summary</h3>
@@ -53,9 +76,27 @@ export default function TeacherLoad({ teacherLoad, onPrintTeacher }: TeacherLoad
                       </TableCell>
                     ))}
                     <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => onPrintTeacher(teacher)}>
-                          <Printer className="h-4 w-4" />
-                        </Button>
+                       {isClient && (
+                          <PDFDownloadLink
+                              document={
+                                  <RoutinePDFDocument 
+                                      scheduleData={scheduleData}
+                                      timeSlots={timeSlots}
+                                      classes={[]}
+                                      teacherLoad={{}}
+                                      title={`Routine for ${teacher}`}
+                                      singleTeacherData={getSingleTeacherData(teacher)}
+                                  />
+                              }
+                              fileName={`routine-${teacher.replace(/\s+/g, '-')}.pdf`}
+                          >
+                            {({ loading }) => (
+                                <Button variant="ghost" size="icon" disabled={loading}>
+                                  <FileDown className="h-4 w-4" />
+                                </Button>
+                            )}
+                          </PDFDownloadLink>
+                       )}
                       </TableCell>
                   </TableRow>
                 ))}

@@ -3,9 +3,9 @@
 
 import { createContext, useState, useEffect, useMemo, useRef, useCallback, ChangeEvent } from "react";
 import { useToast } from "@/hooks/use-toast";
-import type { GenerateScheduleOutput, ScheduleEntry } from "@/ai/flows/generate-schedule";
+import type { GenerateScheduleOutput } from "@/ai/flows/generate-schedule";
 import type { SubjectCategory, SubjectPriority } from "@/lib/schedule-generator";
-import { sortClasses, sortTimeSlots } from "@/lib/utils";
+import { sortTimeSlots } from "@/lib/utils";
 
 type Unavailability = {
   teacher: string;
@@ -27,12 +27,7 @@ export type SchoolConfig = {
   dailyPeriodQuota: number;
 };
 
-type TeacherLoad = Record<string, Record<string, number>>;
-
-type TeacherRoutine = {
-    teacherName: string;
-    schedule: Record<string, Record<string, { className: string, subject: string }>>;
-};
+export type TeacherLoad = Record<string, Record<string, number>>;
 
 type AppState = {
   teachers: string[];
@@ -42,7 +37,6 @@ type AppState = {
   config: SchoolConfig;
   routine: GenerateScheduleOutput | null;
   teacherLoad: TeacherLoad;
-  teacherRoutineForPrint: TeacherRoutine | null;
 }
 
 interface AppStateContextType {
@@ -56,7 +50,6 @@ interface AppStateContextType {
   handleSaveBackup: () => void;
   handleImportBackup: () => void;
   handleClearRoutine: () => void;
-  handlePrintTeacherRoutine: (teacherName: string | null) => void;
 }
 
 export const AppStateContext = createContext<AppStateContextType>({} as AppStateContextType);
@@ -90,38 +83,7 @@ const DEFAULT_APP_STATE: AppState = {
   },
   routine: null,
   teacherLoad: {},
-  teacherRoutineForPrint: null,
 };
-
-const getGradeFromClassName = (className: string): string | null => {
-    if (typeof className !== 'string') return null;
-    const match = className.match(/\d+/);
-    return match ? match[0] : null;
-};
-
-const categorizeClasses = (classes: string[]) => {
-    const sorted = [...classes].sort(sortClasses);
-    const secondary = sorted.filter(c => ['9', '10'].includes(getGradeFromClassName(c) || ''));
-    const seniorSecondary = sorted.filter(c => ['11', '12'].includes(getGradeFromClassName(c) || ''));
-    return { 
-        secondaryClasses: secondary, 
-        seniorSecondaryClasses: seniorSecondary 
-    };
-};
-
-const toRoman = (num: number): string => {
-    if (num < 1) return "";
-    const romanMap: Record<number, string> = { 10: 'X', 9: 'IX', 5: 'V', 4: 'IV', 1: 'I' };
-    let result = '';
-    for (const val of [10, 9, 5, 4, 1]) {
-        while (num >= val) {
-            result += romanMap[val];
-            num -= val;
-        }
-    }
-    return result;
-};
-
 
 export const AppStateProvider = ({ children }: { children: React.ReactNode }) => {
   const [appState, setAppState] = useState<AppState>(DEFAULT_APP_STATE);
@@ -187,7 +149,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   useEffect(() => {
     if (isStateLoaded) {
       try {
-        const stateToSave = { ...appState, teacherLoad: {}, teacherRoutineForPrint: null }; // Don't save computed/temporary state
+        const stateToSave = { ...appState, teacherLoad: {} }; // Don't save computed state
         const appStateJSON = JSON.stringify(stateToSave);
         localStorage.setItem("biharSchoolRoutineState_v2", appStateJSON);
       } catch (error) {
@@ -257,7 +219,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   
   const handleSaveBackup = useCallback(() => {
     try {
-      const stateToSave = { ...appState, teacherLoad: {}, teacherRoutineForPrint: null }; // Don't save computed/temporary state
+      const stateToSave = { ...appState, teacherLoad: {} };
       const jsonString = JSON.stringify(stateToSave, null, 2);
       const blob = new Blob([jsonString], { type: "application/json" });
       const link = document.createElement("a");
@@ -307,186 +269,9 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       updateState('routine', null);
       toast({ title: "Routine Cleared", description: "The generated routine has been removed." });
   }, [updateState, toast]);
-  
-  const handlePrintTeacherRoutine = (teacherName: string | null) => {
-    const { routine, timeSlots, classes, teacherLoad } = appState;
-    if (!routine?.schedule) {
-        toast({ variant: "destructive", title: "No routine available to print." });
-        return;
-    }
-
-    const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    let printContent = '';
-    let title = "Class Routine – Session 2025–26";
-
-    if (teacherName) {
-      title = `Routine for ${teacherName}`;
-      const teacherScheduleEntries = routine.schedule.filter(entry => entry.teacher.includes(teacherName));
-      const scheduleByDayTime: Record<string, Record<string, { className: string, subject: string }>> = {};
-      teacherScheduleEntries.forEach(entry => {
-          if (!scheduleByDayTime[entry.day]) scheduleByDayTime[entry.day] = {};
-          scheduleByDayTime[entry.day][entry.timeSlot] = { className: entry.className, subject: entry.subject };
-      });
-       printContent = `
-          <h2>${title}</h2>
-          <table>
-              <thead>
-                  <tr>
-                      <th>Day / Time</th>
-                      ${timeSlots.map(slot => `<th>${slot}</th>`).join('')}
-                  </tr>
-              </thead>
-              <tbody>
-                  ${daysOfWeek.map(day => `
-                      <tr>
-                          <td class="day-header">${day}</td>
-                          ${timeSlots.map(slot => {
-                              const entry = scheduleByDayTime[day]?.[slot];
-                              const content = entry ? `<div><b>${entry.subject}</b></div><div>${entry.className}</div>` : '---';
-                              return `<td>${content}</td>`;
-                          }).join('')}
-                      </tr>
-                  `).join('')}
-              </tbody>
-          </table>
-      `;
-    } else {
-      // Print all routines
-      const { secondaryClasses, seniorSecondaryClasses } = categorizeClasses(classes);
-
-      const instructionalSlotMap: { [timeSlot: string]: number } = {};
-      let periodCounter = 1;
-      timeSlots.forEach(slot => {
-        if (!routine?.schedule?.find(e => e.timeSlot === slot && (e.subject === 'Prayer' || e.subject === 'Lunch'))) {
-            instructionalSlotMap[slot] = periodCounter++;
-        }
-      });
-      
-      const gridSchedule: Record<string, Record<string, Record<string, ScheduleEntry[]>>> = {};
-      daysOfWeek.forEach(day => {
-          gridSchedule[day] = {};
-          classes.forEach(c => {
-              gridSchedule[day][c] = {};
-              timeSlots.forEach(slot => { gridSchedule[day][c][slot] = []; });
-          });
-      });
-      routine.schedule.forEach(entry => {
-          entry.className.split(' & ').map(c => c.trim()).forEach(className => {
-              if (gridSchedule[entry.day]?.[className]?.[entry.timeSlot]) {
-                gridSchedule[entry.day][className][entry.timeSlot].push(entry);
-              }
-          });
-      });
-
-      const renderScheduleTable = (tableTitle: string, displayClasses: string[]) => {
-        if(displayClasses.length === 0) return '';
-        return `
-            <div class="break-after-page">
-              <h3>${tableTitle}</h3>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Day</th>
-                    <th>Class</th>
-                    ${timeSlots.map(slot => `<th>${slot}<br><span class="roman">${instructionalSlotMap[slot] ? toRoman(instructionalSlotMap[slot]) : '-'}</span></th>`).join('')}
-                  </tr>
-                </thead>
-                <tbody>
-                  ${daysOfWeek.map(day => 
-                    displayClasses.map((className, classIndex) => `
-                      <tr>
-                        ${classIndex === 0 ? `<td class="day-header" rowspan="${displayClasses.length}">${day}</td>` : ''}
-                        <td>${className}</td>
-                        ${timeSlots.map(timeSlot => {
-                          const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
-                          const cellContent = entries.map(e => {
-                            if (e.subject === '---') return '<span class="no-content">---</span>';
-                            let content = `<b>${e.subject}</b>`;
-                            if (e.teacher !== 'N/A') content += `<br><small>${e.teacher}</small>`;
-                            if (e.className.includes('&')) content += `<br><i>(Combined)</i>`;
-                            return content;
-                          }).join(' / ');
-                          return `<td>${cellContent}</td>`;
-                        }).join('')}
-                      </tr>
-                    `).join('')
-                  ).join('')}
-                </tbody>
-              </table>
-            </div>
-        `;
-      };
-      
-      const renderTeacherLoad = () => {
-         const sortedTeachers = Object.keys(teacherLoad).sort();
-         if(sortedTeachers.length === 0) return '';
-         return `
-            <div class="break-after-page">
-              <h3>Teacher Workload Summary</h3>
-              <table>
-                <thead>
-                   <tr>
-                    <th>Teacher</th>
-                    ${daysOfWeek.map(day => `<th>${day.substring(0,3)}</th>`).join('')}
-                  </tr>
-                </thead>
-                <tbody>
-                  ${sortedTeachers.map(teacher => `
-                    <tr>
-                      <td>${teacher}</td>
-                      ${daysOfWeek.map(day => `<td>${teacherLoad[teacher]?.[day] ?? 0}</td>`).join('')}
-                    </tr>
-                  `).join('')}
-                </tbody>
-              </table>
-            </div>
-         `;
-      };
-
-      printContent = `
-        <h2>${title}</h2>
-        ${renderScheduleTable("Secondary", secondaryClasses)}
-        ${renderScheduleTable("Senior Secondary", seniorSecondaryClasses)}
-        ${renderTeacherLoad()}
-      `;
-    }
-
-    const newWindow = window.open('', '_blank');
-    if (newWindow) {
-        newWindow.document.write(`
-          <html>
-            <head>
-              <title>${title}</title>
-              <style>
-                @page { size: A4 landscape; margin: 0.5in; }
-                body { font-family: sans-serif; font-size: 9pt; }
-                h2, h3 { text-align: center; margin: 1rem 0; }
-                table { width: 100%; border-collapse: collapse; margin-bottom: 2rem; }
-                th, td { border: 1px solid #ccc; padding: 4px; text-align: center; word-break: break-word; }
-                th { font-weight: bold; background-color: #f2f2f2; }
-                td.day-header { text-align: left; font-weight: bold; vertical-align: middle; font-size: 9pt; }
-                .roman { font-size: 7pt; color: #666; }
-                .no-content { color: #999; }
-                .break-after-page { page-break-after: always; }
-                @media print {
-                  body {
-                    -webkit-print-color-adjust: exact;
-                    print-color-adjust: exact;
-                  }
-                }
-              </style>
-            </head>
-            <body onload="window.print()">
-              ${printContent}
-            </body>
-          </html>
-        `);
-        newWindow.document.close();
-    }
-  };
 
   return (
-    <AppStateContext.Provider value={{ appState, updateState, updateConfig, isLoading, setIsLoading, handleSaveConfig, handleImportConfig, handleSaveBackup, handleImportBackup, handleClearRoutine, handlePrintTeacherRoutine }}>
+    <AppStateContext.Provider value={{ appState, updateState, updateConfig, isLoading, setIsLoading, handleSaveConfig, handleImportConfig, handleSaveBackup, handleImportBackup, handleClearRoutine }}>
       {children}
       <input
         type="file"
@@ -505,5 +290,3 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     </AppStateContext.Provider>
   );
 };
-
-    

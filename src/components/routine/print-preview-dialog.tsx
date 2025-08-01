@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useRef, useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -63,6 +64,32 @@ const PrintableTeacherRoutine = React.forwardRef<HTMLDivElement>((props, ref) =>
 });
 PrintableTeacherRoutine.displayName = "PrintableTeacherRoutine";
 
+const PrintableContentPortal = ({ children }: { children: React.ReactNode }) => {
+  const [container, setContainer] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    let portalRoot = document.getElementById('printable-area');
+    if (!portalRoot) {
+      portalRoot = document.createElement('div');
+      portalRoot.id = 'printable-area';
+      portalRoot.className = 'hidden'; 
+      document.body.appendChild(portalRoot);
+    }
+    setContainer(portalRoot);
+
+    return () => {
+      if (portalRoot && document.body.contains(portalRoot)) {
+        // Don't remove on unmount, just clear content
+        // This avoids issues with React lifecycle and print jobs
+      }
+    };
+  }, []);
+
+  if (!container) return null;
+
+  return createPortal(children, container);
+};
+
 
 const PrintPreviewDialog: React.FC<PrintPreviewDialogProps> = ({ isOpen, onOpenChange, contentRef, title }) => {
   const { appState, updateState } = useContext(AppStateContext);
@@ -87,6 +114,10 @@ const PrintPreviewDialog: React.FC<PrintPreviewDialogProps> = ({ isOpen, onOpenC
     @page {
       size: ${orientation};
       margin: ${margins.top}cm ${margins.right}cm ${margins.bottom}cm ${margins.left}cm;
+    }
+    body {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
     }
   `, [margins, orientation]);
 
@@ -116,10 +147,21 @@ const PrintPreviewDialog: React.FC<PrintPreviewDialogProps> = ({ isOpen, onOpenC
     return null;
   };
 
+  const contentToPrint = (
+    <>
+      <style>{pageStyle}</style>
+      <h2 className="text-2xl font-bold text-center mb-4">{title}</h2>
+      <div style={{ transform: `scale(${scale / 100})`, transformOrigin: 'top left' }}>
+          {renderContent()}
+      </div>
+    </>
+  );
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-7xl h-[95vh] flex flex-col">
-        <style>{pageStyle}</style>
+        {isOpen && <PrintableContentPortal>{contentToPrint}</PrintableContentPortal>}
+
         <DialogHeader className="no-print">
           <DialogTitle>Print Preview: {title}</DialogTitle>
         </DialogHeader>
@@ -191,15 +233,6 @@ const PrintPreviewDialog: React.FC<PrintPreviewDialogProps> = ({ isOpen, onOpenC
                 </div>
             </div>
           </div>
-          
-          {/* Hidden printable content */}
-          <div id="printable-area" className="hidden print:block">
-            <h2 className="text-2xl font-bold text-center mb-4">{title}</h2>
-            <div style={{ transform: `scale(${scale / 100})`, transformOrigin: 'top left' }}>
-                {renderContent()}
-            </div>
-          </div>
-
         </div>
 
         <DialogFooter className="no-print pt-4">

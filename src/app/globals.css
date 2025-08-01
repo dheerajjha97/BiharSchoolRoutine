@@ -66,24 +66,18 @@
     print-color-adjust: exact;
   }
 
-  .no-print, 
-  .no-print * {
+  body > *:not(#printable-area) {
     display: none !important;
   }
-  
-  body * {
-    visibility: hidden;
-  }
-  
-  #printable-area, #printable-area * {
-    visibility: visible;
-  }
-  
+
   #printable-area {
+    display: block !important;
     position: absolute;
-    left: 0;
     top: 0;
+    left: 0;
     width: 100%;
+    height: auto;
+    visibility: visible;
   }
 
   table {

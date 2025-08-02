@@ -58,9 +58,9 @@ interface AppStateContextType {
 export const AppStateContext = createContext<AppStateContextType>({} as AppStateContextType);
 
 const DEFAULT_APP_STATE: AppState = {
-  teachers: ["Mr. Sharma", "Mrs. Gupta", "Ms. Singh", "Mr. Kumar"],
-  classes: ["Class 9A", "Class 9B", "Class 10A", "Class 10B", "Class 11A", "Class 12A"],
-  subjects: ["Math", "Science", "English", "History", "Physics", "Chemistry", "Biology", "Computer Science"],
+  teachers: ["Mr. Sharma", "Mrs. Gupta", "Ms. Singh", "Mr. Kumar", "Mrs. Roy", "Mr. Das"],
+  classes: ["Class 9A", "Class 9B", "Class 10A", "Class 10B", "Class 11 Sci", "Class 12 Sci"],
+  subjects: ["Math", "Science", "English", "History", "Physics", "Chemistry", "Biology", "Computer Science", "Hindi"],
   timeSlots: [
     "09:00 - 09:45",
     "09:45 - 10:30",
@@ -77,21 +77,25 @@ const DEFAULT_APP_STATE: AppState = {
       "Mr. Sharma": ["Math", "Physics"],
       "Mrs. Gupta": ["English", "History"],
       "Ms. Singh": ["Science", "Biology", "Chemistry"],
-      "Mr. Kumar": ["Computer Science"]
+      "Mr. Kumar": ["Computer Science", "Math"],
+      "Mrs. Roy": ["Hindi", "History"],
+      "Mr. Das": ["Physics", "Chemistry"]
     },
     teacherClasses: {
-        "Mr. Sharma": ["Class 10A", "Class 10B", "Class 11A", "Class 12A"],
+        "Mr. Sharma": ["Class 10A", "Class 10B", "Class 11 Sci", "Class 12 Sci"],
         "Mrs. Gupta": ["Class 9A", "Class 9B", "Class 10A", "Class 10B"],
-        "Ms. Singh": ["Class 9A", "Class 9B", "Class 10A", "Class 11A"],
-        "Mr. Kumar": ["Class 11A", "Class 12A"],
+        "Ms. Singh": ["Class 9A", "Class 9B", "Class 10A", "Class 11 Sci"],
+        "Mr. Kumar": ["Class 9A", "Class 10A", "Class 11 Sci", "Class 12 Sci"],
+        "Mrs. Roy": ["Class 9A", "Class 9B"],
+        "Mr. Das": ["Class 11 Sci", "Class 12 Sci"],
     },
     classRequirements: {
-        "Class 9A": ["Math", "Science", "English", "History"],
-        "Class 9B": ["Math", "Science", "English", "History"],
-        "Class 10A": ["Math", "Science", "English", "History"],
-        "Class 10B": ["Math", "Science", "English", "History"],
-        "Class 11A": ["Physics", "Chemistry", "Math", "English", "Computer Science"],
-        "Class 12A": ["Physics", "Biology", "Math", "English", "Computer Science"],
+        "Class 9A": ["Math", "Science", "English", "History", "Hindi"],
+        "Class 9B": ["Math", "Science", "English", "History", "Hindi"],
+        "Class 10A": ["Math", "Science", "English", "History", "Hindi"],
+        "Class 10B": ["Math", "Science", "English", "History", "Hindi"],
+        "Class 11 Sci": ["Physics", "Chemistry", "Math", "English", "Computer Science"],
+        "Class 12 Sci": ["Physics", "Biology", "Math", "English", "Computer Science"],
     },
     subjectCategories: {
         "Math": "main",
@@ -101,7 +105,8 @@ const DEFAULT_APP_STATE: AppState = {
         "Physics": "main",
         "Chemistry": "main",
         "Biology": "main",
-        "Computer Science": "additional"
+        "Computer Science": "additional",
+        "Hindi": "additional",
     },
     subjectPriorities: {
         "Math": "before",
@@ -205,7 +210,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       try {
         toast({ title: "Loading data...", description: "Fetching your saved data from Google Drive." });
         const loadedState = await driveService.loadBackup();
-        if (loadedState) {
+        if (loadedState && loadedState.teachers && loadedState.teachers.length > 0) {
           const mergedConfig = { ...DEFAULT_APP_STATE.config, ...loadedState.config };
           const mergedState = { ...DEFAULT_APP_STATE, ...loadedState, config: mergedConfig };
           if(mergedState.timeSlots) {
@@ -215,11 +220,11 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
           toast({ title: "Data Loaded Successfully", description: "Your data has been restored from Google Drive." });
         } else {
             setAppState(DEFAULT_APP_STATE);
-            toast({ title: "No backup found", description: "Starting with a fresh slate. Your work will be saved automatically." });
+            toast({ title: "No backup found", description: "Starting with sample data. Your work will be saved automatically." });
         }
       } catch (error) {
         console.error("Failed to load state from Google Drive:", error);
-        toast({ variant: "destructive", title: "Load Failed", description: "Could not load data from Google Drive. Starting with a blank slate." });
+        toast({ variant: "destructive", title: "Load Failed", description: "Could not load data. Using sample data." });
         setAppState(DEFAULT_APP_STATE);
       } finally {
         setIsLoading(false);

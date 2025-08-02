@@ -58,19 +58,59 @@ interface AppStateContextType {
 export const AppStateContext = createContext<AppStateContextType>({} as AppStateContextType);
 
 const DEFAULT_APP_STATE: AppState = {
-  teachers: [],
-  classes: [],
-  subjects: [],
-  timeSlots: [],
+  teachers: ["Mr. Sharma", "Mrs. Gupta", "Ms. Singh", "Mr. Kumar"],
+  classes: ["Class 9A", "Class 9B", "Class 10A", "Class 10B", "Class 11A", "Class 12A"],
+  subjects: ["Math", "Science", "English", "History", "Physics", "Chemistry", "Biology", "Computer Science"],
+  timeSlots: [
+    "09:00 - 09:45",
+    "09:45 - 10:30",
+    "10:30 - 11:15",
+    "11:15 - 11:30", // Prayer
+    "11:30 - 12:15",
+    "12:15 - 01:00",
+    "01:00 - 01:45", // Lunch
+    "01:45 - 02:30",
+    "02:30 - 03:15"
+  ],
   config: {
-    classRequirements: {},
-    subjectPriorities: {},
+    teacherSubjects: {
+      "Mr. Sharma": ["Math", "Physics"],
+      "Mrs. Gupta": ["English", "History"],
+      "Ms. Singh": ["Science", "Biology", "Chemistry"],
+      "Mr. Kumar": ["Computer Science"]
+    },
+    teacherClasses: {
+        "Mr. Sharma": ["Class 10A", "Class 10B", "Class 11A", "Class 12A"],
+        "Mrs. Gupta": ["Class 9A", "Class 9B", "Class 10A", "Class 10B"],
+        "Ms. Singh": ["Class 9A", "Class 9B", "Class 10A", "Class 11A"],
+        "Mr. Kumar": ["Class 11A", "Class 12A"],
+    },
+    classRequirements: {
+        "Class 9A": ["Math", "Science", "English", "History"],
+        "Class 9B": ["Math", "Science", "English", "History"],
+        "Class 10A": ["Math", "Science", "English", "History"],
+        "Class 10B": ["Math", "Science", "English", "History"],
+        "Class 11A": ["Physics", "Chemistry", "Math", "English", "Computer Science"],
+        "Class 12A": ["Physics", "Biology", "Math", "English", "Computer Science"],
+    },
+    subjectCategories: {
+        "Math": "main",
+        "Science": "main",
+        "English": "main",
+        "History": "additional",
+        "Physics": "main",
+        "Chemistry": "main",
+        "Biology": "main",
+        "Computer Science": "additional"
+    },
+    subjectPriorities: {
+        "Math": "before",
+        "Physics": "before",
+        "Science": "before"
+    },
     unavailability: [],
-    teacherSubjects: {},
-    teacherClasses: {},
-    subjectCategories: {},
-    prayerTimeSlot: "",
-    lunchTimeSlot: "",
+    prayerTimeSlot: "11:15 - 11:30",
+    lunchTimeSlot: "01:00 - 01:45",
     preventConsecutiveClasses: true,
     enableCombinedClasses: false,
     dailyPeriodQuota: 5,

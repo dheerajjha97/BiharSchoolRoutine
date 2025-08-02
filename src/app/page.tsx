@@ -13,7 +13,7 @@ import type { GenerateScheduleLogicInput } from "@/lib/schedule-generator";
 import type { ScheduleEntry } from "@/ai/flows/generate-schedule";
 import PageHeader from "@/components/app/page-header";
 
-const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const daysOfWeek: ScheduleEntry['day'][] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export default function Home() {
   const { appState, updateState, isLoading, setIsLoading } = useContext(AppStateContext);

@@ -32,7 +32,7 @@ export type SchoolConfig = {
 
 export type TeacherLoad = Record<string, Record<string, number>>;
 
-type AppState = {
+export type AppState = {
   teachers: string[];
   classes: string[];
   subjects: string[];
@@ -45,6 +45,7 @@ type AppState = {
 interface AppStateContextType {
   appState: AppState;
   updateState: <K extends keyof AppState>(key: K, value: AppState[K]) => void;
+  setFullState: (newState: AppState) => void;
   updateConfig: <K extends keyof SchoolConfig>(key: K, value: SchoolConfig[K]) => void;
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
@@ -164,6 +165,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 
   useEffect(() => {
     updateState('teacherLoad', calculatedTeacherLoad);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [calculatedTeacherLoad]);
 
   const saveStateToDrive = useCallback(async (showToast = false) => {
@@ -205,21 +207,25 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     }
   }, [appState, user, debouncedSave]);
   
+  const setFullState = (newState: AppState) => {
+    // Merge loaded config with default config to ensure new properties are present
+    const mergedConfig = { ...DEFAULT_APP_STATE.config, ...newState.config };
+    // Merge loaded state with default state
+    const mergedState = { ...DEFAULT_APP_STATE, ...newState, config: mergedConfig };
+    
+    if(mergedState.timeSlots) {
+      mergedState.timeSlots = sortTimeSlots(mergedState.timeSlots);
+    }
+    setAppState(mergedState);
+  };
+  
   const loadStateFromDrive = useCallback(async (driveService: GoogleDriveService) => {
       setIsLoading(true);
       try {
         toast({ title: "Loading data...", description: "Fetching your saved data from Google Drive." });
         const loadedState = await driveService.loadBackup();
         if (loadedState && loadedState.teachers && loadedState.teachers.length > 0) {
-          // Merge loaded config with default config to ensure new properties are present
-          const mergedConfig = { ...DEFAULT_APP_STATE.config, ...loadedState.config };
-          // Merge loaded state with default state
-          const mergedState = { ...DEFAULT_APP_STATE, ...loadedState, config: mergedConfig };
-          
-          if(mergedState.timeSlots) {
-            mergedState.timeSlots = sortTimeSlots(mergedState.timeSlots);
-          }
-          setAppState(mergedState);
+          setFullState(loadedState);
           toast({ title: "Data Loaded Successfully", description: "Your data has been restored from Google Drive." });
         } else {
             // If no backup, or backup is empty, start with default data
@@ -273,6 +279,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       setIsAuthLoading(false);
     });
     return () => unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadStateFromDrive, toast, handleLogout]);
 
   const updateState = useCallback(<K extends keyof AppState>(key: K, value: AppState[K]) => {
@@ -326,6 +333,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     <AppStateContext.Provider value={{ 
         appState, 
         updateState, 
+        setFullState,
         updateConfig, 
         isLoading, 
         setIsLoading,

@@ -8,67 +8,62 @@ import DataManager from "@/components/routine/data-manager";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Upload, Download, User, School, Book, Clock } from "lucide-react";
-import { importFromCsv, exportToCsv } from "@/lib/csv-helpers";
+import { importFromJSON, exportToJSON } from "@/lib/csv-helpers";
 import PageHeader from "@/components/app/page-header";
 
 export default function DataManagementPage() {
-    const { appState, updateState } = useContext(AppStateContext);
+    const { appState, updateState, setFullState } = useContext(AppStateContext);
     const { teachers, classes, subjects, timeSlots } = appState;
     const { toast } = useToast();
-    const csvInputRef = useRef<HTMLInputElement>(null);
+    const jsonInputRef = useRef<HTMLInputElement>(null);
 
-    const handleExportCsv = () => {
+    const handleExportJson = () => {
         try {
-            exportToCsv({ teachers, classes, subjects, timeSlots }, "school-data.csv");
+            exportToJSON(appState, "school-data.json");
             toast({ title: "Data exported successfully!" });
         } catch (error) {
             toast({ variant: "destructive", title: "Export failed", description: "Could not export the data." });
         }
     };
 
-    const handleImportCsvClick = () => {
-        csvInputRef.current?.click();
+    const handleImportJsonClick = () => {
+        jsonInputRef.current?.click();
     };
 
-    const handleFileImportCsv = async (event: ChangeEvent<HTMLInputElement>) => {
+    const handleFileImportJson = async (event: ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
 
         try {
-            const data = await importFromCsv(file);
-            // Reset routine when importing data
-            updateState('routine', null); 
-            if (data.teachers) updateState('teachers', data.teachers);
-            if (data.classes) updateState('classes', data.classes);
-            if (data.subjects) updateState('subjects', data.subjects);
-            if (data.timeSlots) updateState('timeSlots', data.timeSlots);
-            toast({ title: "Data imported successfully!", description: "Your routine has been cleared as the data has changed." });
+            const data = await importFromJSON(file);
+            setFullState(data);
+            toast({ title: "Data imported successfully!", description: "Your entire school data and configuration has been restored." });
         } catch (error) {
-            toast({ variant: "destructive", title: "Import failed", description: error instanceof Error ? error.message : "Could not parse the CSV file." });
+            toast({ variant: "destructive", title: "Import failed", description: error instanceof Error ? error.message : "Could not parse the JSON file." });
         }
         // Reset the file input so the same file can be selected again
-        if(csvInputRef.current) csvInputRef.current.value = "";
+        if(jsonInputRef.current) jsonInputRef.current.value = "";
     };
 
     return (
         <div className="space-y-6">
             <PageHeader 
                 title="Data Management"
-                description="Manage the core data for your school. Add or remove teachers, classes, subjects, and time slots."
+                description="Manage the core data for your school. You can also export your entire configuration (including routines) as a JSON file to share or as a backup."
             />
              <div className="flex items-center gap-2">
                 <input
                     type="file"
-                    ref={csvInputRef}
-                    onChange={handleFileImportCsv}
+                    ref={jsonInputRef}
+                    onChange={handleFileImportJson}
                     className="hidden"
-                    accept=".csv, text/csv"
+                    accept=".json, application/json"
                 />
-                <Button variant="outline" onClick={handleImportCsvClick}>
-                    <Upload className="mr-2 h-4 w-4" /> Import from CSV
+                <Button variant="outline" onClick={handleImportJsonClick}>
+                    <Upload className="mr-2 h-4 w-4" /> Import from JSON
                 </Button>
-                <Button variant="outline" onClick={handleExportCsv}>
-                    <Download className="mr-2 h-4 w-4" /> Export to CSV
+                <Button variant="outline" onClick={handleExportJson}>
+                    <Download className="mr-2 h-4 w-4" /> Export to JSON
                 </Button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">

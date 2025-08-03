@@ -10,6 +10,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Logo } from "@/components/icons";
+import { useTheme } from "next-themes";
 import {
   Menu,
   LayoutDashboard,
@@ -17,7 +18,9 @@ import {
   SlidersHorizontal,
   LogIn,
   LogOut,
-  Loader2
+  Loader2,
+  Moon,
+  Sun
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +29,22 @@ const navItems = [
   { href: "/data", label: "Data Management", icon: Database },
   { href: "/config", label: "Configuration", icon: SlidersHorizontal },
 ];
+
+function ThemeToggle() {
+    const { setTheme, theme } = useTheme();
+
+    return (
+        <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+        >
+            <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+            <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+            <span className="sr-only">Toggle theme</span>
+        </Button>
+    );
+}
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -39,13 +58,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   } = useContext(AppStateContext);
 
   const authControls = (
-    <div className="flex items-center gap-4">
+    <div className="flex items-center gap-2">
       {isSyncing && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
             <span>Syncing...</span>
         </div>
       )}
+       <ThemeToggle />
       {user ? (
         <>
           <Avatar className="h-8 w-8">

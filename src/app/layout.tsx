@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { AppStateProvider } from '@/context/app-state-provider';
 import AppShell from '@/components/app/app-shell';
 import { Inter } from 'next/font/google';
+import { ThemeProvider } from '@/components/app/theme-provider';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -48,12 +49,19 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <AppStateProvider>
-          <AppShell>
-            {children}
-          </AppShell>
-        </AppStateProvider>
-        <Toaster />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <AppStateProvider>
+            <AppShell>
+              {children}
+            </AppShell>
+          </AppStateProvider>
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );

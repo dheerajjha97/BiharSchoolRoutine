@@ -228,14 +228,14 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
           setFullState(loadedState);
           toast({ title: "Data Loaded Successfully", description: "Your data has been restored from Google Drive." });
         } else {
-            // If no backup, or backup is empty, start with default data
             setAppState(DEFAULT_APP_STATE);
             toast({ title: "No backup found", description: "Starting with sample data. Your work will be saved automatically." });
+            await driveService.saveBackup(DEFAULT_APP_STATE);
         }
       } catch (error) {
         console.error("Failed to load state from Google Drive:", error);
         toast({ variant: "destructive", title: "Load Failed", description: "Could not load data. Using default sample data." });
-        setAppState(DEFAULT_APP_STATE); // Fallback to default state on error
+        setAppState(DEFAULT_APP_STATE);
       } finally {
         setIsLoading(false);
       }
@@ -257,20 +257,8 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setIsAuthLoading(true);
       if (user) {
         setUser(user);
-        try {
-            if (!driveServiceRef.current) {
-                driveServiceRef.current = new GoogleDriveService();
-            }
-            await driveServiceRef.current.init();
-            await loadStateFromDrive(driveServiceRef.current);
-        } catch (error) {
-            console.error("Error initializing Google Drive service:", error);
-            toast({ variant: "destructive", title: "Google Drive Error", description: "Could not connect to Google Drive."});
-            handleLogout(false);
-        }
       } else {
         setUser(null);
         driveServiceRef.current = null;
@@ -279,8 +267,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       setIsAuthLoading(false);
     });
     return () => unsubscribe();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadStateFromDrive, toast, handleLogout]);
+  }, []);
 
   const updateState = useCallback(<K extends keyof AppState>(key: K, value: AppState[K]) => {
     setAppState(prevState => {
@@ -288,7 +275,6 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       if (key === 'timeSlots' && Array.isArray(value)) {
         newState.timeSlots = sortTimeSlots(value as string[]);
       }
-      // If the fundamental data changes, the routine is no longer valid.
       if (['teachers', 'classes', 'subjects', 'timeSlots'].includes(key as string)) {
           newState.routine = null;
           newState.teacherLoad = {};
@@ -301,7 +287,6 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
      setAppState(prevState => ({
         ...prevState,
         config: { ...prevState.config, [key]: value },
-        // Also invalidate the routine when config changes
         routine: null, 
         teacherLoad: {},
     }));
@@ -312,17 +297,25 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     const provider = new GoogleAuthProvider();
     provider.addScope('https://www.googleapis.com/auth/drive.file');
     try {
-      await signInWithPopup(auth, provider);
-      // onAuthStateChanged will handle the rest
+      const result = await signInWithPopup(auth, provider);
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      if (credential) {
+        const token = credential.accessToken;
+        if (token) {
+          if (!driveServiceRef.current) {
+            driveServiceRef.current = new GoogleDriveService();
+          }
+          await driveServiceRef.current.init(token);
+          await loadStateFromDrive(driveServiceRef.current);
+        }
+      }
     } catch (error: any) {
        if (error.code === 'auth/popup-closed-by-user') {
-        // Don't show a toast for this expected user action.
         console.log("Sign-in popup closed by user.");
       } else {
         console.error("Google Sign-In Error:", error);
         toast({ variant: "destructive", title: "Login Failed", description: "Could not sign in with Google." });
       }
-      // Make sure to turn off loading on any error/cancellation
       setIsAuthLoading(false); 
     }
   };

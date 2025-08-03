@@ -16,11 +16,13 @@ export default function DataManagementPage() {
     const { teachers, classes, subjects, timeSlots } = appState;
     const { toast } = useToast();
     const jsonInputRef = useRef<HTMLInputElement>(null);
+    const backupExtension = ".bsr";
+    const backupFileName = `school-data${backupExtension}`;
 
     const handleExportJson = () => {
         try {
-            exportToJSON(appState, "school-data.json");
-            toast({ title: "Data exported successfully!" });
+            exportToJSON(appState, backupFileName);
+            toast({ title: "Backup file exported successfully!" });
         } catch (error) {
             toast({ variant: "destructive", title: "Export failed", description: "Could not export the data." });
         }
@@ -39,7 +41,7 @@ export default function DataManagementPage() {
             setFullState(data);
             toast({ title: "Data imported successfully!", description: "Your entire school data and configuration has been restored." });
         } catch (error) {
-            toast({ variant: "destructive", title: "Import failed", description: error instanceof Error ? error.message : "Could not parse the JSON file." });
+            toast({ variant: "destructive", title: "Import failed", description: error instanceof Error ? error.message : "Could not parse the backup file." });
         }
         // Reset the file input so the same file can be selected again
         if(jsonInputRef.current) jsonInputRef.current.value = "";
@@ -49,7 +51,7 @@ export default function DataManagementPage() {
         <div className="space-y-6">
             <PageHeader 
                 title="Data Management"
-                description="Manage the core data for your school. You can also export your entire configuration (including routines) as a JSON file to share or as a backup."
+                description={`Manage the core data for your school. You can also export your entire configuration (including routines) as a secure ${backupExtension} file to share or as a backup.`}
             />
              <div className="flex items-center gap-2">
                 <input
@@ -57,13 +59,13 @@ export default function DataManagementPage() {
                     ref={jsonInputRef}
                     onChange={handleFileImportJson}
                     className="hidden"
-                    accept=".json, application/json"
+                    accept={backupExtension}
                 />
                 <Button variant="outline" onClick={handleImportJsonClick}>
-                    <Upload className="mr-2 h-4 w-4" /> Import from JSON
+                    <Upload className="mr-2 h-4 w-4" /> Import from {backupExtension} File
                 </Button>
                 <Button variant="outline" onClick={handleExportJson}>
-                    <Download className="mr-2 h-4 w-4" /> Export to JSON
+                    <Download className="mr-2 h-4 w-4" /> Export to {backupExtension} File
                 </Button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">

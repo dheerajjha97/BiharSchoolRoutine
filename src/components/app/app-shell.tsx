@@ -71,7 +71,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   );
 
   const userProfileSection = user ? (
-    <div className="mt-auto p-4">
+    <div className="p-4">
       <Separator className="my-2" />
       <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary">
         <Avatar className="h-9 w-9">
@@ -85,6 +85,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </div>
     </div>
   ) : null;
+  
+  const creditSection = (
+      <div className="p-4 text-center text-xs text-muted-foreground">
+        <Separator className="my-2" />
+        <p>Created by Dheeraj Jha</p>
+      </div>
+  );
 
   const sidebarContent = (
     <div className="flex h-full flex-col">
@@ -106,7 +113,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
       </div>
-      {userProfileSection}
+      <div className="mt-auto">
+        {creditSection}
+        {userProfileSection}
+      </div>
     </div>
   );
 
@@ -138,7 +148,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
       </div>
-       {userProfileSection}
+       <div className="mt-auto">
+         {creditSection}
+         {userProfileSection}
+       </div>
     </div>
   );
 

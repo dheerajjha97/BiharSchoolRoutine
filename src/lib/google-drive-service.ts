@@ -25,10 +25,10 @@ export class GoogleDriveService {
 
   private loadGapiScript() {
     return new Promise<void>((resolve) => {
-      if (typeof window !== 'undefined' && window.gapi) {
-        this.gapiReady = true;
-        resolve();
-        return;
+      if (typeof window === 'undefined') return resolve();
+      if (window.gapi?.client) {
+          this.gapiReady = true;
+          return resolve();
       }
       const script = document.createElement('script');
       script.src = 'https://apis.google.com/js/api.js';
@@ -50,10 +50,18 @@ export class GoogleDriveService {
 
   private loadGisScript() {
     return new Promise<void>((resolve) => {
-       if (typeof window !== 'undefined' && window.google) {
+       if (typeof window === 'undefined') return resolve();
+       if (window.google?.accounts) {
         this.gisReady = true;
-        resolve();
-        return;
+        // Re-initialize token client if it doesn't exist
+        if (!window.tokenClient) {
+             window.tokenClient = window.google.accounts.oauth2.initTokenClient({
+                client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+                scope: SCOPES,
+                callback: '', // Callback is handled by the Promise in getToken
+            });
+        }
+        return resolve();
       }
       const script = document.createElement('script');
       script.src = 'https://accounts.google.com/gsi/client';
@@ -79,6 +87,10 @@ export class GoogleDriveService {
   
   private async getToken() {
       return new Promise<void>((resolve, reject) => {
+        if (typeof window === 'undefined' || !window.gapi || !window.tokenClient) {
+            return reject(new Error("Google API scripts not loaded."));
+        }
+        
         const token = window.gapi.client.getToken();
         if (token) {
             return resolve();
@@ -101,7 +113,7 @@ export class GoogleDriveService {
   }
   
   public isReady(): boolean {
-    return this.gapiReady && this.gisReady && !!window.gapi.client.getToken();
+    return this.gapiReady && this.gisReady && typeof window !== 'undefined' && !!window.gapi.client.getToken();
   }
 
   private async getFileId(): Promise<string | null> {

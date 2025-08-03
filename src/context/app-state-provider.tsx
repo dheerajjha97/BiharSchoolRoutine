@@ -7,7 +7,7 @@ import type { GenerateScheduleOutput } from "@/ai/flows/generate-schedule";
 import type { SubjectCategory, SubjectPriority } from "@/lib/schedule-generator";
 import { sortTimeSlots } from "@/lib/utils";
 import { auth } from "@/lib/firebase";
-import { onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, type User } from "firebase/auth";
+import { onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, type User, type AuthError } from "firebase/auth";
 import { GoogleDriveService } from "@/lib/google-drive-service";
 
 type Unavailability = {
@@ -310,13 +310,16 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         }
       }
     } catch (error: any) {
-       if (error.code === 'auth/popup-closed-by-user') {
-        console.log("Sign-in popup closed by user.");
-      } else {
-        console.error("Google Sign-In Error:", error);
-        toast({ variant: "destructive", title: "Login Failed", description: "Could not sign in with Google." });
-      }
-      setIsAuthLoading(false); 
+        const authError = error as AuthError;
+        console.error("Google Sign-In Error:", authError);
+        toast({ 
+            variant: "destructive", 
+            title: "Login Failed", 
+            description: `Error: ${authError.code} - ${authError.message}`,
+            duration: 9000
+        });
+    } finally {
+       setIsAuthLoading(false); 
     }
   };
   

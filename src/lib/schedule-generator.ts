@@ -18,7 +18,7 @@ type Booking = {
     classSubjectBookings: Record<string, Set<string>>; // className -> "day-subject"
 };
 
-const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const daysOfWeek: ScheduleEntry['day'][] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 const shuffleArray = <T>(array: T[]): T[] => {
     const newArray = [...array];
@@ -88,8 +88,8 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
 
     daysOfWeek.forEach(day => {
         classes.forEach(className => {
-            if (prayerTimeSlot) bookSlot({ day, timeSlot: prayerTimeSlot, classNames: [className], subject: "Prayer", teacher: "N/A" });
-            if (lunchTimeSlot) bookSlot({ day, timeSlot: lunchTimeSlot, classNames: [className], subject: "Lunch", teacher: "N/A" });
+            if (prayerTimeSlot) bookSlot({ day: day as ScheduleEntry['day'], timeSlot: prayerTimeSlot, classNames: [className], subject: "Prayer", teacher: "N/A" });
+            if (lunchTimeSlot) bookSlot({ day: day as ScheduleEntry['day'], timeSlot: lunchTimeSlot, classNames: [className], subject: "Lunch", teacher: "N/A" });
         });
     });
 
@@ -185,3 +185,5 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
     
     return { schedule };
 }
+
+    

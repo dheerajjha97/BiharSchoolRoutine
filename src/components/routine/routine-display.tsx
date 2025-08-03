@@ -279,7 +279,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
     // Create new entries for the destination day
     const newDestinationEntries = sourceEntries.map(entry => ({
       ...entry,
-      day: destinationDay
+      day: destinationDay as ScheduleEntry['day']
     }));
 
     onScheduleChange([...scheduleWithoutDestination, ...newDestinationEntries]);

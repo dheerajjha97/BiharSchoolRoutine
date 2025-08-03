@@ -312,8 +312,6 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     const provider = new GoogleAuthProvider();
     provider.addScope('https://www.googleapis.com/auth/drive.file');
     try {
-      // This line is crucial for dynamic dev environments
-      auth.tenantId = window.location.hostname;
       await signInWithPopup(auth, provider);
       // onAuthStateChanged will handle the rest
     } catch (error: any) {

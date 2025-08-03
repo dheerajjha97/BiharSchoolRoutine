@@ -4,9 +4,9 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { AppStateProvider } from '@/context/app-state-provider';
 import AppShell from '@/components/app/app-shell';
-import { Manrope } from 'next/font/google';
+import { Inter } from 'next/font/google';
 
-const manrope = Manrope({ subsets: ['latin'] });
+const inter = Inter({ subsets: ['latin'] });
 
 const APP_NAME = "BiharSchoolRoutine";
 const APP_DEFAULT_TITLE = "BiharSchoolRoutine";
@@ -47,7 +47,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={manrope.className}>
+      <body className={inter.className}>
         <AppStateProvider>
           <AppShell>
             {children}

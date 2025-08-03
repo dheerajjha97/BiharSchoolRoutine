@@ -36,14 +36,17 @@ export default function DataManagementPage() {
 
         try {
             const data = await importFromCsv(file);
+            // Reset routine when importing data
+            updateState('routine', null); 
             if (data.teachers) updateState('teachers', data.teachers);
             if (data.classes) updateState('classes', data.classes);
             if (data.subjects) updateState('subjects', data.subjects);
             if (data.timeSlots) updateState('timeSlots', data.timeSlots);
-            toast({ title: "Data imported successfully!" });
+            toast({ title: "Data imported successfully!", description: "Your routine has been cleared as the data has changed." });
         } catch (error) {
-            toast({ variant: "destructive", title: "Import failed", description: "Could not parse the CSV file." });
+            toast({ variant: "destructive", title: "Import failed", description: error instanceof Error ? error.message : "Could not parse the CSV file." });
         }
+        // Reset the file input so the same file can be selected again
         if(csvInputRef.current) csvInputRef.current.value = "";
     };
 

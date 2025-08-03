@@ -211,21 +211,25 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         toast({ title: "Loading data...", description: "Fetching your saved data from Google Drive." });
         const loadedState = await driveService.loadBackup();
         if (loadedState && loadedState.teachers && loadedState.teachers.length > 0) {
+          // Merge loaded config with default config to ensure new properties are present
           const mergedConfig = { ...DEFAULT_APP_STATE.config, ...loadedState.config };
+          // Merge loaded state with default state
           const mergedState = { ...DEFAULT_APP_STATE, ...loadedState, config: mergedConfig };
+          
           if(mergedState.timeSlots) {
             mergedState.timeSlots = sortTimeSlots(mergedState.timeSlots);
           }
           setAppState(mergedState);
           toast({ title: "Data Loaded Successfully", description: "Your data has been restored from Google Drive." });
         } else {
+            // If no backup, or backup is empty, start with default data
             setAppState(DEFAULT_APP_STATE);
             toast({ title: "No backup found", description: "Starting with sample data. Your work will be saved automatically." });
         }
       } catch (error) {
         console.error("Failed to load state from Google Drive:", error);
-        toast({ variant: "destructive", title: "Load Failed", description: "Could not load data. Using sample data." });
-        setAppState(DEFAULT_APP_STATE);
+        toast({ variant: "destructive", title: "Load Failed", description: "Could not load data. Using default sample data." });
+        setAppState(DEFAULT_APP_STATE); // Fallback to default state on error
       } finally {
         setIsLoading(false);
       }
@@ -277,6 +281,11 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       if (key === 'timeSlots' && Array.isArray(value)) {
         newState.timeSlots = sortTimeSlots(value as string[]);
       }
+      // If the fundamental data changes, the routine is no longer valid.
+      if (['teachers', 'classes', 'subjects', 'timeSlots'].includes(key as string)) {
+          newState.routine = null;
+          newState.teacherLoad = {};
+      }
       return newState;
     });
   }, []);
@@ -285,6 +294,9 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
      setAppState(prevState => ({
         ...prevState,
         config: { ...prevState.config, [key]: value },
+        // Also invalidate the routine when config changes
+        routine: null, 
+        teacherLoad: {},
     }));
   }, []);
 
@@ -293,18 +305,20 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     const provider = new GoogleAuthProvider();
     provider.addScope('https://www.googleapis.com/auth/drive.file');
     try {
+      // This line is crucial for dynamic dev environments
       auth.tenantId = window.location.hostname;
       await signInWithPopup(auth, provider);
       // onAuthStateChanged will handle the rest
     } catch (error: any) {
        if (error.code === 'auth/popup-closed-by-user') {
-        console.log("Sign-in popup closed by user.");
         // Don't show a toast for this expected user action.
+        console.log("Sign-in popup closed by user.");
       } else {
         console.error("Google Sign-In Error:", error);
         toast({ variant: "destructive", title: "Login Failed", description: "Could not sign in with Google." });
       }
-      setIsAuthLoading(false); // Make sure to turn off loading on error
+      // Make sure to turn off loading on any error/cancellation
+      setIsAuthLoading(false); 
     }
   };
   

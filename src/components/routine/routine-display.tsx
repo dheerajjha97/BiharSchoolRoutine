@@ -53,7 +53,15 @@ type CellData = {
     teacher: string;
 }
 
-const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const daysOfWeek: ScheduleEntry['day'][] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+type CurrentCell = {
+    day: ScheduleEntry['day'];
+    timeSlot: string;
+    className: string;
+    entry: ScheduleEntry | null;
+};
+
 
 const getGradeFromClassName = (className: string): string | null => {
     if (typeof className !== 'string') return null;
@@ -88,7 +96,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   const { toast } = useToast();
   
   const [isCellDialogOpen, setIsCellDialogOpen] = React.useState(false);
-  const [currentCell, setCurrentCell] = React.useState<{ day: string; timeSlot: string; className: string; entry: ScheduleEntry | null } | null>(null);
+  const [currentCell, setCurrentCell] = React.useState<CurrentCell | null>(null);
   const [cellData, setCellData] = React.useState<CellData>({ subject: "", classNames: [], teacher: "" });
   const [isDownloading, setIsDownloading] = React.useState(false);
   const [pdfHeader, setPdfHeader] = React.useState("");
@@ -184,7 +192,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
     }
   }, [cellData.subject, availableTeachers, cellData.teacher]);
   
-  const handleCellClick = (day: string, timeSlot: string, className: string, entry: ScheduleEntry | null) => {
+  const handleCellClick = (day: ScheduleEntry['day'], timeSlot: string, className: string, entry: ScheduleEntry | null) => {
     setCurrentCell({ day, timeSlot, className, entry });
     setCellData(entry ? {
         subject: entry.subject,
@@ -198,7 +206,6 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
     if (!currentCell || cellData.classNames.length === 0) return;
   
     const currentSchedule = scheduleData?.schedule || [];
-    let newSchedule: ScheduleEntry[];
   
     const newEntryData = {
         subject: cellData.subject,
@@ -211,7 +218,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
     prospectiveSchedule = prospectiveSchedule.filter(e => !(e.day === currentCell.day && e.timeSlot === currentCell.timeSlot && e.className.split(' & ').some(c => cellData.classNames.includes(c))));
     if (cellData.subject && cellData.subject !== '---') {
         const newEntry: ScheduleEntry = {
-            day: currentCell.day,
+            day: currentCell.day as ScheduleEntry['day'],
             timeSlot: currentCell.timeSlot,
             ...newEntryData,
         };
@@ -256,7 +263,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
     setCellData({ ...cellData, teacher: newTeachers.join(' & ') });
   };
   
-  const handleCopyDay = (sourceDay: string, destinationDay: string) => {
+  const handleCopyDay = (sourceDay: ScheduleEntry['day'], destinationDay: ScheduleEntry['day']) => {
     if (!scheduleData?.schedule) return;
 
     // Filter out the destination day's entries (except breaks)
@@ -394,7 +401,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   }
 
 
-  const renderCellContent = (day: string, className: string, timeSlot: string) => {
+  const renderCellContent = (day: ScheduleEntry['day'], className: string, timeSlot: string) => {
     const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
     const isClashed = entries.some(entry => 
         entry.teacher.split(' & ').some(t => clashSet.has(`teacher-${day}-${entry.timeSlot}-${t}`)) ||

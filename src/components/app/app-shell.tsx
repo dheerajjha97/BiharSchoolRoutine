@@ -40,10 +40,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   const authControls = (
     <div className="flex items-center gap-4">
-      {isSyncing && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
+      {isSyncing && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Syncing...</span>
+        </div>
+      )}
       {user ? (
         <>
-          <Avatar>
+          <Avatar className="h-8 w-8">
             <AvatarImage src={user.photoURL || undefined} alt={user.displayName || user.email || 'User'} />
             <AvatarFallback>{user.displayName?.charAt(0) || user.email?.charAt(0)}</AvatarFallback>
           </Avatar>
@@ -67,15 +72,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   const userProfileSection = user ? (
     <div className="mt-auto p-4">
-      <Separator className="my-4" />
-      <div className="flex items-center gap-3">
-        <Avatar>
+      <Separator className="my-2" />
+      <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary">
+        <Avatar className="h-9 w-9">
           <AvatarImage src={user.photoURL || undefined} alt={user.displayName || user.email || 'User'} />
           <AvatarFallback>{user.displayName?.charAt(0) || user.email?.charAt(0)}</AvatarFallback>
         </Avatar>
         <div className="flex flex-col text-sm">
-          <span className="font-semibold text-card-foreground">{user.displayName}</span>
-          <span className="text-muted-foreground truncate">{user.email}</span>
+          <span className="font-semibold text-foreground">{user.displayName}</span>
+          <span className="text-muted-foreground truncate max-w-[180px]">{user.email}</span>
         </div>
       </div>
     </div>
@@ -91,11 +96,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               href={item.href}
               onClick={() => setIsSheetOpen(false)}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-                pathname === item.href && "bg-muted text-primary"
+                "flex items-center gap-3 rounded-lg px-3 py-3 text-muted-foreground transition-all hover:text-primary",
+                pathname === item.href && "bg-primary/10 text-primary font-semibold"
               )}
             >
-              <item.icon className="h-4 w-4" />
+              <item.icon className="h-5 w-5" />
               {item.label}
             </Link>
           ))}
@@ -123,11 +128,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               href={item.href}
               onClick={() => setIsSheetOpen(false)}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-                pathname === item.href && "bg-muted text-primary"
+                "flex items-center gap-3 rounded-lg px-3 py-3 text-muted-foreground transition-all hover:text-primary",
+                pathname === item.href && "bg-primary/10 text-primary font-semibold"
               )}
             >
-              <item.icon className="h-4 w-4" />
+              <item.icon className="h-5 w-5" />
               {item.label}
             </Link>
           ))}
@@ -138,30 +143,23 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen bg-secondary">
       <header className="flex h-16 w-full items-center gap-4 border-b bg-card px-6 no-print shrink-0">
-        <div className="flex items-center gap-4">
-          <Link href="/" className="flex items-center gap-2 font-semibold lg:hidden">
-            <BookOpenCheck className="h-6 w-6 text-primary" />
-            <span className="sr-only">BiharSchoolRoutine</span>
-          </Link>
+        <div className="flex items-center gap-4 lg:hidden">
           <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
             <SheetTrigger asChild>
-              <Button variant="outline" size="icon" className="shrink-0 lg:hidden">
+              <Button variant="outline" size="icon" className="shrink-0">
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Toggle navigation menu</span>
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="flex flex-col p-0">
-              <SheetHeader className="sr-only">
-                <SheetTitle>Navigation Menu</SheetTitle>
-              </SheetHeader>
               {mobileSidebarContent}
             </SheetContent>
           </Sheet>
         </div>
         <div className="flex-1">
-          <h1 className="font-semibold text-lg">
+          <h1 className="font-semibold text-xl text-foreground">
             {navItems.find(item => item.href === pathname)?.label || 'Dashboard'}
           </h1>
         </div>
@@ -173,14 +171,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <div className="grid min-h-full lg:grid-cols-[280px_1fr] min-w-[1200px]">
           <div className="hidden border-r bg-card text-card-foreground lg:flex lg:flex-col no-print">
             <div className="flex h-16 items-center border-b px-6">
-              <Link href="/" className="flex items-center gap-2 font-semibold">
+              <Link href="/" className="flex items-center gap-2 font-semibold text-lg">
                 <BookOpenCheck className="h-6 w-6 text-primary" />
                 <span>BiharSchoolRoutine</span>
               </Link>
             </div>
             {sidebarContent}
           </div>
-          <main className="flex-1 bg-background p-4 md:p-6 overflow-y-auto">
+          <main className="flex-1 bg-background p-4 md:p-6 lg:p-8 overflow-y-auto">
             {children}
           </main>
         </div>

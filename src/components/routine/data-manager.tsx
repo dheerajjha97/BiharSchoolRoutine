@@ -42,10 +42,14 @@ export default function DataManager({ title, icon: Icon, items, setItems, placeh
   return (
     <Card className="flex flex-col h-full">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Icon className="h-6 w-6 text-primary" />
-          <span>{title}</span>
-           <Badge variant="secondary">{items.length}</Badge>
+        <CardTitle className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary">
+            <Icon className="h-5 w-5" />
+          </div>
+          <div className="flex items-center gap-2">
+            <span>{title}</span>
+            <Badge variant="secondary">{items.length}</Badge>
+          </div>
         </CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>

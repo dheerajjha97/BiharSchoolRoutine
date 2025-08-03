@@ -168,7 +168,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
       <div className="flex-1 w-full overflow-x-auto">
-        <div className="grid min-h-full lg:grid-cols-[280px_1fr] min-w-[1200px]">
+        <div className="grid min-h-full lg:grid-cols-[280px_1fr]">
           <div className="hidden border-r bg-card text-card-foreground lg:flex lg:flex-col no-print">
             <div className="flex h-16 items-center border-b px-6">
               <Link href="/" className="flex items-center gap-2 font-semibold text-lg">

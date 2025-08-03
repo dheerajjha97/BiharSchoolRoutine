@@ -9,9 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { Logo } from "@/components/icons";
 import {
   Menu,
-  BookOpenCheck,
   LayoutDashboard,
   Database,
   SlidersHorizontal,
@@ -115,7 +115,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <SheetHeader className="border-b p-4">
         <SheetTitle>
           <Link href="/" onClick={() => setIsSheetOpen(false)} className="flex items-center gap-2 font-semibold">
-            <BookOpenCheck className="h-6 w-6 text-primary" />
+            <Logo className="h-6 w-6 text-primary" />
             <span>BiharSchoolRoutine</span>
           </Link>
         </SheetTitle>
@@ -172,7 +172,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <div className="hidden border-r bg-card text-card-foreground lg:flex lg:flex-col no-print">
             <div className="flex h-16 items-center border-b px-6">
               <Link href="/" className="flex items-center gap-2 font-semibold text-lg">
-                <BookOpenCheck className="h-6 w-6 text-primary" />
+                <Logo className="h-6 w-6 text-primary" />
                 <span>BiharSchoolRoutine</span>
               </Link>
             </div>

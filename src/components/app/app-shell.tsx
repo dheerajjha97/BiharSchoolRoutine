@@ -171,11 +171,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </SheetContent>
           </Sheet>
         </div>
-        <div className="flex-1">
-          <h1 className="font-semibold text-xl text-foreground">
-            {navItems.find(item => item.href === pathname)?.label || 'Dashboard'}
-          </h1>
-        </div>
+        <div className="flex-1" />
         <div className="flex items-center gap-2 flex-wrap justify-end">
           {authControls}
         </div>

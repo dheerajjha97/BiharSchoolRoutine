@@ -11,6 +11,7 @@ const manrope = Manrope({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'BiharSchoolRoutine',
   description: 'AI-Powered School Routine Generator',
+  manifest: '/manifest.json',
 };
 
 export default function RootLayout({

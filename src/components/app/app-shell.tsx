@@ -20,7 +20,8 @@ import {
   LogOut,
   Loader2,
   Moon,
-  Sun
+  Sun,
+  Mail,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -107,9 +108,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   ) : null;
   
   const creditSection = (
-      <div className="p-4 text-center text-xs text-muted-foreground">
+      <div className="p-4 text-xs text-muted-foreground space-y-2">
         <Separator className="my-2" />
-        <p>Created by Dheeraj Jha</p>
+        <p className="text-center">Created by Dheeraj Jha</p>
+         <Button asChild variant="outline" size="sm" className="w-full">
+              <a href="mailto:dheerajjha2018@gmail.com?subject=Feedback for BiharSchoolRoutine App">
+                  <Mail className="mr-2 h-4 w-4" /> Send Feedback
+              </a>
+          </Button>
       </div>
   );
 

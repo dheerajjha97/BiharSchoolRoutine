@@ -112,7 +112,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <Separator className="my-2" />
         <p className="text-center">Created by Dheeraj Jha</p>
          <Button asChild variant="outline" size="sm" className="w-full">
-              <a href="mailto:dheerajjha2018@gmail.com?subject=Feedback for BiharSchoolRoutine App">
+              <a href="mailto:dheerajjha.brgovt@gmail.com?subject=Feedback for BiharSchoolRoutine App">
                   <Mail className="mr-2 h-4 w-4" /> Send Feedback
               </a>
           </Button>
@@ -197,6 +197,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </SheetContent>
           </Sheet>
         </div>
+        <div className="hidden lg:block">
+          <Link href="/" className="flex items-center gap-2 font-semibold text-lg">
+            <Logo className="h-6 w-6 text-primary" />
+            <span>BiharSchoolRoutine</span>
+          </Link>
+        </div>
         <div className="flex-1" />
         <div className="flex items-center gap-2 flex-wrap justify-end">
           {authControls}
@@ -205,12 +211,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <div className="flex-1 w-full overflow-x-auto">
         <div className="grid min-h-full lg:grid-cols-[280px_1fr]">
           <div className="hidden border-r bg-card text-card-foreground lg:flex lg:flex-col no-print">
-            <div className="flex h-16 items-center border-b px-6">
-              <Link href="/" className="flex items-center gap-2 font-semibold text-lg">
-                <Logo className="h-6 w-6 text-primary" />
-                <span>BiharSchoolRoutine</span>
-              </Link>
-            </div>
             {sidebarContent}
           </div>
           <main className="flex-1 bg-background p-4 md:p-6 lg:p-8 overflow-y-auto">

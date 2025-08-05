@@ -10,8 +10,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit",
-    "deploy": "next build && firebase apphosting:backends:deploy YOUR_BACKEND_ID --region=YOUR_REGION"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.7",

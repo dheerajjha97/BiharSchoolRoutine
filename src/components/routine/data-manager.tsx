@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
-import { sortTimeSlots, formatTimeSlot } from "@/lib/utils";
+import { sortTimeSlots } from "@/lib/utils";
 
 interface DataManagerProps {
   title: string;
@@ -26,23 +26,13 @@ export default function DataManager({ title, icon: Icon, items, setItems, placeh
   const handleAddItem = () => {
     let finalNewItem = newItem.trim();
     if (!finalNewItem) return;
-
-    if (title === 'Time Slots') {
-      const formatted = formatTimeSlot(finalNewItem);
-      if (!formatted) {
-        // Optionally, show a toast or error message for invalid format
-        console.error("Invalid time format");
-        return;
-      }
-      finalNewItem = formatted;
-    }
     
     if (!items.includes(finalNewItem)) {
-      const newItems = [finalNewItem, ...items];
+      const newItemsList = [finalNewItem, ...items];
       if (title === 'Time Slots') {
-        setItems(sortTimeSlots(newItems));
+        setItems(sortTimeSlots(newItemsList));
       } else {
-        setItems(newItems.sort());
+        setItems(newItemsList.sort());
       }
       setNewItem("");
     }
@@ -51,6 +41,25 @@ export default function DataManager({ title, icon: Icon, items, setItems, placeh
   const handleRemoveItem = (itemToRemove: string) => {
     setItems(items.filter(item => item !== itemToRemove));
   };
+  
+  const handleTimeSlotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value.replace(/[^0-9]/g, '');
+    let formattedValue = rawValue;
+
+    if (rawValue.length > 2) {
+      formattedValue = `${rawValue.slice(0, 2)}:${rawValue.slice(2)}`;
+    }
+    if (rawValue.length > 4) {
+      formattedValue = `${rawValue.slice(0, 2)}:${rawValue.slice(2, 4)} - ${rawValue.slice(4)}`;
+    }
+    if (rawValue.length > 6) {
+      formattedValue = `${rawValue.slice(0, 2)}:${rawValue.slice(2, 4)} - ${rawValue.slice(4, 6)}:${rawValue.slice(6)}`;
+    }
+    
+    setNewItem(formattedValue.slice(0, 13)); // "HH:MM - HH:MM" is 13 chars
+  };
+
+  const isTimeSlotManager = title === 'Time Slots';
 
   return (
     <Card className="flex flex-col h-full">
@@ -71,8 +80,9 @@ export default function DataManager({ title, icon: Icon, items, setItems, placeh
           <Input
             placeholder={placeholder}
             value={newItem}
-            onChange={(e) => setNewItem(e.target.value)}
+            onChange={isTimeSlotManager ? handleTimeSlotChange : (e) => setNewItem(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleAddItem()}
+            maxLength={isTimeSlotManager ? 13 : undefined}
           />
           <Button onClick={handleAddItem}>Add</Button>
         </div>

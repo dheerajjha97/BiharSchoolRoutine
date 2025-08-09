@@ -328,14 +328,14 @@ export default function RoutineControls({
                             <TableCell><Label>{c}</Label></TableCell>
                             <TableCell>
                                 <Select 
-                                    value={config.classTeachers[c] || ''}
-                                    onValueChange={(value) => updateConfig('classTeachers', { ...config.classTeachers, [c]: value })}
+                                    value={config.classTeachers[c] || 'none'}
+                                    onValueChange={(value) => updateConfig('classTeachers', { ...config.classTeachers, [c]: value === 'none' ? '' : value })}
                                 >
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select Class Teacher" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">None</SelectItem>
+                                        <SelectItem value="none">None</SelectItem>
                                         {teachers.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                                     </SelectContent>
                                 </Select>

@@ -6,8 +6,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function sortTimeSlots(timeSlots: string[]): string[] {
-  const parseTime = (timeStr: string): number => {
+const parseTime = (timeStr: string): number => {
     // Take the start time, e.g., "09:00" from "09:00 - 09:45"
     const startTimeStr = timeStr.split(' - ')[0].trim();
     
@@ -42,8 +41,9 @@ export function sortTimeSlots(timeSlots: string[]): string[] {
     }
 
     return hours * 60 + minutes;
-  };
+};
 
+export function sortTimeSlots(timeSlots: string[]): string[] {
   return [...timeSlots].sort((a, b) => {
     const timeA = parseTime(a);
     const timeB = parseTime(b);
@@ -63,4 +63,24 @@ export const sortClasses = (a: string, b: string): number => {
   if (gradeA !== gradeB) return gradeA - gradeB;
   return a.localeCompare(b);
 };
-    
+
+export const formatTimeSlot = (input: string): string | null => {
+    const trimmedInput = input.trim();
+    // Regex to match H, H:mm, HH:mm
+    const match = trimmedInput.match(/^(\d{1,2})(?::(\d{2}))?$/);
+    if (!match) return null;
+
+    let hours = parseInt(match[1], 10);
+    let minutes = parseInt(match[2], 10) || 0;
+
+    if (hours > 23 || minutes > 59) return null;
+
+    const startTime = new Date();
+    startTime.setHours(hours, minutes, 0, 0);
+
+    const endTime = new Date(startTime.getTime() + 45 * 60000);
+
+    const format = (date: Date) => date.toTimeString().substring(0, 5);
+
+    return `${format(startTime)} - ${format(endTime)}`;
+};

@@ -46,7 +46,13 @@ export type SchoolConfig = {
   splitClasses: SplitClassRule[];
 };
 
-export type TeacherLoad = Record<string, Record<string, number>>;
+export type TeacherLoadDetail = {
+    total: number;
+    main: number;
+    additional: number;
+};
+export type TeacherLoad = Record<string, Record<string, TeacherLoadDetail>>;
+
 
 export type AppState = {
   teachers: string[];
@@ -166,27 +172,50 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 
   const calculatedTeacherLoad = useMemo(() => {
     const load: TeacherLoad = {};
-    if (!appState.routine?.schedule) return {};
+    if (!appState.routine?.schedule || !appState.teachers) return {};
 
+    const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Total"];
+    
     appState.teachers.forEach(teacher => {
-        load[teacher] = { Monday: 0, Tuesday: 0, Wednesday: 0, Thursday: 0, Friday: 0, Saturday: 0, Total: 0 };
+        load[teacher] = {};
+        days.forEach(day => {
+            load[teacher][day] = { total: 0, main: 0, additional: 0 };
+        });
     });
 
     appState.routine.schedule.forEach(entry => {
-        if(entry.subject === "Prayer" || entry.subject === "Lunch") return;
+        if(entry.subject === "Prayer" || entry.subject === "Lunch" || entry.subject === "---") return;
+        
         const teachersInEntry = entry.teacher.split(' & ').map(t => t.trim());
-        teachersInEntry.forEach(teacher => {
+        const subjectsInEntry = entry.subject.split(' / ').map(s => s.trim());
+
+        teachersInEntry.forEach((teacher, index) => {
             if (teacher && teacher !== "N/A" && load[teacher]) {
-                if (load[teacher][entry.day] !== undefined) {
-                  load[teacher][entry.day]++;
+                const subject = subjectsInEntry[index] || subjectsInEntry[0]; // For split, match teacher to subject
+                const category = appState.config.subjectCategories[subject] || 'additional';
+
+                if (load[teacher][entry.day]) {
+                    load[teacher][entry.day].total++;
+                    if (category === 'main') {
+                        load[teacher][entry.day].main++;
+                    } else {
+                        load[teacher][entry.day].additional++;
+                    }
                 }
-                load[teacher].Total++;
+                
+                // Update weekly total
+                load[teacher].Total.total++;
+                if (category === 'main') {
+                    load[teacher].Total.main++;
+                } else {
+                    load[teacher].Total.additional++;
+                }
             }
         });
     });
 
     return load;
-  }, [appState.routine, appState.teachers]);
+  }, [appState.routine, appState.teachers, appState.config.subjectCategories]);
 
   useEffect(() => {
     updateState('teacherLoad', calculatedTeacherLoad);

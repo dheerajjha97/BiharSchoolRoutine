@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { GenerateScheduleOutput } from "@/ai/flows/generate-schedule";
 import type { SubjectCategory, SubjectPriority } from "@/lib/schedule-generator";
 import { sortTimeSlots } from "@/lib/utils";
-import { auth } from "@/lib/firebase";
+import { getFirebaseAuth } from "@/lib/firebase";
 import { onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, type User, type AuthError } from "firebase/auth";
 import { GoogleDriveService } from "@/lib/google-drive-service";
 
@@ -242,6 +242,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   }, [toast]);
 
   const handleLogout = useCallback(async (withSave = true) => {
+    const auth = getFirebaseAuth();
     setIsAuthLoading(true);
     if (withSave && user && driveServiceRef.current?.isReady()) {
         toast({ title: "Saving your work...", description: "Saving your final changes to Google Drive before logging out." });
@@ -256,6 +257,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   }, [user, saveStateToDrive, toast]);
 
   useEffect(() => {
+    const auth = getFirebaseAuth();
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUser(user);
@@ -294,6 +296,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 
   const handleGoogleSignIn = async () => {
     setIsAuthLoading(true);
+    const auth = getFirebaseAuth();
     const provider = new GoogleAuthProvider();
     provider.addScope('https://www.googleapis.com/auth/drive.file');
     try {

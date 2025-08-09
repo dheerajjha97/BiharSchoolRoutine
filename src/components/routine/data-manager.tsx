@@ -25,7 +25,7 @@ export default function DataManager({ title, icon: Icon, items, setItems, placeh
 
   const handleAddItem = () => {
     if (newItem.trim() && !items.includes(newItem.trim())) {
-      const newItems = [...items, newItem.trim()];
+      const newItems = [newItem.trim(), ...items];
       if (title === 'Time Slots') {
         setItems(sortTimeSlots(newItems));
       } else {

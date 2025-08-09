@@ -39,6 +39,7 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
         classRequirements,
         teacherSubjects,
         teacherClasses,
+        classTeachers,
         prayerTimeSlot,
         lunchTimeSlot,
         subjectCategories,
@@ -103,10 +104,22 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
         });
     });
 
+    // Book Class Teacher Attendance Period
+    daysOfWeek.forEach(day => {
+        classes.forEach(className => {
+            const classTeacher = classTeachers[className];
+            const firstSlot = instructionalSlots[0];
+            if (classTeacher && firstSlot && !isClassBooked(className, day, firstSlot) && !isTeacherBooked(classTeacher, day, firstSlot) && getTeacherLoadForDay(classTeacher, day) < dailyPeriodQuota) {
+                bookSlot({ day, timeSlot: firstSlot, classNames: [className], subject: "Attendance", teacher: classTeacher });
+            }
+        });
+    });
+
+
     // Book Main Subjects
     daysOfWeek.forEach(day => {
         classes.forEach(className => {
-            const requiredSubjectsForClass = shuffleArray((classRequirements[className] || []).filter(s => subjectCategories[s] === 'main'));
+            const requiredSubjectsForClass = shuffleArray((classRequirements[className] || []).filter(s => subjectCategories[s] === 'main' && s !== 'Attendance'));
 
             requiredSubjectsForClass.forEach(subject => {
                 if (isClassSubjectBookedForDay(className, day, subject)) return;

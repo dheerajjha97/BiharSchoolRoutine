@@ -134,6 +134,42 @@ export default function RoutineControls({
         </AccordionContent>
       </AccordionItem>
 
+       <AccordionItem value="class-teacher" className="border p-4 rounded-lg bg-card">
+        <AccordionTrigger>Class Teacher Assignment</AccordionTrigger>
+        <AccordionContent className="space-y-4 pt-4">
+           <p className="text-sm text-muted-foreground">Assign a class teacher to each class. They will be automatically scheduled for the first period for attendance.</p>
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Class</TableHead>
+                        <TableHead>Class Teacher</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {classes.map(c => (
+                        <TableRow key={c}>
+                            <TableCell><Label>{c}</Label></TableCell>
+                            <TableCell>
+                                <Select 
+                                    value={config.classTeachers[c] || ''}
+                                    onValueChange={(value) => updateConfig('classTeachers', { ...config.classTeachers, [c]: value })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select Class Teacher" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="">None</SelectItem>
+                                        {teachers.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        </AccordionContent>
+      </AccordionItem>
+
       <AccordionItem value="teacher-unavailability" className="border p-4 rounded-lg bg-card">
         <AccordionTrigger>Teacher Unavailability</AccordionTrigger>
         <AccordionContent className="space-y-4 pt-4">

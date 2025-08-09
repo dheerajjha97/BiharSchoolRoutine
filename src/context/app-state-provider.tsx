@@ -22,6 +22,7 @@ export type SchoolConfig = {
   unavailability: Unavailability[];
   teacherSubjects: Record<string, string[]>;
   teacherClasses: Record<string, string[]>;
+  classTeachers: Record<string, string>;
   prayerTimeSlot: string;
   lunchTimeSlot: string;
   preventConsecutiveClasses: boolean;
@@ -61,7 +62,7 @@ export const AppStateContext = createContext<AppStateContextType>({} as AppState
 const DEFAULT_APP_STATE: AppState = {
   teachers: ["Mr. Sharma", "Mrs. Gupta", "Ms. Singh", "Mr. Kumar", "Mrs. Roy", "Mr. Das"],
   classes: ["Class 9A", "Class 9B", "Class 10A", "Class 10B", "Class 11 Sci", "Class 12 Sci"],
-  subjects: ["Math", "Science", "English", "History", "Physics", "Chemistry", "Biology", "Computer Science", "Hindi"],
+  subjects: ["Math", "Science", "English", "History", "Physics", "Chemistry", "Biology", "Computer Science", "Hindi", "Attendance"],
   timeSlots: [
     "09:00 - 09:45",
     "09:45 - 10:30",
@@ -75,12 +76,12 @@ const DEFAULT_APP_STATE: AppState = {
   ],
   config: {
     teacherSubjects: {
-      "Mr. Sharma": ["Math", "Physics"],
-      "Mrs. Gupta": ["English", "History"],
-      "Ms. Singh": ["Science", "Biology", "Chemistry"],
-      "Mr. Kumar": ["Computer Science", "Math"],
-      "Mrs. Roy": ["Hindi", "History"],
-      "Mr. Das": ["Physics", "Chemistry"]
+      "Mr. Sharma": ["Math", "Physics", "Attendance"],
+      "Mrs. Gupta": ["English", "History", "Attendance"],
+      "Ms. Singh": ["Science", "Biology", "Chemistry", "Attendance"],
+      "Mr. Kumar": ["Computer Science", "Math", "Attendance"],
+      "Mrs. Roy": ["Hindi", "History", "Attendance"],
+      "Mr. Das": ["Physics", "Chemistry", "Attendance"]
     },
     teacherClasses: {
         "Mr. Sharma": ["Class 10A", "Class 10B", "Class 11 Sci", "Class 12 Sci"],
@@ -98,6 +99,11 @@ const DEFAULT_APP_STATE: AppState = {
         "Class 11 Sci": ["Physics", "Chemistry", "Math", "English", "Computer Science"],
         "Class 12 Sci": ["Physics", "Biology", "Math", "English", "Computer Science"],
     },
+    classTeachers: {
+      "Class 9A": "Mrs. Gupta",
+      "Class 9B": "Mrs. Roy",
+      "Class 10A": "Mr. Kumar",
+    },
     subjectCategories: {
         "Math": "main",
         "Science": "main",
@@ -108,6 +114,7 @@ const DEFAULT_APP_STATE: AppState = {
         "Biology": "main",
         "Computer Science": "additional",
         "Hindi": "additional",
+        "Attendance": "main",
     },
     subjectPriorities: {
         "Math": "before",

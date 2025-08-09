@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from 'react';
-import type { DutyChart } from '@/lib/exam-duty-generator';
+import type { DutyChart } from '@/context/app-state-provider';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
@@ -16,8 +16,6 @@ import { Textarea } from '../ui/textarea';
 interface InvigilationDutyChartProps {
   dutyChart: DutyChart;
 }
-
-const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export default function InvigilationDutyChart({ dutyChart }: InvigilationDutyChartProps) {
   const { toast } = useToast();
@@ -85,7 +83,7 @@ export default function InvigilationDutyChart({ dutyChart }: InvigilationDutyCha
         });
         
         const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('l', 'mm', 'a4'); 
+        const pdf = new jsPDF('p', 'mm', 'a4'); 
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
         const imgWidth = canvas.width;
@@ -122,7 +120,7 @@ export default function InvigilationDutyChart({ dutyChart }: InvigilationDutyCha
             <div>
               <CardTitle>Generated Invigilation Duty Chart</CardTitle>
               <CardDescription>
-                The following chart shows the assigned invigilation duties for each teacher.
+                The following chart shows the assigned invigilation duties for each exam slot.
               </CardDescription>
             </div>
             <Button size="sm" variant="outline" disabled={isDownloading} onClick={() => handleDownloadPdf('duty-chart-table', 'invigilation-duty-chart.pdf')}>
@@ -151,30 +149,33 @@ export default function InvigilationDutyChart({ dutyChart }: InvigilationDutyCha
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead className='font-semibold sticky left-0 bg-card z-10'>Time Slot</TableHead>
-                        {daysOfWeek.map(day => (
-                            <TableHead key={day} className='text-center font-semibold'>{day}</TableHead>
-                        ))}
+                        <TableHead className='font-semibold'>Date</TableHead>
+                        <TableHead className='font-semibold'>Time</TableHead>
+                        <TableHead className='font-semibold'>Invigilators</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {dutyChart.timeSlots.map(slot => (
-                        <TableRow key={slot}>
-                             <TableCell className="font-medium sticky left-0 bg-card z-10">{slot}</TableCell>
-                             {daysOfWeek.map(day => (
-                                <TableCell key={day} className="text-center">
+                    {dutyChart.examSlots.map(slot => {
+                        const key = `${slot.date}-${slot.time}`;
+                        const invigilators = dutyChart.duties[key] || [];
+                        return (
+                            <TableRow key={key}>
+                                <TableCell className="font-medium">{slot.date}</TableCell>
+                                <TableCell className="font-medium">{slot.time}</TableCell>
+                                <TableCell>
                                     <div className="flex flex-col gap-1">
-                                        {(dutyChart.duties[`${day}-${slot}`] || []).map((teacher, index) => (
-                                            <span key={index} className="text-xs bg-secondary p-1 rounded-md">{teacher}</span>
-                                        ))}
-                                        {(dutyChart.duties[`${day}-${slot}`] || []).length === 0 && (
+                                        {invigilators.length > 0 ? (
+                                            invigilators.map((teacher, index) => (
+                                                <span key={index} className="text-xs bg-secondary p-1 rounded-md">{teacher}</span>
+                                            ))
+                                        ) : (
                                             <span className='text-xs text-muted-foreground'>-</span>
                                         )}
                                     </div>
                                 </TableCell>
-                             ))}
-                        </TableRow>
-                    ))}
+                            </TableRow>
+                        )
+                    })}
                 </TableBody>
             </Table>
          </div>

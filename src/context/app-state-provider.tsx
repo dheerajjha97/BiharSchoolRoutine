@@ -53,6 +53,19 @@ export type TeacherLoadDetail = {
 };
 export type TeacherLoad = Record<string, Record<string, TeacherLoadDetail>>;
 
+export type ExamEntry = {
+    id: string;
+    date: string;
+    time: string;
+    classes: string[];
+    subject: string;
+};
+
+export type DutyChart = {
+    duties: Record<string, string[]>; // Key: "date-time", Value: array of teacher names
+    examSlots: { date: string, time: string }[];
+};
+
 
 export type AppState = {
   teachers: string[];
@@ -62,6 +75,7 @@ export type AppState = {
   config: SchoolConfig;
   routine: GenerateScheduleOutput | null;
   teacherLoad: TeacherLoad;
+  examTimetable: ExamEntry[];
 }
 
 interface AppStateContextType {
@@ -97,12 +111,12 @@ const DEFAULT_APP_STATE: AppState = {
   ],
   config: {
     teacherSubjects: {
-      "Mr. Sharma": ["Math", "Physics", "Attendance"],
-      "Mrs. Gupta": ["English", "History", "Attendance", "Library"],
-      "Ms. Singh": ["Science", "Biology", "Chemistry", "Attendance"],
-      "Mr. Kumar": ["Computer Science", "Math", "Attendance"],
-      "Mrs. Roy": ["Hindi", "History", "Art", "Attendance"],
-      "Mr. Das": ["Physics", "Chemistry", "Attendance"]
+      "Mr. Sharma": ["Math", "Physics"],
+      "Mrs. Gupta": ["English", "History", "Library"],
+      "Ms. Singh": ["Science", "Biology", "Chemistry"],
+      "Mr. Kumar": ["Computer Science", "Math"],
+      "Mrs. Roy": ["Hindi", "History", "Art"],
+      "Mr. Das": ["Physics", "Chemistry"]
     },
     teacherClasses: {
         "Mr. Sharma": ["Class 10A", "Class 10B", "Class 11 Sci", "Class 12 Sci"],
@@ -154,6 +168,7 @@ const DEFAULT_APP_STATE: AppState = {
   },
   routine: null,
   teacherLoad: {},
+  examTimetable: [],
 };
 
 export const AppStateProvider = ({ children }: { children: React.ReactNode }) => {

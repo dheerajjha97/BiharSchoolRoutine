@@ -22,6 +22,7 @@ import {
   Moon,
   Sun,
   Mail,
+  ClipboardCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +30,7 @@ const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/data", label: "Data Management", icon: Database },
   { href: "/config", label: "Configuration", icon: SlidersHorizontal },
+  { href: "/reports", label: "Reports", icon: ClipboardCheck },
 ];
 
 function ThemeToggle() {

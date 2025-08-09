@@ -6,8 +6,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function sortTimeSlots(timeSlots: string[]): string[] {
-  const parseTime = (timeStr: string): number => {
+const parseTime = (timeStr: string): number => {
     // Take the start time, e.g., "09:00" from "09:00 - 09:45"
     const startTimeStr = timeStr.split(' - ')[0].trim();
     
@@ -42,8 +41,9 @@ export function sortTimeSlots(timeSlots: string[]): string[] {
     }
 
     return hours * 60 + minutes;
-  };
+};
 
+export function sortTimeSlots(timeSlots: string[]): string[] {
   return [...timeSlots].sort((a, b) => {
     const timeA = parseTime(a);
     const timeB = parseTime(b);
@@ -63,4 +63,3 @@ export const sortClasses = (a: string, b: string): number => {
   if (gradeA !== gradeB) return gradeA - gradeB;
   return a.localeCompare(b);
 };
-    

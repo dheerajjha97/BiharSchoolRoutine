@@ -315,8 +315,10 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                 if (contentWrapper) {
                     const subjectDiv = contentWrapper.querySelector('div:first-child');
                     const teacherDiv = contentWrapper.querySelector('div:nth-child(2)');
+                    const noteDiv = contentWrapper.querySelector('div:nth-child(3)');
                     const subjectText = subjectDiv?.textContent || '';
                     const teacherText = teacherDiv?.textContent || '';
+                    const noteText = noteDiv?.textContent || '';
                     
                     contentWrapper.innerHTML = '';
                     contentWrapper.className = '';
@@ -324,6 +326,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                     contentWrapper.innerHTML = `
                         <div style="font-weight: bold; font-size: 12px;">${subjectText}</div>
                         <div style="font-size: 10px;">${teacherText}</div>
+                        ${noteText ? `<div style="font-size: 9px; font-style: italic;">${noteText}</div>` : ''}
                     `;
                 }
             }
@@ -402,11 +405,15 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                         entry.teacher.split(' & ').some(t => clashSet.has(`teacher-${day}-${entry.timeSlot}-${t}`)) ||
                         clashSet.has(`class-${day}-${entry.timeSlot}-${className}`)
                     );
+                    const isCombined = entry.className.includes('&');
+                    const isSplit = entry.subject.includes('/');
+                    
                     return (
                         <div key={index} className={cn("w-full text-center p-1 bg-card rounded-md border text-xs", isClashedEntry && "bg-destructive/20")}>
                             <div className="font-semibold">{entry.subject}</div>
                             <div className="text-muted-foreground text-[10px]">{entry.teacher || <span className="italic">N/A</span>}</div>
-                            {entry.className.includes('&') && <div className="text-muted-foreground text-[10px] italic mt-1">(Combined)</div>}
+                            {isCombined && <div className="text-muted-foreground text-[9px] italic mt-1">(Combined)</div>}
+                            {isSplit && <div className="text-muted-foreground text-[9px] italic mt-1">(Split)</div>}
                         </div>
                     )
                 })

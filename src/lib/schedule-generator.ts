@@ -39,11 +39,14 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
         classRequirements,
         teacherSubjects,
         teacherClasses,
+        classTeachers,
         prayerTimeSlot,
         lunchTimeSlot,
+        preventConsecutiveClasses, // This is not yet used, but kept for future implementation
         subjectCategories,
         dailyPeriodQuota,
-        enableCombinedClasses, // Assuming this is for combined classes, now using for combined teachers
+        combinedClasses = [],
+        splitClasses = [],
     } = input;
 
     const schedule: ScheduleEntry[] = [];
@@ -61,9 +64,8 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
     const isClassBooked = (className: string, day: string, timeSlot: string): boolean => 
         bookings.classBookings[className]?.has(`${day}-${timeSlot}`);
 
-    // UPDATED: Prevent ANY subject from repeating for a class on the same day.
     const isClassSubjectBookedForDay = (className: string, day: string, subject: string): boolean =>
-        bookings.classSubjectBookings[className]?.has(`${day}-${subject}`);
+        subjectCategories[subject] === 'main' && bookings.classSubjectBookings[className]?.has(`${day}-${subject}`);
     
     const isTeacherUnavailable = (teacher: string, day: string, timeSlot: string): boolean => 
         unavailability.some(u => u.teacher === teacher && u.day === day && u.timeSlot === timeSlot);
@@ -73,19 +75,23 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
       return Array.from(bookings.teacherBookings[teacher]).filter(booking => booking.startsWith(day)).length;
     }
 
-    const bookSlot = (entry: Omit<ScheduleEntry, 'className'> & { classNames: string[] }) => {
-        const { teacher, day, timeSlot, classNames, subject } = entry;
-        const finalEntry: ScheduleEntry = { day, timeSlot, className: classNames.sort().join(' & '), subject, teacher };
-        schedule.push(finalEntry);
-        
-        teacher.split(' & ').map(t => t.trim()).forEach(t => {
-            if (teacherNames.includes(t)) bookings.teacherBookings[t].add(`${day}-${timeSlot}`);
-        });
+    const bookSlot = (entry: ScheduleEntry) => {
+        schedule.push(entry);
+        const teachersToBook = entry.teacher.split(' & ').map(t => t.trim()).filter(t => t && t !== "N/A");
+        const classesToBook = entry.className.split(' & ').map(c => c.trim());
 
-        classNames.forEach(c => {
-            bookings.classBookings[c].add(`${day}-${timeSlot}`);
-            if (subject !== "---" && subject !== "Prayer" && subject !== "Lunch") {
-              bookings.classSubjectBookings[c].add(`${day}-${subject}`);
+        teachersToBook.forEach(teacher => {
+            if (bookings.teacherBookings[teacher]) {
+                bookings.teacherBookings[teacher].add(`${entry.day}-${entry.timeSlot}`);
+            }
+        });
+        
+        classesToBook.forEach(className => {
+            if (bookings.classBookings[className]) {
+                bookings.classBookings[className].add(`${entry.day}-${entry.timeSlot}`);
+            }
+             if (entry.subject !== "---" && entry.subject !== "Prayer" && entry.subject !== "Lunch" && !entry.subject.includes('/')) {
+              bookings.classSubjectBookings[className].add(`${entry.day}-${entry.subject}`);
             }
         });
     };
@@ -95,18 +101,69 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
     const beforeLunchSlots = lunchIndex !== -1 ? instructionalSlots.filter(slot => timeSlots.indexOf(slot) < lunchIndex) : [];
     const afterLunchSlots = lunchIndex !== -1 ? instructionalSlots.filter(slot => timeSlots.indexOf(slot) > lunchIndex) : instructionalSlots;
 
-    // Book Prayer and Lunch
+    // 1. Book Prayer and Lunch
     daysOfWeek.forEach(day => {
         classes.forEach(className => {
-            if (prayerTimeSlot) bookSlot({ day, timeSlot: prayerTimeSlot, classNames: [className], subject: "Prayer", teacher: "N/A" });
-            if (lunchTimeSlot) bookSlot({ day, timeSlot: lunchTimeSlot, classNames: [className], subject: "Lunch", teacher: "N/A" });
+            if (prayerTimeSlot) bookSlot({ day, timeSlot: prayerTimeSlot, className, subject: "Prayer", teacher: "N/A" });
+            if (lunchTimeSlot) bookSlot({ day, timeSlot: lunchTimeSlot, className, subject: "Lunch", teacher: "N/A" });
+        });
+    });
+    
+    // 2. Book Special Rules (Combined/Split)
+    daysOfWeek.forEach(day => {
+        // Combined Classes
+        combinedClasses.forEach(rule => {
+             const availableSlot = shuffleArray(instructionalSlots).find(slot => 
+                !isTeacherBooked(rule.teacher, day, slot) &&
+                !isTeacherUnavailable(rule.teacher, day, slot) &&
+                getTeacherLoadForDay(rule.teacher, day) < dailyPeriodQuota &&
+                rule.classes.every(c => !isClassBooked(c, day, slot))
+            );
+            if (availableSlot) {
+                bookSlot({ day, timeSlot: availableSlot, className: rule.classes.join(' & '), subject: rule.subject, teacher: rule.teacher });
+            }
+        });
+
+        // Split Classes
+        splitClasses.forEach(rule => {
+            const areAllTeachersAvailable = (slot: string) => rule.parts.every(part => 
+                !isTeacherBooked(part.teacher, day, slot) &&
+                !isTeacherUnavailable(part.teacher, day, slot) &&
+                getTeacherLoadForDay(part.teacher, day) < dailyPeriodQuota
+            );
+            const availableSlot = shuffleArray(instructionalSlots).find(slot => 
+                !isClassBooked(rule.className, day, slot) &&
+                areAllTeachersAvailable(slot)
+            );
+            if (availableSlot) {
+                bookSlot({
+                    day,
+                    timeSlot: availableSlot,
+                    className: rule.className,
+                    subject: rule.parts.map(p => p.subject).join(' / '),
+                    teacher: rule.parts.map(p => p.teacher).join(' & ')
+                });
+            }
         });
     });
 
-    // Book Main Subjects
+
+    // 3. Book Class Teacher Attendance Period
     daysOfWeek.forEach(day => {
         classes.forEach(className => {
-            const requiredSubjectsForClass = shuffleArray((classRequirements[className] || []).filter(s => subjectCategories[s] === 'main'));
+            const classTeacher = classTeachers[className];
+            const firstSlot = instructionalSlots[0];
+            if (classTeacher && firstSlot && !isClassBooked(className, day, firstSlot) && !isTeacherBooked(classTeacher, day, firstSlot) && getTeacherLoadForDay(classTeacher, day) < dailyPeriodQuota) {
+                bookSlot({ day, timeSlot: firstSlot, className, subject: "Attendance", teacher: classTeacher });
+            }
+        });
+    });
+
+
+    // 4. Book Main Subjects
+    daysOfWeek.forEach(day => {
+        classes.forEach(className => {
+            const requiredSubjectsForClass = shuffleArray((classRequirements[className] || []).filter(s => subjectCategories[s] === 'main' && s !== 'Attendance'));
 
             requiredSubjectsForClass.forEach(subject => {
                 if (isClassSubjectBookedForDay(className, day, subject)) return;
@@ -128,7 +185,7 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
                     );
                     
                     if (availableSlot) {
-                        bookSlot({ day, timeSlot: availableSlot, classNames: [className], subject, teacher });
+                        bookSlot({ day, timeSlot: availableSlot, className, subject, teacher });
                         break;
                     }
                 }
@@ -136,65 +193,41 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
         });
     });
 
-    // Book Additional Subjects and Combined Teacher slots
+    // 5. Book Additional Subjects
     daysOfWeek.forEach(day => {
-        for (const className of shuffleArray(classes)) {
-             const availableSlotsForClass = shuffleArray(instructionalSlots.filter(slot => !isClassBooked(className, day, slot)));
-             
-             for (const slot of availableSlotsForClass) {
-                 if(isClassBooked(className, day, slot)) continue;
+        instructionalSlots.forEach(timeSlot => {
+            shuffleArray(classes).forEach(className => {
+                if (isClassBooked(className, day, timeSlot)) return;
 
-                 const potentialSubjects = shuffleArray((classRequirements[className] || []).filter(s =>
-                     (!subjectCategories[s] || subjectCategories[s] === 'additional') &&
-                     !isClassSubjectBookedForDay(className, day, s)
-                 ));
+                const potentialSubjects = shuffleArray((classRequirements[className] || []).filter(s =>
+                    (!subjectCategories[s] || subjectCategories[s] === 'additional') &&
+                    !isClassSubjectBookedForDay(className, day, s)
+                ));
 
-                 let slotFilled = false;
-                 for (const subject of potentialSubjects) {
-                     const qualifiedTeachers = shuffleArray(teacherNames.filter(t =>
-                         (teacherSubjects[t] || []).includes(subject) && (teacherClasses[t] || []).includes(className)
-                     ));
-                     
-                     // Try to find a single teacher first
-                     const singleTeacher = qualifiedTeachers.find(t => 
+                for (const subject of potentialSubjects) {
+                    const qualifiedTeachers = shuffleArray(teacherNames.filter(t =>
+                        (teacherSubjects[t] || []).includes(subject) &&
+                        (teacherClasses[t] || []).includes(className) &&
                         getTeacherLoadForDay(t, day) < dailyPeriodQuota &&
-                        !isTeacherBooked(t, day, slot) &&
-                        !isTeacherUnavailable(t, day, slot)
-                     );
+                        !isTeacherBooked(t, day, timeSlot) &&
+                        !isTeacherUnavailable(t, day, timeSlot)
+                    ));
 
-                     if(singleTeacher) {
-                         bookSlot({ day, timeSlot: slot, classNames: [className], subject, teacher: singleTeacher });
-                         slotFilled = true;
-                         break;
-                     }
-                     
-                     // If enabled, try to find two teachers with low load
-                     if (enableCombinedClasses && qualifiedTeachers.length >= 2) {
-                        const underloadedTeachers = qualifiedTeachers.filter(t => 
-                            getTeacherLoadForDay(t, day) < dailyPeriodQuota &&
-                            !isTeacherBooked(t, day, slot) &&
-                            !isTeacherUnavailable(t, day, slot)
-                        );
-                        
-                        if (underloadedTeachers.length >= 2) {
-                            const teacherPair = underloadedTeachers.slice(0, 2);
-                            bookSlot({ day, timeSlot: slot, classNames: [className], subject, teacher: teacherPair.join(' & ') });
-                            slotFilled = true;
-                            break;
-                        }
-                     }
-                 }
-                 if(slotFilled) continue;
-             }
-        }
+                    if (qualifiedTeachers.length > 0) {
+                        bookSlot({ day, timeSlot, className, subject, teacher: qualifiedTeachers[0] });
+                        break; 
+                    }
+                }
+            });
+        });
     });
 
-    // Fill any remaining empty slots
+    // 6. Fill any remaining empty slots
     daysOfWeek.forEach(day => {
         instructionalSlots.forEach(timeSlot => {
             classes.forEach(className => {
                 if (!isClassBooked(className, day, timeSlot)) {
-                    bookSlot({ day, timeSlot, classNames: [className], subject: "---", teacher: "N/A" });
+                    bookSlot({ day, timeSlot, className, subject: "---", teacher: "N/A" });
                 }
             });
         });

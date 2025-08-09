@@ -1,5 +1,5 @@
 
-import { initializeApp, getApp, getApps, type FirebaseOptions } from "firebase/app";
+import { initializeApp, getApp, getApps, type FirebaseApp, type FirebaseOptions } from "firebase/app";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig: FirebaseOptions = {
@@ -11,8 +11,17 @@ const firebaseConfig: FirebaseOptions = {
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
-// Initialize Firebase
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-const auth = getAuth(app);
+// Singleton pattern to initialize Firebase only once
+function getFirebaseApp(): FirebaseApp {
+    if (!getApps().length) {
+        return initializeApp(firebaseConfig);
+    }
+    return getApp();
+}
 
-export { app, auth };
+function getFirebaseAuth() {
+    return getAuth(getFirebaseApp());
+}
+
+
+export { getFirebaseApp, getFirebaseAuth };

@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { GenerateScheduleOutput } from "@/ai/flows/generate-schedule";
 import type { SubjectCategory, SubjectPriority } from "@/lib/schedule-generator";
 import { sortTimeSlots } from "@/lib/utils";
-import { auth } from "@/lib/firebase";
+import { getFirebaseAuth } from "@/lib/firebase";
 import { onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, type User, type AuthError } from "firebase/auth";
 import { GoogleDriveService } from "@/lib/google-drive-service";
 
@@ -16,18 +16,34 @@ type Unavailability = {
   timeSlot: string;
 }
 
+export type CombinedClassRule = {
+    classes: string[];
+    subject: string;
+    teacher: string;
+}
+
+export type SplitClassRule = {
+    className: string;
+    parts: {
+        subject: string;
+        teacher: string;
+    }[];
+}
+
 export type SchoolConfig = {
   classRequirements: Record<string, string[]>;
   subjectPriorities: Record<string, SubjectPriority>;
   unavailability: Unavailability[];
   teacherSubjects: Record<string, string[]>;
   teacherClasses: Record<string, string[]>;
+  classTeachers: Record<string, string>;
   prayerTimeSlot: string;
   lunchTimeSlot: string;
   preventConsecutiveClasses: boolean;
-  enableCombinedClasses: boolean;
   subjectCategories: Record<string, SubjectCategory>;
   dailyPeriodQuota: number;
+  combinedClasses: CombinedClassRule[];
+  splitClasses: SplitClassRule[];
 };
 
 export type TeacherLoad = Record<string, Record<string, number>>;
@@ -61,7 +77,7 @@ export const AppStateContext = createContext<AppStateContextType>({} as AppState
 const DEFAULT_APP_STATE: AppState = {
   teachers: ["Mr. Sharma", "Mrs. Gupta", "Ms. Singh", "Mr. Kumar", "Mrs. Roy", "Mr. Das"],
   classes: ["Class 9A", "Class 9B", "Class 10A", "Class 10B", "Class 11 Sci", "Class 12 Sci"],
-  subjects: ["Math", "Science", "English", "History", "Physics", "Chemistry", "Biology", "Computer Science", "Hindi"],
+  subjects: ["Math", "Science", "English", "History", "Physics", "Chemistry", "Biology", "Computer Science", "Hindi", "Attendance", "Library", "Art"],
   timeSlots: [
     "09:00 - 09:45",
     "09:45 - 10:30",
@@ -75,12 +91,12 @@ const DEFAULT_APP_STATE: AppState = {
   ],
   config: {
     teacherSubjects: {
-      "Mr. Sharma": ["Math", "Physics"],
-      "Mrs. Gupta": ["English", "History"],
-      "Ms. Singh": ["Science", "Biology", "Chemistry"],
-      "Mr. Kumar": ["Computer Science", "Math"],
-      "Mrs. Roy": ["Hindi", "History"],
-      "Mr. Das": ["Physics", "Chemistry"]
+      "Mr. Sharma": ["Math", "Physics", "Attendance"],
+      "Mrs. Gupta": ["English", "History", "Attendance", "Library"],
+      "Ms. Singh": ["Science", "Biology", "Chemistry", "Attendance"],
+      "Mr. Kumar": ["Computer Science", "Math", "Attendance"],
+      "Mrs. Roy": ["Hindi", "History", "Art", "Attendance"],
+      "Mr. Das": ["Physics", "Chemistry", "Attendance"]
     },
     teacherClasses: {
         "Mr. Sharma": ["Class 10A", "Class 10B", "Class 11 Sci", "Class 12 Sci"],
@@ -91,12 +107,17 @@ const DEFAULT_APP_STATE: AppState = {
         "Mr. Das": ["Class 11 Sci", "Class 12 Sci"],
     },
     classRequirements: {
-        "Class 9A": ["Math", "Science", "English", "History", "Hindi"],
-        "Class 9B": ["Math", "Science", "English", "History", "Hindi"],
+        "Class 9A": ["Math", "Science", "English", "History", "Hindi", "Computer Science", "Library", "Art"],
+        "Class 9B": ["Math", "Science", "English", "History", "Hindi", "Art"],
         "Class 10A": ["Math", "Science", "English", "History", "Hindi"],
         "Class 10B": ["Math", "Science", "English", "History", "Hindi"],
         "Class 11 Sci": ["Physics", "Chemistry", "Math", "English", "Computer Science"],
         "Class 12 Sci": ["Physics", "Biology", "Math", "English", "Computer Science"],
+    },
+    classTeachers: {
+      "Class 9A": "Mrs. Gupta",
+      "Class 9B": "Mrs. Roy",
+      "Class 10A": "Mr. Kumar",
     },
     subjectCategories: {
         "Math": "main",
@@ -108,6 +129,9 @@ const DEFAULT_APP_STATE: AppState = {
         "Biology": "main",
         "Computer Science": "additional",
         "Hindi": "additional",
+        "Attendance": "main",
+        "Library": "additional",
+        "Art": "additional"
     },
     subjectPriorities: {
         "Math": "before",
@@ -118,8 +142,9 @@ const DEFAULT_APP_STATE: AppState = {
     prayerTimeSlot: "11:15 - 11:30",
     lunchTimeSlot: "01:00 - 01:45",
     preventConsecutiveClasses: true,
-    enableCombinedClasses: false,
     dailyPeriodQuota: 5,
+    combinedClasses: [],
+    splitClasses: [],
   },
   routine: null,
   teacherLoad: {},
@@ -242,6 +267,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   }, [toast]);
 
   const handleLogout = useCallback(async (withSave = true) => {
+    const auth = getFirebaseAuth();
     setIsAuthLoading(true);
     if (withSave && user && driveServiceRef.current?.isReady()) {
         toast({ title: "Saving your work...", description: "Saving your final changes to Google Drive before logging out." });
@@ -256,6 +282,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   }, [user, saveStateToDrive, toast]);
 
   useEffect(() => {
+    const auth = getFirebaseAuth();
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUser(user);
@@ -294,6 +321,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 
   const handleGoogleSignIn = async () => {
     setIsAuthLoading(true);
+    const auth = getFirebaseAuth();
     const provider = new GoogleAuthProvider();
     provider.addScope('https://www.googleapis.com/auth/drive.file');
     try {

@@ -16,9 +16,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Trash2 } from "lucide-react";
-import type { SchoolConfig } from "@/context/app-state-provider";
+import { Trash2, PlusCircle, AlertTriangle } from "lucide-react";
+import type { SchoolConfig, CombinedClassRule, SplitClassRule } from "@/context/app-state-provider";
 import type { SubjectPriority, SubjectCategory } from "@/lib/schedule-generator";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogTrigger } from "../ui/dialog";
+import { Popover, PopoverTrigger, PopoverContent } from "../ui/popover";
+import { Command, CommandEmpty, CommandInput, CommandGroup, CommandItem, CommandList } from "../ui/command";
+import { Check as CheckIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type Unavailability = {
   teacher: string;
@@ -37,6 +42,56 @@ interface RoutineControlsProps {
 
 const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
+function MultiSelectPopover({ options, selected, onSelectedChange, placeholder }: { options: string[], selected: string[], onSelectedChange: (selected: string[]) => void, placeholder: string }) {
+    const [open, setOpen] = useState(false);
+
+    const handleSelect = (option: string) => {
+        const newSelected = selected.includes(option)
+            ? selected.filter(item => item !== option)
+            : [...selected, option];
+        onSelectedChange(newSelected);
+    };
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between">
+                    <span className="truncate">
+                        {selected.length > 0 ? selected.join(', ') : placeholder}
+                    </span>
+                    <PlusCircle className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                <Command>
+                    <CommandInput placeholder="Search..." />
+                    <CommandList>
+                        <CommandEmpty>No results found.</CommandEmpty>
+                        <CommandGroup>
+                            {options.map((option) => (
+                                <CommandItem
+                                    key={option}
+                                    value={option}
+                                    onSelect={() => handleSelect(option)}
+                                >
+                                    <CheckIcon
+                                        className={cn(
+                                            "mr-2 h-4 w-4",
+                                            selected.includes(option) ? "opacity-100" : "opacity-0"
+                                        )}
+                                    />
+                                    {option}
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+    );
+}
+
+
 export default function RoutineControls({
   teachers,
   classes,
@@ -47,6 +102,16 @@ export default function RoutineControls({
 }: RoutineControlsProps) {
   
   const [newUnavailability, setNewUnavailability] = useState<Omit<Unavailability, ''>>({ teacher: '', day: '', timeSlot: '' });
+  const [ruleType, setRuleType] = useState<'combined' | 'split'>('combined');
+  
+  // State for new combined rule
+  const [combinedRuleClasses, setCombinedRuleClasses] = useState<string[]>([]);
+  const [combinedRuleSubject, setCombinedRuleSubject] = useState('');
+  const [combinedRuleTeacher, setCombinedRuleTeacher] = useState('');
+
+  // State for new split rule
+  const [splitRuleClass, setSplitRuleClass] = useState('');
+  const [splitRuleParts, setSplitRuleParts] = useState<{ subject: string, teacher: string }[]>([{ subject: '', teacher: '' }]);
 
   const handleRequirementChange = (className: string, subject: string, checked: boolean) => {
     const currentReqs = config.classRequirements[className] || [];
@@ -88,6 +153,39 @@ export default function RoutineControls({
   const handleRemoveUnavailability = (index: number) => {
     updateConfig('unavailability', config.unavailability.filter((_, i) => i !== index));
   };
+  
+  const handleAddSpecialRule = () => {
+    if (ruleType === 'combined') {
+        if (combinedRuleClasses.length > 1 && combinedRuleSubject && combinedRuleTeacher) {
+            const newRule: CombinedClassRule = { classes: combinedRuleClasses, subject: combinedRuleSubject, teacher: combinedRuleTeacher };
+            updateConfig('combinedClasses', [...(config.combinedClasses || []), newRule]);
+            setCombinedRuleClasses([]);
+            setCombinedRuleSubject('');
+            setCombinedRuleTeacher('');
+        }
+    } else { // split
+        if (splitRuleClass && splitRuleParts.length > 1 && splitRuleParts.every(p => p.subject && p.teacher)) {
+            const newRule: SplitClassRule = { className: splitRuleClass, parts: splitRuleParts };
+            updateConfig('splitClasses', [...(config.splitClasses || []), newRule]);
+            setSplitRuleClass('');
+            setSplitRuleParts([{ subject: '', teacher: '' }]);
+        }
+    }
+  };
+
+  const handleUpdateSplitPart = (index: number, field: 'subject' | 'teacher', value: string) => {
+    const newParts = [...splitRuleParts];
+    newParts[index][field] = value;
+    setSplitRuleParts(newParts);
+  };
+  
+  const handleAddSplitPart = () => {
+    setSplitRuleParts([...splitRuleParts, { subject: '', teacher: '' }]);
+  };
+  
+  const handleRemoveSplitPart = (index: number) => {
+    setSplitRuleParts(splitRuleParts.filter((_, i) => i !== index));
+  };
 
 
   return (
@@ -121,16 +219,131 @@ export default function RoutineControls({
               Prevent teachers from having 3 or more consecutive periods
             </Label>
           </div>
-           <div className="flex items-center space-x-2">
-            <Checkbox
-              id="enable-combined-classes"
-              checked={config.enableCombinedClasses}
-              onCheckedChange={(checked) => updateConfig('enableCombinedClasses', !!checked)}
-            />
-            <Label htmlFor="enable-combined-classes" className="font-normal">
-              Enable combined classes for the same subject/grade (experimental)
-            </Label>
-          </div>
+        </AccordionContent>
+      </AccordionItem>
+      
+      <AccordionItem value="special-rules" className="border p-4 rounded-lg bg-card">
+        <AccordionTrigger>Combined/Split Class Rules</AccordionTrigger>
+        <AccordionContent className="space-y-4 pt-4">
+             <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">Define special rules for combining or splitting classes for specific periods.</p>
+                 <Dialog>
+                    <DialogTrigger asChild>
+                        <Button><PlusCircle className="mr-2 h-4 w-4" /> Add Rule</Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-xl">
+                        <DialogHeader>
+                            <DialogTitle>Add New Special Rule</DialogTitle>
+                        </DialogHeader>
+                        <div className="py-4 space-y-4">
+                            <RadioGroup defaultValue="combined" onValueChange={(v: 'combined' | 'split') => setRuleType(v)} className="grid grid-cols-2 gap-4">
+                                <div><RadioGroupItem value="combined" id="r-combined" className="peer sr-only" /><Label htmlFor="r-combined" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">Combined Class</Label></div>
+                                <div><RadioGroupItem value="split" id="r-split" className="peer sr-only" /><Label htmlFor="r-split" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">Split Class</Label></div>
+                            </RadioGroup>
+
+                            {ruleType === 'combined' ? (
+                                <div className="space-y-4 p-4 border rounded-md">
+                                    <h4 className="font-medium">Define Combined Class</h4>
+                                    <div><Label>Classes to Combine</Label><MultiSelectPopover options={classes} selected={combinedRuleClasses} onSelectedChange={setCombinedRuleClasses} placeholder="Select classes..." /></div>
+                                    <div><Label>Subject</Label><Select value={combinedRuleSubject} onValueChange={setCombinedRuleSubject}><SelectTrigger><SelectValue placeholder="Select subject" /></SelectTrigger><SelectContent>{subjects.map(s=><SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
+                                    <div><Label>Teacher</Label><Select value={combinedRuleTeacher} onValueChange={setCombinedRuleTeacher}><SelectTrigger><SelectValue placeholder="Select teacher" /></SelectTrigger><SelectContent>{teachers.map(t=><SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
+                                </div>
+                            ) : (
+                                <div className="space-y-4 p-4 border rounded-md">
+                                    <h4 className="font-medium">Define Split Class</h4>
+                                    <div><Label>Class to Split</Label><Select value={splitRuleClass} onValueChange={setSplitRuleClass}><SelectTrigger><SelectValue placeholder="Select class" /></SelectTrigger><SelectContent>{classes.map(c=><SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></div>
+                                    <div className="space-y-2">
+                                        <Label>Parts</Label>
+                                        {splitRuleParts.map((part, index) => (
+                                            <div key={index} className="flex gap-2 items-center">
+                                                <Select value={part.subject} onValueChange={(v) => handleUpdateSplitPart(index, 'subject', v)}><SelectTrigger><SelectValue placeholder="Subject" /></SelectTrigger><SelectContent>{subjects.map(s=><SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
+                                                <Select value={part.teacher} onValueChange={(v) => handleUpdateSplitPart(index, 'teacher', v)}><SelectTrigger><SelectValue placeholder="Teacher" /></SelectTrigger><SelectContent>{teachers.map(t=><SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select>
+                                                <Button variant="ghost" size="icon" onClick={() => handleRemoveSplitPart(index)} disabled={splitRuleParts.length <= 1}><Trash2 className="h-4 w-4" /></Button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <Button variant="outline" size="sm" onClick={handleAddSplitPart}>Add Another Part</Button>
+                                </div>
+                            )}
+
+                        </div>
+                        <DialogFooter>
+                            <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
+                            <DialogClose asChild><Button onClick={handleAddSpecialRule}>Add Rule</Button></DialogClose>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+             </div>
+             <div className="mt-4 space-y-2">
+                 {(config.combinedClasses?.length || 0) === 0 && (config.splitClasses?.length || 0) === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">No special rules added.</p>
+                 ) : (
+                    <Table>
+                        <TableHeader><TableRow><TableHead>Type</TableHead><TableHead>Details</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                        <TableBody>
+                            {config.combinedClasses?.map((rule, index) => (
+                                <TableRow key={`c-${index}`}>
+                                    <TableCell>Combined</TableCell>
+                                    <TableCell>{rule.classes.join(' & ')} {'->'} {rule.subject} ({rule.teacher})</TableCell>
+                                    <TableCell className="text-right">
+                                        <Button variant="ghost" size="icon" onClick={() => updateConfig('combinedClasses', config.combinedClasses.filter((_, i) => i !== index))}>
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                             {config.splitClasses?.map((rule, index) => (
+                                <TableRow key={`s-${index}`}>
+                                    <TableCell>Split</TableCell>
+                                    <TableCell>{rule.className} {'->'} {rule.parts.map(p => `${p.subject} (${p.teacher})`).join(' | ')}</TableCell>
+                                    <TableCell className="text-right">
+                                        <Button variant="ghost" size="icon" onClick={() => updateConfig('splitClasses', config.splitClasses.filter((_, i) => i !== index))}>
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                 )}
+             </div>
+        </AccordionContent>
+      </AccordionItem>
+
+
+       <AccordionItem value="class-teacher" className="border p-4 rounded-lg bg-card">
+        <AccordionTrigger>Class Teacher Assignment</AccordionTrigger>
+        <AccordionContent className="space-y-4 pt-4">
+           <p className="text-sm text-muted-foreground">Assign a class teacher to each class. They will be automatically scheduled for the first period for attendance.</p>
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Class</TableHead>
+                        <TableHead>Class Teacher</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {classes.map(c => (
+                        <TableRow key={c}>
+                            <TableCell><Label>{c}</Label></TableCell>
+                            <TableCell>
+                                <Select 
+                                    value={config.classTeachers[c] || 'none'}
+                                    onValueChange={(value) => updateConfig('classTeachers', { ...config.classTeachers, [c]: value === 'none' ? '' : value })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select Class Teacher" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="none">None</SelectItem>
+                                        {teachers.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
         </AccordionContent>
       </AccordionItem>
 

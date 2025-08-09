@@ -46,16 +46,39 @@ export type SchoolConfig = {
   splitClasses: SplitClassRule[];
 };
 
-export type TeacherLoad = Record<string, Record<string, number>>;
+export type TeacherLoadDetail = {
+    total: number;
+    main: number;
+    additional: number;
+};
+export type TeacherLoad = Record<string, Record<string, TeacherLoadDetail>>;
+
+export type ExamEntry = {
+    id: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    classes: string[];
+    rooms: string[];
+    subject: string;
+};
+
+export type DutyChart = {
+    duties: Record<string, Record<string, string[]>>; // Key: "date-startTime", Value: { room: [teachers] }
+    examSlots: { date: string, startTime: string, endTime: string }[];
+};
+
 
 export type AppState = {
   teachers: string[];
   classes: string[];
   subjects: string[];
   timeSlots: string[];
+  rooms: string[];
   config: SchoolConfig;
   routine: GenerateScheduleOutput | null;
   teacherLoad: TeacherLoad;
+  examTimetable: ExamEntry[];
 }
 
 interface AppStateContextType {
@@ -89,14 +112,15 @@ const DEFAULT_APP_STATE: AppState = {
     "01:45 - 02:30",
     "02:30 - 03:15"
   ],
+  rooms: ["Room 101", "Room 102", "Room 103", "Hall A", "Hall B"],
   config: {
     teacherSubjects: {
-      "Mr. Sharma": ["Math", "Physics", "Attendance"],
-      "Mrs. Gupta": ["English", "History", "Attendance", "Library"],
-      "Ms. Singh": ["Science", "Biology", "Chemistry", "Attendance"],
-      "Mr. Kumar": ["Computer Science", "Math", "Attendance"],
-      "Mrs. Roy": ["Hindi", "History", "Art", "Attendance"],
-      "Mr. Das": ["Physics", "Chemistry", "Attendance"]
+      "Mr. Sharma": ["Math", "Physics"],
+      "Mrs. Gupta": ["English", "History", "Library"],
+      "Ms. Singh": ["Science", "Biology", "Chemistry"],
+      "Mr. Kumar": ["Computer Science", "Math"],
+      "Mrs. Roy": ["Hindi", "History", "Art"],
+      "Mr. Das": ["Physics", "Chemistry"]
     },
     teacherClasses: {
         "Mr. Sharma": ["Class 10A", "Class 10B", "Class 11 Sci", "Class 12 Sci"],
@@ -148,6 +172,7 @@ const DEFAULT_APP_STATE: AppState = {
   },
   routine: null,
   teacherLoad: {},
+  examTimetable: [],
 };
 
 export const AppStateProvider = ({ children }: { children: React.ReactNode }) => {
@@ -166,27 +191,50 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 
   const calculatedTeacherLoad = useMemo(() => {
     const load: TeacherLoad = {};
-    if (!appState.routine?.schedule) return {};
+    if (!appState.routine?.schedule || !appState.teachers) return {};
 
+    const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Total"];
+    
     appState.teachers.forEach(teacher => {
-        load[teacher] = { Monday: 0, Tuesday: 0, Wednesday: 0, Thursday: 0, Friday: 0, Saturday: 0, Total: 0 };
+        load[teacher] = {};
+        days.forEach(day => {
+            load[teacher][day] = { total: 0, main: 0, additional: 0 };
+        });
     });
 
     appState.routine.schedule.forEach(entry => {
-        if(entry.subject === "Prayer" || entry.subject === "Lunch") return;
+        if(entry.subject === "Prayer" || entry.subject === "Lunch" || entry.subject === "---") return;
+        
         const teachersInEntry = entry.teacher.split(' & ').map(t => t.trim());
-        teachersInEntry.forEach(teacher => {
+        const subjectsInEntry = entry.subject.split(' / ').map(s => s.trim());
+
+        teachersInEntry.forEach((teacher, index) => {
             if (teacher && teacher !== "N/A" && load[teacher]) {
-                if (load[teacher][entry.day] !== undefined) {
-                  load[teacher][entry.day]++;
+                const subject = subjectsInEntry[index] || subjectsInEntry[0]; // For split, match teacher to subject
+                const category = appState.config.subjectCategories[subject] || 'additional';
+
+                if (load[teacher][entry.day]) {
+                    load[teacher][entry.day].total++;
+                    if (category === 'main') {
+                        load[teacher][entry.day].main++;
+                    } else {
+                        load[teacher][entry.day].additional++;
+                    }
                 }
-                load[teacher].Total++;
+                
+                // Update weekly total
+                load[teacher].Total.total++;
+                if (category === 'main') {
+                    load[teacher].Total.main++;
+                } else {
+                    load[teacher].Total.additional++;
+                }
             }
         });
     });
 
     return load;
-  }, [appState.routine, appState.teachers]);
+  }, [appState.routine, appState.teachers, appState.config.subjectCategories]);
 
   useEffect(() => {
     updateState('teacherLoad', calculatedTeacherLoad);
@@ -305,6 +353,9 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       if (['teachers', 'classes', 'subjects', 'timeSlots'].includes(key as string)) {
           newState.routine = null;
           newState.teacherLoad = {};
+      }
+      if (key === 'rooms') {
+          newState.examTimetable = [];
       }
       return newState;
     });

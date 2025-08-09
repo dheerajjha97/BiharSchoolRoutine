@@ -3,20 +3,21 @@ import type { AppState } from "@/context/app-state-provider";
 import { sortTimeSlots } from "./utils";
 
 // This function is no longer used but kept for potential legacy support or alternative export options.
-export const exportToCsv = (data: Omit<AppState, 'config' | 'routine' | 'teacherLoad'>, filename: string) => {
-  const { teachers, classes, subjects, timeSlots = [] } = data;
+export const exportToCsv = (data: Omit<AppState, 'config' | 'routine' | 'teacherLoad' | 'examTimetable'>, filename: string) => {
+  const { teachers, classes, subjects, timeSlots = [], rooms = [] } = data;
   
-  const headers = ['teachers', 'classes', 'subjects', 'timeSlots'];
+  const headers = ['teachers', 'classes', 'subjects', 'timeSlots', 'rooms'];
   let csvContent = headers.join(',') + '\n';
 
-  const maxLength = Math.max(teachers.length, classes.length, subjects.length, timeSlots.length);
+  const maxLength = Math.max(teachers.length, classes.length, subjects.length, timeSlots.length, rooms.length);
 
   for (let i = 0; i < maxLength; i++) {
     const rowData = {
         teachers: teachers[i] || '',
         classes: classes[i] || '',
         subjects: subjects[i] || '',
-        timeSlots: timeSlots[i] || ''
+        timeSlots: timeSlots[i] || '',
+        rooms: rooms[i] || '',
     };
     const row = headers.map(header => {
         const value = rowData[header as keyof typeof rowData];
@@ -48,12 +49,12 @@ export const importFromCsv = (file: File): Promise<Omit<AppState, 'config' | 'ro
         const lines = csv.split(/[\r\n]+/).filter(line => line.trim() !== '');
         
         if (lines.length < 2) {
-            resolve({ teachers: [], classes: [], subjects: [], timeSlots: [] });
+            resolve({ teachers: [], classes: [], subjects: [], timeSlots: [], rooms: [], examTimetable: [] });
             return;
         }
 
         const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-        const data: Required<Omit<AppState, 'config' | 'routine' | 'teacherLoad'>> = { teachers: [], classes: [], subjects: [], timeSlots: [] };
+        const data: Required<Omit<AppState, 'config' | 'routine' | 'teacherLoad'>> = { teachers: [], classes: [], subjects: [], timeSlots: [], rooms: [], examTimetable: [] };
 
         const requiredHeaders = ['teachers', 'classes', 'subjects'];
         if (!requiredHeaders.every(h => headers.includes(h))) {
@@ -64,6 +65,7 @@ export const importFromCsv = (file: File): Promise<Omit<AppState, 'config' | 'ro
         const classIndex = headers.indexOf('classes');
         const subjectIndex = headers.indexOf('subjects');
         const timeSlotIndex = headers.indexOf('timeSlots');
+        const roomIndex = headers.indexOf('rooms');
 
         for (let i = 1; i < lines.length; i++) {
             const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
@@ -72,13 +74,16 @@ export const importFromCsv = (file: File): Promise<Omit<AppState, 'config' | 'ro
             if (classIndex !== -1 && values[classIndex]) data.classes.push(values[classIndex]);
             if (subjectIndex !== -1 && values[subjectIndex]) data.subjects.push(values[subjectIndex]);
             if (timeSlotIndex !== -1 && values[timeSlotIndex]) data.timeSlots.push(values[timeSlotIndex]);
+            if (roomIndex !== -1 && values[roomIndex]) data.rooms.push(values[roomIndex]);
         }
         
         const finalData = {
           teachers: [...new Set(data.teachers)].sort(),
           classes: [...new Set(data.classes)].sort(),
           subjects: [...new Set(data.subjects)].sort(),
-          timeSlots: sortTimeSlots([...new Set(data.timeSlots)])
+          timeSlots: sortTimeSlots([...new Set(data.timeSlots)]),
+          rooms: [...new Set(data.rooms)].sort(),
+          examTimetable: [], // CSV import doesn't handle complex objects
         };
         
         resolve(finalData);

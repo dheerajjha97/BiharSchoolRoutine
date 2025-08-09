@@ -12,6 +12,7 @@ import { generateScheduleLogic } from "@/lib/schedule-generator";
 import type { GenerateScheduleLogicInput } from "@/lib/schedule-generator";
 import type { ScheduleEntry } from "@/ai/flows/generate-schedule";
 import PageHeader from "@/components/app/page-header";
+import TeacherLoad from "@/components/routine/teacher-load";
 
 const daysOfWeek: ScheduleEntry['day'][] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -171,7 +172,10 @@ export default function Home() {
           teachers={appState.teachers}
           teacherSubjects={appState.config.teacherSubjects}
           dailyPeriodQuota={appState.config.dailyPeriodQuota}
-          teacherLoad={appState.teacherLoad}
+        />
+        
+        <TeacherLoad 
+            teacherLoad={appState.teacherLoad}
         />
     </div>
   );

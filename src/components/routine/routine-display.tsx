@@ -27,8 +27,6 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import TeacherLoad from './teacher-load';
-import type { TeacherLoad as TeacherLoadType } from '@/context/app-state-provider';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { Textarea } from '../ui/textarea';
@@ -42,7 +40,6 @@ interface RoutineDisplayProps {
   teacherSubjects: Record<string, string[]>;
   onScheduleChange: (newSchedule: ScheduleEntry[]) => void;
   dailyPeriodQuota: number;
-  teacherLoad: TeacherLoadType;
 }
 
 type GridSchedule = Record<string, Record<string, Record<string, ScheduleEntry[]>>>;
@@ -92,7 +89,7 @@ const toRoman = (num: number): string => {
     return result;
 };
 
-const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, teacherSubjects, onScheduleChange, dailyPeriodQuota, teacherLoad }: RoutineDisplayProps) => {
+const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, teacherSubjects, onScheduleChange, dailyPeriodQuota }: RoutineDisplayProps) => {
   const { toast } = useToast();
   
   const [isCellDialogOpen, setIsCellDialogOpen] = React.useState(false);
@@ -549,9 +546,6 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
           <div className="p-4 md:p-6 space-y-6">
                 {renderScheduleTable("Secondary", secondaryClasses, "routine-table-secondary")}
                 {renderScheduleTable("Senior Secondary", seniorSecondaryClasses, "routine-table-senior-secondary")}
-                <TeacherLoad 
-                    teacherLoad={teacherLoad}
-                />
             </div>
         </CardContent>
       </Card>

@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import type { TeacherLoad as TeacherLoadType } from '@/context/app-state-provider';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Users, FileDown, Loader2 } from "lucide-react";
@@ -14,7 +15,7 @@ import { Textarea } from '../ui/textarea';
 
 
 interface TeacherLoadProps {
-  teacherLoad: Record<string, Record<string, number>>;
+  teacherLoad: TeacherLoadType;
 }
 
 const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Total"];
@@ -45,7 +46,6 @@ export default function TeacherLoad({ teacherLoad }: TeacherLoadProps) {
     
     const wrapperDiv = document.createElement('div');
     
-    // Create and style the header div
     if (pdfHeader.trim()) {
         const headerDiv = document.createElement('div');
         headerDiv.style.textAlign = 'center';
@@ -72,17 +72,14 @@ export default function TeacherLoad({ teacherLoad }: TeacherLoadProps) {
             const el = cell as HTMLElement;
             el.style.border = '1px solid black';
             el.style.padding = '4px';
+            el.style.textAlign = 'center';
+            el.style.fontSize = '10px';
         });
         table.querySelectorAll('th').forEach(th => {
             const el = th as HTMLElement;
-            el.style.backgroundColor = 'hsl(217, 33%, 54%)';
-            el.style.color = 'hsl(210, 40%, 98%)';
+            el.style.backgroundColor = '#f2f2f2';
         });
     }
-
-    clonedElement.querySelectorAll('th, td').forEach(el => {
-        (el as HTMLElement).style.position = 'static';
-    });
     
     wrapperDiv.appendChild(clonedElement);
     pdfContainer.appendChild(wrapperDiv);
@@ -126,19 +123,19 @@ export default function TeacherLoad({ teacherLoad }: TeacherLoadProps) {
 
 
   return (
-    <div className="px-6 md:px-0 break-after-page">
+    <div className="px-0 md:px-0 break-after-page">
       <div id="pdf-container-teacher" className="absolute -left-[9999px] top-auto" aria-hidden="true"></div>
-      <Card id="teacher-load-table">
+      <Card>
         <CardHeader>
           <div className="flex flex-wrap justify-between items-start gap-4">
             <div>
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-primary" />
-                <CardTitle>Teacher Workload</CardTitle>
+                <CardTitle>Teacher Workload Analysis</CardTitle>
               </div>
-              <CardDescription>Number of classes assigned per teacher per day.</CardDescription>
+              <CardDescription>Detailed breakdown of classes assigned per teacher.</CardDescription>
             </div>
-            <Button size="sm" variant="outline" disabled={isDownloading} onClick={() => handleDownloadPdf('teacher-load-table', 'teacher-workload.pdf')}>
+            <Button size="sm" variant="outline" disabled={isDownloading} onClick={() => handleDownloadPdf('teacher-load-table-container', 'teacher-workload.pdf')}>
               {isDownloading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
@@ -158,27 +155,40 @@ export default function TeacherLoad({ teacherLoad }: TeacherLoadProps) {
                 />
             </div>
         </CardHeader>
-        <CardContent>
-          <h3 className="hidden">Teacher Workload Summary</h3>
+        <CardContent id="teacher-load-table-container">
           <div className="border rounded-lg overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="font-semibold">Teacher</TableHead>
+                  <TableHead className="font-semibold sticky left-0 bg-card z-10" rowSpan={2}>Teacher</TableHead>
                   {daysOfWeek.map(day => (
-                    <TableHead key={day} className="text-center font-semibold">{day.substring(0, 3)}</TableHead>
+                    <TableHead key={day} className="text-center font-semibold" colSpan={3}>{day}</TableHead>
+                  ))}
+                </TableRow>
+                 <TableRow>
+                  {daysOfWeek.map(day => (
+                    <React.Fragment key={day}>
+                      <TableHead className="text-center">Main</TableHead>
+                      <TableHead className="text-center">Add.</TableHead>
+                      <TableHead className="text-center font-bold">Total</TableHead>
+                    </React.Fragment>
                   ))}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {teachers.map(teacher => (
                   <TableRow key={teacher}>
-                    <TableCell className="font-medium">{teacher}</TableCell>
-                    {daysOfWeek.map(day => (
-                      <TableCell key={`${teacher}-${day}`} className="text-center">
-                        {teacherLoad[teacher]?.[day] ?? 0}
-                      </TableCell>
-                    ))}
+                    <TableCell className="font-medium sticky left-0 bg-card z-10">{teacher}</TableCell>
+                    {daysOfWeek.map(day => {
+                      const load = teacherLoad[teacher]?.[day] ?? { total: 0, main: 0, additional: 0 };
+                      return (
+                         <React.Fragment key={`${teacher}-${day}`}>
+                            <TableCell className="text-center">{load.main}</TableCell>
+                            <TableCell className="text-center">{load.additional}</TableCell>
+                            <TableCell className="text-center font-bold bg-secondary/50">{load.total}</TableCell>
+                         </React.Fragment>
+                      )
+                    })}
                   </TableRow>
                 ))}
               </TableBody>
@@ -189,5 +199,3 @@ export default function TeacherLoad({ teacherLoad }: TeacherLoadProps) {
     </div>
   );
 }
-
-    

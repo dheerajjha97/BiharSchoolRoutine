@@ -49,7 +49,7 @@ type GridSchedule = Record<string, Record<string, Record<string, ScheduleEntry[]
 
 type CellData = {
     subject: string;
-    classNames: string[];
+    className: string;
     teacher: string;
 }
 
@@ -97,7 +97,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   
   const [isCellDialogOpen, setIsCellDialogOpen] = React.useState(false);
   const [currentCell, setCurrentCell] = React.useState<CurrentCell | null>(null);
-  const [cellData, setCellData] = React.useState<CellData>({ subject: "", classNames: [], teacher: "" });
+  const [cellData, setCellData] = React.useState<CellData>({ subject: "", className: "", teacher: "" });
   const [isDownloading, setIsDownloading] = React.useState(false);
   const [pdfHeader, setPdfHeader] = React.useState("");
   
@@ -177,72 +177,59 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
     return teachers.filter(teacher => teacherSubjects[teacher]?.includes(cellData.subject));
   }, [cellData.subject, teachers, teacherSubjects]);
 
-  const getDisabledClasses = useMemo(() => {
-    if (cellData.classNames.length === 0) return new Set();
-    const firstSelectedGrade = getGradeFromClassName(cellData.classNames[0]);
-    if (!firstSelectedGrade) return new Set(classes);
-    
-    return new Set<string>(classes.filter(c => getGradeFromClassName(c) !== firstSelectedGrade));
-  }, [cellData.classNames, classes]);
-
   React.useEffect(() => {
-    const currentTeachers = cellData.teacher.split(' & ').map(t => t.trim()).filter(Boolean);
-    if (cellData.subject && currentTeachers.some(t => !availableTeachers.includes(t) && t !== 'N/A')) {
+    if (cellData.subject && cellData.teacher && !availableTeachers.includes(cellData.teacher) && cellData.teacher !== 'N/A') {
         setCellData(prev => ({ ...prev, teacher: '' }));
     }
-  }, [cellData.subject, availableTeachers, cellData.teacher]);
+  }, [cellData.subject, cellData.teacher, availableTeachers]);
   
   const handleCellClick = (day: ScheduleEntry['day'], timeSlot: string, className: string, entry: ScheduleEntry | null) => {
     setCurrentCell({ day, timeSlot, className, entry });
     setCellData(entry ? {
         subject: entry.subject,
-        classNames: entry.className.split(' & ').map(c => c.trim()),
+        className: entry.className,
         teacher: entry.teacher || "",
-    } : { subject: "", classNames: [className], teacher: "" });
+    } : { subject: "", className: className, teacher: "" });
     setIsCellDialogOpen(true);
   };
   
   const handleSave = () => {
-    if (!currentCell || cellData.classNames.length === 0) return;
+    if (!currentCell) return;
   
     const currentSchedule = scheduleData?.schedule || [];
-  
-    const newEntryData = {
-        subject: cellData.subject,
-        className: [...cellData.classNames].sort(sortClasses).join(' & '),
-        teacher: cellData.teacher
-    };
-
-    // Calculate the future schedule if this change is saved
-    let prospectiveSchedule = currentSchedule.filter(e => e !== currentCell.entry);
-    prospectiveSchedule = prospectiveSchedule.filter(e => !(e.day === currentCell.day && e.timeSlot === currentCell.timeSlot && e.className.split(' & ').some(c => cellData.classNames.includes(c))));
-    if (cellData.subject && cellData.subject !== '---') {
-        const newEntry: ScheduleEntry = {
-            day: currentCell.day as ScheduleEntry['day'],
-            timeSlot: currentCell.timeSlot,
-            ...newEntryData,
-        };
-        prospectiveSchedule.push(newEntry);
-    }
-
+    
     // Check teacher load against quota
-    const teachersInSlot = cellData.teacher.split(' & ').map(t => t.trim()).filter(t => t && t !== "N/A");
-    for (const teacher of teachersInSlot) {
-        const periodsToday = prospectiveSchedule.filter(
-            e => e.day === currentCell.day && e.teacher.includes(teacher) && e.subject !== 'Prayer' && e.subject !== 'Lunch'
+    if (cellData.teacher && cellData.subject !== 'Prayer' && cellData.subject !== 'Lunch') {
+        const otherPeriodsToday = currentSchedule.filter(
+            e => e !== currentCell.entry && e.day === currentCell.day && e.teacher === cellData.teacher && e.subject !== 'Prayer' && e.subject !== 'Lunch'
         ).length;
-
-        if (periodsToday > dailyPeriodQuota) {
+        if (otherPeriodsToday >= dailyPeriodQuota) {
             toast({
                 variant: "destructive",
                 title: "Teacher Workload Exceeded",
-                description: `${teacher} already has ${periodsToday-1} periods on ${currentCell.day}. Cannot assign more than ${dailyPeriodQuota}.`,
+                description: `${cellData.teacher} already has ${otherPeriodsToday} periods on ${currentCell.day}. Cannot assign more than ${dailyPeriodQuota}.`,
             });
             return; // Abort save
         }
     }
+
+    let newSchedule = [...currentSchedule];
+    if (currentCell.entry) {
+      newSchedule = newSchedule.filter(e => e !== currentCell.entry);
+    }
     
-    onScheduleChange(prospectiveSchedule);
+    if (cellData.subject && cellData.subject !== '---') {
+        const newEntry: ScheduleEntry = {
+            day: currentCell.day,
+            timeSlot: currentCell.timeSlot,
+            className: cellData.className,
+            subject: cellData.subject,
+            teacher: cellData.teacher,
+        };
+        newSchedule.push(newEntry);
+    }
+    
+    onScheduleChange(newSchedule);
     setIsCellDialogOpen(false);
     setCurrentCell(null);
   };
@@ -253,14 +240,6 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
      onScheduleChange(newSchedule);
      setIsCellDialogOpen(false);
      setCurrentCell(null);
-  };
-  
-  const handleMultiSelectTeacher = (selectedTeacher: string) => {
-    const currentTeachers = cellData.teacher.split(' & ').map(t => t.trim()).filter(Boolean);
-    const newTeachers = currentTeachers.includes(selectedTeacher)
-      ? currentTeachers.filter(t => t !== selectedTeacher)
-      : [...currentTeachers, selectedTeacher];
-    setCellData({ ...cellData, teacher: newTeachers.join(' & ') });
   };
   
   const handleCopyDay = (sourceDay: ScheduleEntry['day'], destinationDay: ScheduleEntry['day']) => {
@@ -521,14 +500,6 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
     );
   }
 
-  const selectedTeachers = cellData.teacher.split(' & ').map(t => t.trim()).filter(Boolean);
-  const ClassCheckbox = ({ className }: { className: string }) => (
-    <div className="flex items-center space-x-2">
-        <Checkbox id={`class-${className}`} checked={cellData.classNames.includes(className)} disabled={getDisabledClasses.has(className)} onCheckedChange={(checked) => setCellData({...cellData, classNames: checked ? [...cellData.classNames, className] : cellData.classNames.filter(name => name !== className)})}/>
-        <Label htmlFor={`class-${className}`} className={cn("font-normal", getDisabledClasses.has(className) && 'text-muted-foreground')}>{className}</Label>
-    </div>
-  );
-
   return (
     <>
       <Card>
@@ -580,63 +551,29 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
       
       {isCellDialogOpen && (
         <Dialog open={isCellDialogOpen} onOpenChange={setIsCellDialogOpen}>
-          <DialogContent className="sm:max-w-lg">
+          <DialogContent>
             <DialogHeader>
               <DialogTitle>Edit Schedule Slot</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-1 md:grid-cols-4 items-center gap-4">
-                <Label htmlFor="subject" className="md:text-right">Subject</Label>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="subject" className="text-right">Subject</Label>
                 <Select value={cellData.subject} onValueChange={(value) => setCellData({ ...cellData, subject: value === '---' ? '---' : value, teacher: '' })}>
-                  <SelectTrigger className="md:col-span-3"><SelectValue placeholder="Select subject" /></SelectTrigger>
+                  <SelectTrigger className="col-span-3"><SelectValue placeholder="Select subject" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="---">--- (Clear Slot)</SelectItem>
                     {subjects.map((s) => (<SelectItem key={s} value={s}>{s}</SelectItem>))}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-4 items-start gap-4">
-                <Label className="md:text-right pt-2">Class(es)</Label>
-                 <div className="md:col-span-3 space-y-4">
-                    {secondaryClasses.length > 0 && (
-                      <div>
-                        <Label className="text-sm font-medium">Secondary</Label>
-                        <Separator className="my-2" />
-                        <div className="grid grid-cols-2 gap-2">{secondaryClasses.map(c => <ClassCheckbox key={c} className={c} />)}</div>
-                      </div>
-                    )}
-                    {seniorSecondaryClasses.length > 0 && (
-                       <div>
-                        <Label className="text-sm font-medium">Senior Secondary</Label>
-                        <Separator className="my-2" />
-                        <div className="grid grid-cols-2 gap-2">{seniorSecondaryClasses.map(c => <ClassCheckbox key={c} className={c} />)}</div>
-                      </div>
-                    )}
-                  </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-4 items-center gap-4">
-                <Label className="md:text-right">Teacher(s)</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                      <Button variant="outline" className="md:col-span-3 justify-start font-normal truncate">{selectedTeachers.length > 0 ? selectedTeachers.join(', ') : "Select teachers"}</Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[300px] p-0">
-                      <Command>
-                          <CommandInput placeholder="Search teachers..." />
-                          <CommandList>
-                              <CommandEmpty>No qualified teachers found.</CommandEmpty>
-                              <CommandGroup>
-                                  {availableTeachers.map((teacher) => (
-                                      <CommandItem key={teacher} onSelect={() => handleMultiSelectTeacher(teacher)} value={teacher}>
-                                          <Check className={cn("mr-2 h-4 w-4", selectedTeachers.includes(teacher) ? "opacity-100" : "opacity-0")}/>
-                                          <span>{teacher}</span>
-                                      </CommandItem>
-                                  ))}
-                              </CommandGroup>
-                          </CommandList>
-                      </Command>
-                  </PopoverContent>
-                </Popover>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="teacher" className="text-right">Teacher</Label>
+                <Select value={cellData.teacher} onValueChange={(value) => setCellData({ ...cellData, teacher: value })}>
+                  <SelectTrigger className="col-span-3"><SelectValue placeholder="Select teacher" /></SelectTrigger>
+                  <SelectContent>
+                    {availableTeachers.map((teacher) => (<SelectItem key={teacher} value={teacher}>{teacher}</SelectItem>))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <DialogFooter className="sm:justify-between flex-col-reverse sm:flex-row gap-2">

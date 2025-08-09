@@ -1,67 +1,60 @@
 
-import type { ExamEntry } from "@/context/app-state-provider";
-
-export type DutyChart = {
-    duties: Record<string, string[]>; // Key: "date-time", Value: array of teacher names
-    examSlots: { date: string, time: string }[];
-};
+import type { ExamEntry, DutyChart } from "@/context/app-state-provider";
 
 export function generateInvigilationDuty(
     examTimetable: ExamEntry[],
     allTeachers: string[]
 ): DutyChart {
-    const duties: Record<string, string[]> = {};
+    const duties: DutyChart['duties'] = {};
     const teacherDutyCount: Record<string, number> = {};
     allTeachers.forEach(t => { teacherDutyCount[t] = 0; });
 
-    // Identify teachers who are conducting an exam at a certain slot
-    const occupiedTeachers: Record<string, Set<string>> = {}; // Key: "date-time", Value: set of teacher names
-
-    examTimetable.forEach(exam => {
-        const key = `${exam.date}-${exam.time}`;
-        if (!occupiedTeachers[key]) {
-            occupiedTeachers[key] = new Set();
-        }
-        // Assuming one teacher per subject, we need a way to map subject to teacher.
-        // For now, we will assume any teacher can invigilate any exam except their own subject's.
-        // A more robust system would use the teacherSubjects mapping.
-        // This part is simplified: we are not excluding the subject teacher from invigilating.
-        // This is a limitation to be addressed if teacher-subject mapping is available here.
-    });
-
     const uniqueExamSlots = examTimetable.reduce((acc, exam) => {
-        const key = `${exam.date}-${exam.time}`;
-        if (!acc.find(slot => `${slot.date}-${slot.time}` === key)) {
-            acc.push({ date: exam.date, time: exam.time });
+        const key = `${exam.date}-${exam.startTime}`;
+        if (!acc.find(slot => `${slot.date}-${slot.startTime}` === key)) {
+            acc.push({ date: exam.date, startTime: exam.startTime, endTime: exam.endTime });
         }
         return acc;
-    }, [] as { date: string, time: string }[]).sort((a, b) => {
-        const dateA = new Date(a.date).getTime();
-        const dateB = new Date(b.date).getTime();
-        if(dateA !== dateB) return dateA - dateB;
-        return a.time.localeCompare(b.time);
+    }, [] as { date: string, startTime: string, endTime: string }[]).sort((a, b) => {
+        const dateA = new Date(`${a.date}T${a.startTime}`).getTime();
+        const dateB = new Date(`${b.date}T${b.startTime}`).getTime();
+        return dateA - dateB;
     });
 
-    uniqueExamSlots.forEach(({ date, time }) => {
-        const key = `${date}-${time}`;
-        duties[key] = [];
+    uniqueExamSlots.forEach(({ date, startTime }) => {
+        const key = `${date}-${startTime}`;
+        duties[key] = {};
 
-        // All teachers are potential invigilators for this slot.
-        // A better approach would be to exclude teachers whose subject is being tested.
-        // This requires passing teacher-subject mapping.
-        const availableTeachers = [...allTeachers];
-        
-        // Sort available teachers by their current duty count (ascending) to balance the load
-        const sortedAvailableTeachers = availableTeachers.sort((a, b) => teacherDutyCount[a] - teacherDutyCount[b]);
-        
-        // Assign a certain number of teachers for invigilation, e.g., 2 per slot if available
-        const numInvigilators = Math.min(sortedAvailableTeachers.length, 2); 
-        
-        for (let i = 0; i < numInvigilators; i++) {
-            const teacherToAssign = sortedAvailableTeachers[i];
-            duties[key].push(teacherToAssign);
-            teacherDutyCount[teacherToAssign]++;
-        }
+        // Find all exams in this specific time slot
+        const examsInSlot = examTimetable.filter(e => e.date === date && e.startTime === startTime);
+
+        // Get all unique rooms used in this time slot
+        const roomsForSlot = [...new Set(examsInSlot.flatMap(e => e.rooms))];
+
+        roomsForSlot.forEach(room => {
+            if (!duties[key][room]) {
+                duties[key][room] = [];
+            }
+
+            const availableTeachers = [...allTeachers];
+            
+            // Sort available teachers by their current duty count (ascending) to balance the load
+            const sortedAvailableTeachers = availableTeachers.sort((a, b) => teacherDutyCount[a] - teacherDutyCount[b]);
+            
+            // Assign a certain number of teachers for invigilation per room, e.g., 2
+            const numInvigilatorsPerRoom = Math.min(sortedAvailableTeachers.length, 2); 
+            
+            // Find teachers who are not already assigned in this slot (in another room)
+            const teachersAssignedInThisSlot = Object.values(duties[key]).flat();
+            const unassignedTeachers = sortedAvailableTeachers.filter(t => !teachersAssignedInThisSlot.includes(t));
+
+            const teachersToAssign = unassignedTeachers.slice(0, numInvigilatorsPerRoom);
+
+            duties[key][room].push(...teachersToAssign);
+            teachersToAssign.forEach(teacher => {
+                teacherDutyCount[teacher]++;
+            });
+        });
     });
     
     return { duties, examSlots: uniqueExamSlots };

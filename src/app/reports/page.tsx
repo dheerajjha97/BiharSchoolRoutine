@@ -71,18 +71,20 @@ function MultiSelectPopover({ options, selected, onSelectedChange, placeholder }
 
 export default function ReportsPage() {
     const { appState, updateState } = useContext(AppStateContext);
-    const { teachers, classes, subjects, examTimetable = [] } = appState;
+    const { teachers, classes, subjects, rooms, examTimetable = [] } = appState;
     const [dutyChart, setDutyChart] = useState<DutyChart | null>(null);
     const { toast } = useToast();
 
     // State for the new exam entry form
     const [newExamDate, setNewExamDate] = useState("");
-    const [newExamTime, setNewExamTime] = useState("");
+    const [newExamStartTime, setNewExamStartTime] = useState("");
+    const [newExamEndTime, setNewExamEndTime] = useState("");
     const [newExamClasses, setNewExamClasses] = useState<string[]>([]);
+    const [newExamRooms, setNewExamRooms] = useState<string[]>([]);
     const [newExamSubject, setNewExamSubject] = useState("");
 
     const handleAddExamEntry = () => {
-        if (!newExamDate || !newExamTime || newExamClasses.length === 0 || !newExamSubject) {
+        if (!newExamDate || !newExamStartTime || !newExamEndTime || newExamClasses.length === 0 || newExamRooms.length === 0 || !newExamSubject) {
             toast({ variant: "destructive", title: "Missing Information", description: "Please fill all fields to add an exam entry." });
             return;
         }
@@ -90,8 +92,10 @@ export default function ReportsPage() {
         const newEntry: ExamEntry = {
             id: Date.now().toString(), // simple unique id
             date: newExamDate,
-            time: newExamTime,
+            startTime: newExamStartTime,
+            endTime: newExamEndTime,
             classes: newExamClasses,
+            rooms: newExamRooms,
             subject: newExamSubject
         };
 
@@ -99,8 +103,10 @@ export default function ReportsPage() {
 
         // Reset form
         setNewExamDate("");
-        setNewExamTime("");
+        setNewExamStartTime("");
+        setNewExamEndTime("");
         setNewExamClasses([]);
+        setNewExamRooms([]);
         setNewExamSubject("");
     };
 
@@ -149,30 +155,42 @@ export default function ReportsPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                         <div>
                             <Label htmlFor="exam-date">Date</Label>
                             <Input id="exam-date" type="date" value={newExamDate} onChange={e => setNewExamDate(e.target.value)} />
                         </div>
-                        <div>
-                            <Label htmlFor="exam-time">Time</Label>
-                            <Input id="exam-time" type="time" value={newExamTime} onChange={e => setNewExamTime(e.target.value)} />
+                        <div className="grid grid-cols-2 gap-2">
+                             <div>
+                                <Label htmlFor="exam-start-time">Start Time</Label>
+                                <Input id="exam-start-time" type="time" value={newExamStartTime} onChange={e => setNewExamStartTime(e.target.value)} />
+                            </div>
+                             <div>
+                                <Label htmlFor="exam-end-time">End Time</Label>
+                                <Input id="exam-end-time" type="time" value={newExamEndTime} onChange={e => setNewExamEndTime(e.target.value)} />
+                            </div>
                         </div>
-                        <div className="lg:col-span-2">
+                        <div>
                              <Label>Classes</Label>
                              <MultiSelectPopover options={classes} selected={newExamClasses} onSelectedChange={setNewExamClasses} placeholder="Select classes..." />
                         </div>
                         <div>
+                            <Label>Rooms</Label>
+                            <MultiSelectPopover options={rooms} selected={newExamRooms} onSelectedChange={setNewExamRooms} placeholder="Select rooms..." />
+                        </div>
+                        <div className="lg:col-span-2">
                             <Label htmlFor="exam-subject">Subject</Label>
                             <Select value={newExamSubject} onValueChange={setNewExamSubject}>
                                 <SelectTrigger id="exam-subject"><SelectValue placeholder="Select Subject" /></SelectTrigger>
                                 <SelectContent>{subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                             </Select>
                         </div>
+                         <div className="lg:col-span-2 flex items-end">
+                             <Button onClick={handleAddExamEntry} className="w-full">
+                                <PlusCircle className="mr-2 h-4 w-4" /> Add to Timetable
+                            </Button>
+                        </div>
                     </div>
-                     <Button onClick={handleAddExamEntry}>
-                        <PlusCircle className="mr-2 h-4 w-4" /> Add to Timetable
-                    </Button>
 
                     {examTimetable.length > 0 && (
                         <div className="border rounded-md mt-4">
@@ -182,6 +200,7 @@ export default function ReportsPage() {
                                         <TableHead>Date</TableHead>
                                         <TableHead>Time</TableHead>
                                         <TableHead>Classes</TableHead>
+                                        <TableHead>Rooms</TableHead>
                                         <TableHead>Subject</TableHead>
                                         <TableHead className="text-right">Action</TableHead>
                                     </TableRow>
@@ -190,8 +209,9 @@ export default function ReportsPage() {
                                     {examTimetable.map(entry => (
                                         <TableRow key={entry.id}>
                                             <TableCell>{entry.date}</TableCell>
-                                            <TableCell>{entry.time}</TableCell>
+                                            <TableCell>{entry.startTime} - {entry.endTime}</TableCell>
                                             <TableCell>{entry.classes.join(', ')}</TableCell>
+                                            <TableCell>{entry.rooms.join(', ')}</TableCell>
                                             <TableCell>{entry.subject}</TableCell>
                                             <TableCell className="text-right">
                                                 <Button variant="ghost" size="icon" onClick={() => handleRemoveExamEntry(entry.id)}>

@@ -151,30 +151,51 @@ export default function InvigilationDutyChart({ dutyChart }: InvigilationDutyCha
                     <TableRow>
                         <TableHead className='font-semibold'>Date</TableHead>
                         <TableHead className='font-semibold'>Time</TableHead>
+                        <TableHead className='font-semibold'>Room</TableHead>
                         <TableHead className='font-semibold'>Invigilators</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {dutyChart.examSlots.map(slot => {
-                        const key = `${slot.date}-${slot.time}`;
-                        const invigilators = dutyChart.duties[key] || [];
-                        return (
-                            <TableRow key={key}>
-                                <TableCell className="font-medium">{slot.date}</TableCell>
-                                <TableCell className="font-medium">{slot.time}</TableCell>
-                                <TableCell>
-                                    <div className="flex flex-col gap-1">
-                                        {invigilators.length > 0 ? (
-                                            invigilators.map((teacher, index) => (
-                                                <span key={index} className="text-xs bg-secondary p-1 rounded-md">{teacher}</span>
-                                            ))
-                                        ) : (
-                                            <span className='text-xs text-muted-foreground'>-</span>
-                                        )}
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                        )
+                        const key = `${slot.date}-${slot.startTime}`;
+                        const dutiesForSlot = dutyChart.duties[key] || {};
+                        const roomsInSlot = Object.keys(dutiesForSlot).sort();
+                        
+                        if (roomsInSlot.length === 0) {
+                            return (
+                                <TableRow key={key}>
+                                    <TableCell className="font-medium">{slot.date}</TableCell>
+                                    <TableCell className="font-medium">{slot.startTime} - {slot.endTime}</TableCell>
+                                    <TableCell colSpan={2} className="text-center text-muted-foreground">No duties assigned</TableCell>
+                                </TableRow>
+                            );
+                        }
+
+                        return roomsInSlot.map((room, index) => {
+                            const invigilators = dutiesForSlot[room] || [];
+                            return (
+                                <TableRow key={`${key}-${room}`}>
+                                    {index === 0 && (
+                                        <>
+                                            <TableCell className="font-medium align-top" rowSpan={roomsInSlot.length}>{slot.date}</TableCell>
+                                            <TableCell className="font-medium align-top" rowSpan={roomsInSlot.length}>{slot.startTime} - {slot.endTime}</TableCell>
+                                        </>
+                                    )}
+                                    <TableCell className="font-medium">{room}</TableCell>
+                                    <TableCell>
+                                        <div className="flex flex-col gap-1">
+                                            {invigilators.length > 0 ? (
+                                                invigilators.map((teacher, idx) => (
+                                                    <span key={idx} className="text-xs bg-secondary p-1 rounded-md">{teacher}</span>
+                                                ))
+                                            ) : (
+                                                <span className='text-xs text-muted-foreground'>-</span>
+                                            )}
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            );
+                        });
                     })}
                 </TableBody>
             </Table>

@@ -7,13 +7,13 @@ import { AppStateContext } from "@/context/app-state-provider";
 import DataManager from "@/components/routine/data-manager";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Upload, Download, User, School, Book, Clock } from "lucide-react";
+import { Upload, Download, User, School, Book, Clock, DoorOpen } from "lucide-react";
 import { importFromJSON, exportToJSON } from "@/lib/csv-helpers";
 import PageHeader from "@/components/app/page-header";
 
 export default function DataManagementPage() {
     const { appState, updateState, setFullState } = useContext(AppStateContext);
-    const { teachers, classes, subjects, timeSlots } = appState;
+    const { teachers, classes, subjects, timeSlots, rooms } = appState;
     const { toast } = useToast();
     const jsonInputRef = useRef<HTMLInputElement>(null);
     const backupExtension = ".bsr";
@@ -92,6 +92,14 @@ export default function DataManagementPage() {
                     setItems={(newItems) => updateState('subjects', newItems)} 
                     placeholder="New subject name..."
                     description="All subjects taught."
+                />
+                 <DataManager 
+                    title="Rooms / Halls" 
+                    icon={DoorOpen} 
+                    items={rooms} 
+                    setItems={(newItems) => updateState('rooms', newItems)} 
+                    placeholder="e.g. Room 101"
+                    description="Exam rooms or halls."
                 />
                 <DataManager 
                     title="Time Slots" 

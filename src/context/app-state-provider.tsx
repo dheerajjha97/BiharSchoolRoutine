@@ -56,14 +56,16 @@ export type TeacherLoad = Record<string, Record<string, TeacherLoadDetail>>;
 export type ExamEntry = {
     id: string;
     date: string;
-    time: string;
+    startTime: string;
+    endTime: string;
     classes: string[];
+    rooms: string[];
     subject: string;
 };
 
 export type DutyChart = {
-    duties: Record<string, string[]>; // Key: "date-time", Value: array of teacher names
-    examSlots: { date: string, time: string }[];
+    duties: Record<string, Record<string, string[]>>; // Key: "date-startTime", Value: { room: [teachers] }
+    examSlots: { date: string, startTime: string, endTime: string }[];
 };
 
 
@@ -72,6 +74,7 @@ export type AppState = {
   classes: string[];
   subjects: string[];
   timeSlots: string[];
+  rooms: string[];
   config: SchoolConfig;
   routine: GenerateScheduleOutput | null;
   teacherLoad: TeacherLoad;
@@ -109,6 +112,7 @@ const DEFAULT_APP_STATE: AppState = {
     "01:45 - 02:30",
     "02:30 - 03:15"
   ],
+  rooms: ["Room 101", "Room 102", "Room 103", "Hall A", "Hall B"],
   config: {
     teacherSubjects: {
       "Mr. Sharma": ["Math", "Physics"],
@@ -349,6 +353,9 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       if (['teachers', 'classes', 'subjects', 'timeSlots'].includes(key as string)) {
           newState.routine = null;
           newState.teacherLoad = {};
+      }
+      if (key === 'rooms') {
+          newState.examTimetable = [];
       }
       return newState;
     });

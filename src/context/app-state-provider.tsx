@@ -6,8 +6,8 @@ import { useToast } from "@/hooks/use-toast";
 import type { GenerateScheduleOutput } from "@/ai/flows/generate-schedule";
 import type { SubjectCategory, SubjectPriority } from "@/lib/schedule-generator";
 import { sortTimeSlots } from "@/lib/utils";
-import { getFirebaseAuth } from "@/lib/firebase";
-import { onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, type User, type AuthError } from "firebase/auth";
+import { getFirebaseAuth, getFirebaseApp } from "@/lib/firebase";
+import { onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, type User, type AuthError, reauthenticateWithCredential } from "firebase/auth";
 import { GoogleDriveService } from "@/lib/google-drive-service";
 import type { SubstitutionPlan } from "@/lib/substitution-generator";
 
@@ -357,12 +357,34 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         setIsLoading(false);
       }
   }, [toast]);
+  
+  const initializeDriveService = useCallback(async (user: User) => {
+    try {
+        const tokenResult = await user.getIdTokenResult(true);
+        const token = tokenResult.token;
+
+        if (token) {
+            if (!driveServiceRef.current) {
+                driveServiceRef.current = new GoogleDriveService();
+            }
+            await driveServiceRef.current.init(token);
+            await loadStateFromDrive(driveServiceRef.current);
+        } else {
+            throw new Error("Could not retrieve access token.");
+        }
+    } catch(error) {
+        console.error("Failed to initialize drive service or load data:", error);
+        toast({ variant: "destructive", title: "Sync Error", description: "Could not connect to Google Drive. Please try logging in again." });
+        handleLogout(false);
+    }
+  }, [loadStateFromDrive, toast, handleLogout]);
 
   useEffect(() => {
     const auth = getFirebaseAuth();
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUser(user);
+        await initializeDriveService(user);
       } else {
         setUser(null);
         driveServiceRef.current = null;
@@ -371,6 +393,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       setIsAuthLoading(false);
     });
     return () => unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const updateState = useCallback(<K extends keyof AppState>(key: K, value: AppState[K]) => {
@@ -414,18 +437,9 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     const provider = new GoogleAuthProvider();
     provider.addScope('https://www.googleapis.com/auth/drive.file');
     try {
-      const result = await signInWithPopup(auth, provider);
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      if (credential) {
-        const token = credential.accessToken;
-        if (token) {
-          if (!driveServiceRef.current) {
-            driveServiceRef.current = new GoogleDriveService();
-          }
-          await driveServiceRef.current.init(token);
-          await loadStateFromDrive(driveServiceRef.current);
-        }
-      }
+      // The onAuthStateChanged listener will handle the post-login logic,
+      // including initializing Drive and loading data.
+      await signInWithPopup(auth, provider);
     } catch (error: any) {
         const authError = error as AuthError;
         console.error("Google Sign-In Error:", authError);
@@ -435,9 +449,9 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
             description: `Error: ${authError.code} - ${authError.message}`,
             duration: 9000
         });
-    } finally {
-       setIsAuthLoading(false); 
+        setIsAuthLoading(false);
     }
+    // No need to call setIsAuthLoading(false) here, as onAuthStateChanged will handle it.
   };
   
   return (

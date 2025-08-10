@@ -20,7 +20,8 @@ function getFirebaseApp(): FirebaseApp {
 }
 
 function getFirebaseAuth() {
-    return getAuth(getFirebaseApp());
+    const app = getFirebaseApp();
+    return getAuth(app);
 }
 
 

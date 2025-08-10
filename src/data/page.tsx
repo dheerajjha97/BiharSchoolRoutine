@@ -19,8 +19,8 @@ export default function DataManagementPage() {
     const { teachers, classes, subjects, timeSlots, rooms, pdfHeader } = appState;
     const { toast } = useToast();
     const jsonInputRef = useRef<HTMLInputElement>(null);
-    const backupExtension = ".json"; 
-    const backupFileName = `school-routine-data${backupExtension}`;
+    const backupExtension = ".bsr"; // Bihar School Routine
+    const backupFileName = `school-data-backup${backupExtension}`;
 
     const handleExportJson = () => {
         try {
@@ -54,7 +54,7 @@ export default function DataManagementPage() {
         <div className="space-y-6">
             <PageHeader 
                 title="Data Management"
-                description={`Manage core data and global settings. You can also export your entire configuration as a ${backupExtension} file.`}
+                description={`Manage core data and global settings. You can also export your entire configuration as a secure ${backupExtension} file.`}
             />
             
             <Card>

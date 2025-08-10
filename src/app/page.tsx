@@ -157,6 +157,31 @@ export default function Home() {
       setRenameValue("");
     }
   };
+  
+  const ConfirmationWrapper = ({ onConfirm, children, disabled }: { onConfirm: () => void; children: React.ReactNode, disabled: boolean }) => {
+    if (appState.routineHistory.length === 0) {
+      return <div onClick={onConfirm}>{children}</div>;
+    }
+
+    return (
+      <AlertDialog>
+        <AlertDialogTrigger asChild disabled={disabled}>{children}</AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will create a new version of the routine, leaving your current active routine untouched in the history. Do you want to continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={onConfirm}>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    );
+  };
+
 
   return (
     <div className="space-y-6">
@@ -174,27 +199,30 @@ export default function Home() {
           </CardHeader>
           <CardContent>
               <div className="flex flex-wrap gap-4">
-                <Button
-                  size="lg"
-                  onClick={handleGenerateRoutine}
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  ) : (
-                    <Wand2 className="mr-2 h-5 w-5" />
-                  )}
-                  Generate Routine
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  onClick={handleCreateBlankRoutine}
-                  disabled={isLoading}
-                >
-                  <PlusSquare className="mr-2 h-5 w-5" />
-                  Create Blank Routine
-                </Button>
+                  <ConfirmationWrapper onConfirm={handleGenerateRoutine} disabled={isLoading}>
+                    <Button
+                      size="lg"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      ) : (
+                        <Wand2 className="mr-2 h-5 w-5" />
+                      )}
+                      Generate Routine
+                    </Button>
+                  </ConfirmationWrapper>
+                  
+                  <ConfirmationWrapper onConfirm={handleCreateBlankRoutine} disabled={isLoading}>
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      disabled={isLoading}
+                    >
+                      <PlusSquare className="mr-2 h-5 w-5" />
+                      Create Blank Routine
+                    </Button>
+                  </ConfirmationWrapper>
               </div>
           </CardContent>
         </Card>

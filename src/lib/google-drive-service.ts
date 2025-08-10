@@ -1,7 +1,7 @@
 
 import type { AppState } from '@/context/app-state-provider';
 
-const BACKUP_FILE_NAME = 'school-routine-backup.bsr';
+const BACKUP_FILE_NAME = 'school-routine-data.json';
 const BACKUP_MIME_TYPE = 'application/json';
 
 export class GoogleDriveService {
@@ -27,9 +27,9 @@ export class GoogleDriveService {
 
     const response = await fetch(url, { method: 'GET', headers });
     if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Error listing files:', errorText);
-        throw new Error(`Failed to list files from Google Drive. Status: ${response.status}. Message: ${errorText}`);
+        const errorBody = await response.json().catch(() => ({ message: response.statusText }));
+        console.error('Error listing files:', errorBody);
+        throw new Error(`Failed to list files. Status: ${response.status}. Message: ${errorBody.error?.message || response.statusText}`);
     }
     
     const data = await response.json();
@@ -44,6 +44,7 @@ export class GoogleDriveService {
     
     const fileId = await this.getFileId();
     if (!fileId) {
+      console.log("No backup file found in Google Drive.");
       return null;
     }
     
@@ -56,9 +57,9 @@ export class GoogleDriveService {
     const response = await fetch(url, { method: 'GET', headers });
 
     if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Error loading backup:', errorText);
-        throw new Error(`Failed to load backup from Google Drive. Status: ${response.status}. Message: ${errorText}`);
+        const errorBody = await response.json().catch(() => ({ message: response.statusText }));
+        console.error('Error loading backup:', errorBody);
+        throw new Error(`Failed to load backup. Status: ${response.status}. Message: ${errorBody.error?.message || response.statusText}`);
     }
 
     try {
@@ -77,9 +78,10 @@ export class GoogleDriveService {
     const blob = new Blob([backupData], { type: BACKUP_MIME_TYPE });
     
     const headers = new Headers({ 'Authorization': 'Bearer ' + this.accessToken });
-
+    const formData = new FormData();
+      
     if (fileId) {
-      const formData = new FormData();
+      // Update existing file
       const metadata = { name: BACKUP_FILE_NAME, mimeType: BACKUP_MIME_TYPE };
       formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
       formData.append('file', blob);
@@ -89,14 +91,15 @@ export class GoogleDriveService {
         headers,
         body: formData,
       });
+
       if (!response.ok) {
-        const error = await response.json();
-        console.error('Error updating file:', error);
-        throw new Error('Failed to update backup file.');
+        const errorBody = await response.json().catch(() => ({ message: response.statusText }));
+        console.error('Error updating file:', errorBody);
+        throw new Error(`Failed to update backup. Status: ${response.status}. Message: ${errorBody.error?.message || response.statusText}`);
       }
 
     } else {
-      const formData = new FormData();
+      // Create new file
       const metadata = { name: BACKUP_FILE_NAME, mimeType: BACKUP_MIME_TYPE, parents: ['root'] };
       formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
       formData.append('file', blob);
@@ -106,10 +109,11 @@ export class GoogleDriveService {
         headers,
         body: formData,
       });
+
       if (!response.ok) {
-        const error = await response.json();
-        console.error('Error creating file:', error);
-        throw new Error('Failed to create backup file.');
+        const errorBody = await response.json().catch(() => ({ message: response.statusText }));
+        console.error('Error creating file:', errorBody);
+        throw new Error(`Failed to create backup. Status: ${response.status}. Message: ${errorBody.error?.message || response.statusText}`);
       }
     }
   }

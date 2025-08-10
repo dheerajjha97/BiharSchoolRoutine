@@ -19,8 +19,8 @@ export default function DataManagementPage() {
     const { teachers, classes, subjects, timeSlots, rooms, pdfHeader } = appState;
     const { toast } = useToast();
     const jsonInputRef = useRef<HTMLInputElement>(null);
-    const backupExtension = ".bsr";
-    const backupFileName = `school-data${backupExtension}`;
+    const backupExtension = ".bsr"; // Bihar School Routine
+    const backupFileName = `school-data-backup${backupExtension}`;
 
     const handleExportJson = () => {
         try {

@@ -1,7 +1,7 @@
 
 import type { AppState } from '@/context/app-state-provider';
 
-const BACKUP_FILE_NAME = 'school-routine-backup.json';
+const BACKUP_FILE_NAME = 'school-routine-backup.bsr';
 const BACKUP_MIME_TYPE = 'application/json';
 
 export class GoogleDriveService {
@@ -70,10 +70,11 @@ export class GoogleDriveService {
     const backupData = JSON.stringify(state, null, 2);
     const blob = new Blob([backupData], { type: BACKUP_MIME_TYPE });
     
-    const form = new FormData();
     const headers = new Headers({ 'Authorization': 'Bearer ' + this.accessToken });
 
     if (fileId) {
+      // If file exists, update it using PATCH
+      const form = new FormData();
       const metadata = { name: BACKUP_FILE_NAME, mimeType: BACKUP_MIME_TYPE };
       form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
       form.append('file', blob);
@@ -83,6 +84,7 @@ export class GoogleDriveService {
         headers,
         body: form,
       });
+
       if (!response.ok) {
         const error = await response.json();
         console.error('Error updating file:', error);
@@ -90,6 +92,8 @@ export class GoogleDriveService {
       }
 
     } else {
+      // If file doesn't exist, create a new one using POST
+      const form = new FormData();
       const metadata = { name: BACKUP_FILE_NAME, mimeType: BACKUP_MIME_TYPE, parents: ['root'] };
       form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
       form.append('file', blob);

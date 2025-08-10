@@ -128,7 +128,7 @@ const DEFAULT_APP_STATE: AppState = {
     "02:30 - 03:15"
   ],
   rooms: ["Room 101", "Room 102", "Room 103", "Hall A", "Hall B"],
-  pdfHeader: "",
+  pdfHeader: "My School Name\nWeekly Class Routine\n2024-25",
   config: {
     teacherSubjects: {
       "Mr. Sharma": ["Math", "Physics"],
@@ -264,6 +264,21 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [calculatedTeacherLoad]);
 
+  const handleLogout = useCallback(async (withSave = true) => {
+    const auth = getFirebaseAuth();
+    setIsAuthLoading(true);
+    if (withSave && user && driveServiceRef.current?.isReady()) {
+        toast({ title: "Saving your work...", description: "Saving your final changes to Google Drive before logging out." });
+        await saveStateToDrive(true); 
+    }
+    await signOut(auth);
+    setAppState(DEFAULT_APP_STATE);
+    driveServiceRef.current = null;
+    setUser(null);
+    setIsAuthLoading(false);
+    toast({ title: "Logged Out", description: "You have been successfully logged out." });
+  }, [user, toast]);
+
   const saveStateToDrive = useCallback(async (showToast = false) => {
     if (!driveServiceRef.current || !driveServiceRef.current.isReady()) return;
     setIsSyncing(true);
@@ -275,16 +290,16 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       }
     } catch (error: any) {
       console.error("Failed to save state to Google Drive:", error);
-      if (error.status === 401 || (error.result?.error?.code === 401) ) { 
-         toast({ variant: "destructive", title: "Authentication Error", description: "Please log out and log in again to refresh your session." });
-         handleLogout(false);
-      } else {
-        toast({ variant: "destructive", title: "Sync Failed", description: "Could not save data to Google Drive." });
-      }
+       if (error.message.includes('401') || error.message.includes('Authentication Error')) {
+            toast({ variant: "destructive", title: "Authentication Error", description: "Please log out and log in again to refresh your session.", duration: 5000 });
+            await handleLogout(false);
+        } else {
+            toast({ variant: "destructive", title: "Sync Failed", description: "Could not save data to Google Drive." });
+        }
     } finally {
       setIsSyncing(false);
     }
-  }, [toast]);
+  }, [toast, handleLogout]);
   
   const debouncedSave = useRef(
     (() => {
@@ -293,7 +308,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         clearTimeout(timeout);
         timeout = setTimeout(() => {
           saveStateToDrive(false);
-        }, 5000); 
+        }, 3000); 
       };
     })()
   ).current;
@@ -342,21 +357,6 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         setIsLoading(false);
       }
   }, [toast]);
-
-  const handleLogout = useCallback(async (withSave = true) => {
-    const auth = getFirebaseAuth();
-    setIsAuthLoading(true);
-    if (withSave && user && driveServiceRef.current?.isReady()) {
-        toast({ title: "Saving your work...", description: "Saving your final changes to Google Drive before logging out." });
-        await saveStateToDrive(true); 
-    }
-    await signOut(auth);
-    setAppState(DEFAULT_APP_STATE);
-    driveServiceRef.current = null;
-    setUser(null);
-    setIsAuthLoading(false);
-    toast({ title: "Logged Out", description: "You have been successfully logged out." });
-  }, [user, saveStateToDrive, toast]);
 
   useEffect(() => {
     const auth = getFirebaseAuth();

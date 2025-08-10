@@ -29,7 +29,7 @@ export class GoogleDriveService {
     if (!response.ok) {
         const error = await response.json();
         console.error('Error listing files:', error);
-        throw new Error('Failed to list files from Google Drive.');
+        throw new Error(`Failed to list files from Google Drive. Status: ${response.status}`);
     }
     
     const data = await response.json();
@@ -39,7 +39,7 @@ export class GoogleDriveService {
     return null;
   }
 
-  public async loadBackup(): Promise<Omit<AppState, 'adjustments'> | null> {
+  public async loadBackup(): Promise<Omit<AppState, 'adjustments' | 'teacherLoad'> | null> {
     if (!this.isReady()) throw new Error('Google Drive API not ready.');
     
     const fileId = await this.getFileId();
@@ -57,24 +57,29 @@ export class GoogleDriveService {
 
     if (!response.ok) {
         console.error('Error loading backup:', await response.text());
-        throw new Error('Failed to load backup from Google Drive.');
+        throw new Error(`Failed to load backup from Google Drive. Status: ${response.status}`);
     }
 
-    return response.json() as Promise<Omit<AppState, 'adjustments'>>;
+    try {
+        return await response.json();
+    } catch (e) {
+        console.error("Failed to parse JSON from Drive backup", e);
+        return null;
+    }
   }
 
-  public async saveBackup(state: Omit<AppState, 'adjustments'>): Promise<void> {
+  public async saveBackup(state: Omit<AppState, 'adjustments' | 'teacherLoad'>): Promise<void> {
     if (!this.isReady()) throw new Error('Google Drive API not ready.');
 
     const fileId = await this.getFileId();
     const backupData = JSON.stringify(state, null, 2);
     const blob = new Blob([backupData], { type: BACKUP_MIME_TYPE });
     
-    const headers = new Headers({ 'Authorization': 'Bearer ' + this.accessToken });
+    const headers = new Headers({ 'Authorization': `Bearer ${this.accessToken}` });
+    const form = new FormData();
 
     if (fileId) {
-      // If file exists, update it using PATCH
-      const form = new FormData();
+      // If file exists, update it
       const metadata = { name: BACKUP_FILE_NAME, mimeType: BACKUP_MIME_TYPE };
       form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
       form.append('file', blob);
@@ -88,12 +93,11 @@ export class GoogleDriveService {
       if (!response.ok) {
         const error = await response.json();
         console.error('Error updating file:', error);
-        throw new Error('Failed to update backup file.');
+        throw new Error(`Failed to update backup file. Status: ${response.status}`);
       }
 
     } else {
-      // If file doesn't exist, create a new one using POST
-      const form = new FormData();
+      // If file doesn't exist, create a new one
       const metadata = { name: BACKUP_FILE_NAME, mimeType: BACKUP_MIME_TYPE, parents: ['root'] };
       form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
       form.append('file', blob);
@@ -106,7 +110,7 @@ export class GoogleDriveService {
       if (!response.ok) {
         const error = await response.json();
         console.error('Error creating file:', error);
-        throw new Error('Failed to create backup file.');
+        throw new Error(`Failed to create backup file. Status: ${response.status}`);
       }
     }
   }

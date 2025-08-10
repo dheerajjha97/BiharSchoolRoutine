@@ -27,9 +27,9 @@ export class GoogleDriveService {
 
     const response = await fetch(url, { method: 'GET', headers });
     if (!response.ok) {
-        const error = await response.json();
-        console.error('Error listing files:', error);
-        throw new Error('Failed to list files from Google Drive.');
+        const errorText = await response.text();
+        console.error('Error listing files:', errorText);
+        throw new Error(`Failed to list files from Google Drive. Status: ${response.status}. Message: ${errorText}`);
     }
     
     const data = await response.json();
@@ -39,7 +39,7 @@ export class GoogleDriveService {
     return null;
   }
 
-  public async loadBackup(): Promise<Omit<AppState, 'adjustments'> | null> {
+  public async loadBackup(): Promise<Omit<AppState, 'adjustments' | 'teacherLoad'> | null> {
     if (!this.isReady()) throw new Error('Google Drive API not ready.');
     
     const fileId = await this.getFileId();
@@ -56,14 +56,20 @@ export class GoogleDriveService {
     const response = await fetch(url, { method: 'GET', headers });
 
     if (!response.ok) {
-        console.error('Error loading backup:', await response.text());
-        throw new Error('Failed to load backup from Google Drive.');
+        const errorText = await response.text();
+        console.error('Error loading backup:', errorText);
+        throw new Error(`Failed to load backup from Google Drive. Status: ${response.status}. Message: ${errorText}`);
     }
 
-    return response.json() as Promise<Omit<AppState, 'adjustments'>>;
+    try {
+        return await response.json();
+    } catch (e) {
+        console.error("Failed to parse JSON from Drive backup", e);
+        return null;
+    }
   }
 
-  public async saveBackup(state: Omit<AppState, 'adjustments'>): Promise<void> {
+  public async saveBackup(state: Omit<AppState, 'adjustments' | 'teacherLoad'>): Promise<void> {
     if (!this.isReady()) throw new Error('Google Drive API not ready.');
 
     const fileId = await this.getFileId();
@@ -73,18 +79,16 @@ export class GoogleDriveService {
     const headers = new Headers({ 'Authorization': 'Bearer ' + this.accessToken });
 
     if (fileId) {
-      // If file exists, update it using PATCH
-      const form = new FormData();
+      const formData = new FormData();
       const metadata = { name: BACKUP_FILE_NAME, mimeType: BACKUP_MIME_TYPE };
-      form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-      form.append('file', blob);
+      formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+      formData.append('file', blob);
       
       const response = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`, {
         method: 'PATCH',
         headers,
-        body: form,
+        body: formData,
       });
-
       if (!response.ok) {
         const error = await response.json();
         console.error('Error updating file:', error);
@@ -92,16 +96,15 @@ export class GoogleDriveService {
       }
 
     } else {
-      // If file doesn't exist, create a new one using POST
-      const form = new FormData();
+      const formData = new FormData();
       const metadata = { name: BACKUP_FILE_NAME, mimeType: BACKUP_MIME_TYPE, parents: ['root'] };
-      form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-      form.append('file', blob);
+      formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+      formData.append('file', blob);
 
       const response = await fetch(`https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart`, {
         method: 'POST',
         headers,
-        body: form,
+        body: formData,
       });
       if (!response.ok) {
         const error = await response.json();

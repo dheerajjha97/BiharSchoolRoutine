@@ -4,12 +4,7 @@ import { sortTimeSlots } from "./utils";
 
 export const exportToJSON = (data: AppState, filename: string) => {
   try {
-    // We only export the persistent state, not the daily adjustments
-    const persistentState = { ...data };
-    // @ts-ignore
-    delete persistentState.adjustments;
-
-    const jsonString = JSON.stringify(persistentState, null, 2);
+    const jsonString = JSON.stringify(data, null, 2);
     const blob = new Blob([jsonString], { type: 'application/json' });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
@@ -52,7 +47,7 @@ export const importFromJSON = (file: File): Promise<AppState> => {
                 if (error instanceof SyntaxError) {
                     reject(new Error("Invalid JSON file. Please check the file content."));
                 } else {
-                    reject(error);
+                    reject(error as Error);
                 }
             }
         };

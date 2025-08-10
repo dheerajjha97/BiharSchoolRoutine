@@ -68,13 +68,15 @@ function MultiSelectPopover({ options, selected, onSelectedChange, placeholder }
 
 export default function AdjustmentsPage() {
     const { appState, updateAdjustments } = useContext(AppStateContext);
-    const { teachers, routine, teacherLoad, pdfHeader } = appState;
+    const { teachers, routineHistory, activeRoutineId, teacherLoad, pdfHeader } = appState;
     const { date, absentTeachers, substitutionPlan } = appState.adjustments;
     const { toast } = useToast();
 
+    const activeRoutine = routineHistory.find(r => r.id === activeRoutineId);
+
     const handleGeneratePlan = () => {
-        if (!routine?.schedule) {
-            toast({ variant: "destructive", title: "No Routine Found", description: "Please generate a master routine on the dashboard first." });
+        if (!activeRoutine?.schedule?.schedule) {
+            toast({ variant: "destructive", title: "No Active Routine Found", description: "Please generate or select a master routine on the dashboard first." });
             return;
         }
         if (absentTeachers.length === 0) {
@@ -89,7 +91,7 @@ export default function AdjustmentsPage() {
 
         try {
             const plan = generateSubstitutionPlan({
-                schedule: routine.schedule,
+                schedule: activeRoutine.schedule.schedule,
                 allTeachers: teachers,
                 absentTeachers,
                 date: date, // Pass the date string directly
@@ -114,7 +116,7 @@ export default function AdjustmentsPage() {
                 <CardHeader>
                     <CardTitle>Create Substitution Plan</CardTitle>
                     <CardDescription>
-                        Select the date and the teachers who are absent. The system will assign available teachers to cover their periods.
+                        Select the date and the teachers who are absent. The system will assign available teachers to cover their periods based on the active routine.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -144,7 +146,7 @@ export default function AdjustmentsPage() {
                             />
                         </div>
                     </div>
-                     <Button onClick={handleGeneratePlan}>
+                     <Button onClick={handleGeneratePlan} disabled={!activeRoutine}>
                         Generate Substitution Plan
                     </Button>
                 </CardContent>

@@ -19,5 +19,13 @@ export const GenerateScheduleOutputSchema = z.object({
   schedule: z.array(ScheduleEntrySchema).describe("A flat list of all the scheduled classes for the week."),
 });
 
+export const RoutineVersionSchema = z.object({
+  id: z.string(),
+  createdAt: z.string(), // ISO string
+  name: z.string(),
+  schedule: GenerateScheduleOutputSchema,
+});
+
 export type ScheduleEntry = z.infer<typeof ScheduleEntrySchema>;
 export type GenerateScheduleOutput = z.infer<typeof GenerateScheduleOutputSchema>;
+export type RoutineVersion = z.infer<typeof RoutineVersionSchema>;

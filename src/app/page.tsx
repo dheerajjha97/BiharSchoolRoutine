@@ -3,7 +3,6 @@
 
 import { useContext, useMemo, useState } from "react";
 import { AppStateContext } from "@/context/app-state-provider";
-import type { RoutineVersion } from "@/context/app-state-provider";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +10,7 @@ import { Loader2, Wand2, PlusSquare, Trash2, Edit, Check, X } from "lucide-react
 import RoutineDisplay from "@/components/routine/routine-display";
 import { generateScheduleLogic } from "@/lib/schedule-generator";
 import type { GenerateScheduleLogicInput } from "@/lib/schedule-generator";
-import type { ScheduleEntry } from "@/ai/flows/generate-schedule";
+import type { ScheduleEntry, RoutineVersion } from "@/ai/flows/generate-schedule";
 import PageHeader from "@/components/app/page-header";
 import TeacherLoad from "@/components/routine/teacher-load";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -27,9 +26,9 @@ export default function Home() {
   const [routineToRename, setRoutineToRename] = useState<RoutineVersion | null>(null);
 
   const activeRoutine = useMemo(() => {
-    if (!appState.routineHistory || !appState.activeRoutineId) return null;
-    return appState.routineHistory.find(r => r.id === appState.activeRoutineId) || (appState.routineHistory.length > 0 ? appState.routineHistory[0] : null);
-  }, [appState.routineHistory, appState.activeRoutineId]);
+    if (!routineHistory || !activeRoutineId) return null;
+    return routineHistory.find(r => r.id === activeRoutineId) || (routineHistory.length > 0 ? routineHistory[0] : null);
+  }, [routineHistory, activeRoutineId]);
 
   const handleGenerateRoutine = () => {
     setIsLoading(true);
@@ -189,7 +188,7 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        {appState.routineHistory && appState.routineHistory.length > 0 && (
+        {routineHistory && routineHistory.length > 0 && (
             <Card>
                 <CardHeader>
                     <CardTitle>Manage Active Routine</CardTitle>
@@ -226,7 +225,7 @@ export default function Home() {
                                 </Button>
                                  <AlertDialog>
                                     <AlertDialogTrigger asChild>
-                                        <Button variant="destructive" size="sm">
+                                        <Button variant="destructive" size="sm" disabled={routineHistory.length <= 1}>
                                             <Trash2 className="mr-2 h-4 w-4" /> Delete
                                         </Button>
                                     </AlertDialogTrigger>

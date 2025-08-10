@@ -5,17 +5,13 @@ import React, { useMemo, useState } from 'react';
 import type { GenerateScheduleOutput, ScheduleEntry } from "@/ai/flows/generate-schedule";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash2, Check, AlertTriangle, Copy, FileDown, Loader2 } from "lucide-react";
+import { Trash2, AlertTriangle, Copy, FileDown, Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from '../ui/checkbox';
 import { cn, sortClasses } from '@/lib/utils';
-import { Separator } from '../ui/separator';
 import { useToast } from "@/hooks/use-toast";
 import {
   DropdownMenu,
@@ -29,7 +25,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { Textarea } from '../ui/textarea';
 
 interface RoutineDisplayProps {
   scheduleData: GenerateScheduleOutput | null;
@@ -493,7 +488,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
       <Card>
         <CardHeader>
           <CardTitle>School Routine</CardTitle>
-          <CardDescription>No routine has been generated yet.</CardDescription>
+          <CardDescription>No routine has been generated or selected yet.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="text-center py-12 text-muted-foreground">

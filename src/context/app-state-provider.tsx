@@ -3,11 +3,11 @@
 
 import { createContext, useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
-import type { GenerateScheduleOutput } from "@/ai/flows/generate-schedule";
+import type { GenerateScheduleOutput, RoutineVersion } from "@/ai/flows/generate-schedule";
 import type { SubjectCategory, SubjectPriority } from "@/lib/schedule-generator";
 import { sortTimeSlots } from "@/lib/utils";
 import { getFirebaseAuth, getFirebaseApp } from "@/lib/firebase";
-import { onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, type User, type AuthError, reauthenticateWithCredential } from "firebase/auth";
+import { onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, type User, type AuthError } from "firebase/auth";
 import { GoogleDriveService } from "@/lib/google-drive-service";
 import type { SubstitutionPlan } from "@/lib/substitution-generator";
 
@@ -78,7 +78,8 @@ export type AppState = {
   rooms: string[];
   pdfHeader: string;
   config: SchoolConfig;
-  routine: GenerateScheduleOutput | null;
+  routineHistory: RoutineVersion[];
+  activeRoutineId: string | null;
   teacherLoad: TeacherLoad;
   examTimetable: ExamEntry[];
   // Non-persistent state for daily adjustments
@@ -102,6 +103,10 @@ interface AppStateContextType {
   user: User | null;
   handleGoogleSignIn: () => void;
   handleLogout: () => void;
+  setActiveRoutineId: (id: string) => void;
+  addRoutineVersion: (schedule: GenerateScheduleOutput, name: string) => void;
+  updateRoutineVersion: (id: string, updates: Partial<RoutineVersion>) => void;
+  deleteRoutineVersion: (id: string) => void;
 }
 
 export const AppStateContext = createContext<AppStateContextType>({} as AppStateContextType);
@@ -186,15 +191,17 @@ const DEFAULT_APP_STATE: AppState = {
     combinedClasses: [],
     splitClasses: [],
   },
-  routine: null,
+  routineHistory: [],
+  activeRoutineId: null,
   teacherLoad: {},
   examTimetable: [],
   adjustments: DEFAULT_ADJUSTMENTS_STATE,
 };
 
 // Function to strip non-persistent state for saving
-const getPersistentState = (state: AppState): Omit<AppState, 'adjustments'> => {
-  const { adjustments, ...persistentState } = state;
+const getPersistentState = (state: AppState): Omit<AppState, 'adjustments' | 'teacherLoad'> => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { adjustments, teacherLoad, ...persistentState } = state;
   return persistentState;
 };
 
@@ -212,9 +219,13 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     stateRef.current = appState;
   }, [appState]);
 
+  const activeRoutine = useMemo(() => {
+    return appState.routineHistory.find(r => r.id === appState.activeRoutineId);
+  }, [appState.routineHistory, appState.activeRoutineId]);
+
   const calculatedTeacherLoad = useMemo(() => {
     const load: TeacherLoad = {};
-    if (!appState.routine?.schedule || !appState.teachers) return {};
+    if (!activeRoutine?.schedule || !appState.teachers) return {};
 
     const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Total"];
     
@@ -225,7 +236,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         });
     });
 
-    appState.routine.schedule.forEach(entry => {
+    activeRoutine.schedule.forEach(entry => {
         if(entry.subject === "Prayer" || entry.subject === "Lunch" || entry.subject === "---") return;
         
         const teachersInEntry = entry.teacher.split(' & ').map(t => t.trim());
@@ -257,7 +268,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     });
 
     return load;
-  }, [appState.routine, appState.teachers, appState.config.subjectCategories]);
+  }, [activeRoutine, appState.teachers, appState.config.subjectCategories]);
 
   useEffect(() => {
     updateState('teacherLoad', calculatedTeacherLoad);
@@ -333,6 +344,12 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     if(mergedState.timeSlots) {
       mergedState.timeSlots = sortTimeSlots(mergedState.timeSlots);
     }
+    // After loading, set the active routine to the most recent one if not set
+    if (!mergedState.activeRoutineId && mergedState.routineHistory.length > 0) {
+        const sortedHistory = [...mergedState.routineHistory].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        mergedState.activeRoutineId = sortedHistory[0].id;
+    }
+
     setAppState(mergedState);
   };
   
@@ -403,7 +420,8 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         newState.timeSlots = sortTimeSlots(value as string[]);
       }
       if (['teachers', 'classes', 'subjects', 'timeSlots'].includes(key as string)) {
-          newState.routine = null;
+          newState.routineHistory = [];
+          newState.activeRoutineId = null;
           newState.teacherLoad = {};
           newState.adjustments = DEFAULT_ADJUSTMENTS_STATE;
       }
@@ -418,7 +436,8 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
      setAppState(prevState => ({
         ...prevState,
         config: { ...prevState.config, [key]: value },
-        routine: null, 
+        routineHistory: [], 
+        activeRoutineId: null,
         teacherLoad: {},
         adjustments: DEFAULT_ADJUSTMENTS_STATE,
     }));
@@ -437,8 +456,6 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     const provider = new GoogleAuthProvider();
     provider.addScope('https://www.googleapis.com/auth/drive.file');
     try {
-      // The onAuthStateChanged listener will handle the post-login logic,
-      // including initializing Drive and loading data.
       await signInWithPopup(auth, provider);
     } catch (error: any) {
         const authError = error as AuthError;
@@ -451,9 +468,62 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         });
         setIsAuthLoading(false);
     }
-    // No need to call setIsAuthLoading(false) here, as onAuthStateChanged will handle it.
   };
   
+  const setActiveRoutineId = (id: string) => {
+    updateState('activeRoutineId', id);
+  };
+
+  const addRoutineVersion = (schedule: GenerateScheduleOutput, name: string) => {
+    const newVersion: RoutineVersion = {
+      id: `routine_${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      name,
+      schedule,
+    };
+
+    setAppState(prevState => {
+        const newHistory = [newVersion, ...prevState.routineHistory].slice(0, 5); // Keep last 5
+        return {
+            ...prevState,
+            routineHistory: newHistory,
+            activeRoutineId: newVersion.id,
+        }
+    });
+  };
+
+  const updateRoutineVersion = (id: string, updates: Partial<RoutineVersion>) => {
+    setAppState(prevState => ({
+      ...prevState,
+      routineHistory: prevState.routineHistory.map(r => 
+        r.id === id ? { ...r, ...updates, id: r.id, createdAt: r.createdAt } : r
+      )
+    }));
+  };
+
+  const deleteRoutineVersion = (id: string) => {
+    setAppState(prevState => {
+      const newHistory = prevState.routineHistory.filter(r => r.id !== id);
+      let newActiveId = prevState.activeRoutineId;
+      
+      // If the deleted routine was the active one, select the newest one as active
+      if (prevState.activeRoutineId === id) {
+        if (newHistory.length > 0) {
+           const sortedHistory = [...newHistory].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+           newActiveId = sortedHistory[0].id;
+        } else {
+           newActiveId = null;
+        }
+      }
+      
+      return {
+        ...prevState,
+        routineHistory: newHistory,
+        activeRoutineId: newActiveId,
+      };
+    });
+  };
+
   return (
     <AppStateContext.Provider value={{ 
         appState, 
@@ -468,6 +538,10 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         user,
         handleGoogleSignIn,
         handleLogout: () => handleLogout(true),
+        setActiveRoutineId,
+        addRoutineVersion,
+        updateRoutineVersion,
+        deleteRoutineVersion
     }}>
       {children}
     </AppStateContext.Provider>

@@ -170,7 +170,7 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
         });
     });
 
-    // 4. Book Main Subjects
+    // 4. Book Main Subjects (Hard Requirement)
     daysOfWeek.forEach(day => {
         classes.forEach(className => {
             const requiredSubjectsForClass = shuffleArray((classRequirements[className] || []).filter(s => subjectCategories[s] === 'main' && s !== 'Attendance'));
@@ -181,27 +181,46 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
                 const qualifiedTeachers = shuffleArray(teacherNames.filter(t =>
                     (teacherSubjects[t] || []).includes(subject) && (teacherClasses[t] || []).includes(className)
                 ));
+                
+                let isBooked = false;
 
                 for (const teacher of qualifiedTeachers) {
                     if (getTeacherLoadForDay(teacher, day) >= dailyPeriodQuota) continue;
 
                     const priority = subjectPriorities[subject] || 'none';
-                    const preferredSlots = priority === 'before' ? beforeLunchSlots : (priority === 'after' ? afterLunchSlots : instructionalSlots);
+                    let preferredSlots = instructionalSlots;
+                    if (priority === 'before') {
+                        preferredSlots = beforeLunchSlots;
+                    } else if (priority === 'after') {
+                        preferredSlots = afterLunchSlots;
+                    }
                     
-                    const availableSlot = shuffleArray(preferredSlots).find(slot =>
+                    // First try preferred slots
+                    let availableSlot = shuffleArray(preferredSlots).find(slot =>
                         !isTeacherBooked(teacher, day, slot) &&
                         !isClassBooked(className, day, slot) &&
                         !isTeacherUnavailable(teacher, day, slot)
                     );
                     
+                    // If no preferred slot, try any available slot
+                    if (!availableSlot) {
+                        availableSlot = shuffleArray(instructionalSlots).find(slot =>
+                            !isTeacherBooked(teacher, day, slot) &&
+                            !isClassBooked(className, day, slot) &&
+                            !isTeacherUnavailable(teacher, day, slot)
+                        );
+                    }
+                    
                     if (availableSlot) {
                         bookSlot({ day, timeSlot: availableSlot, className, subject, teacher });
-                        break;
+                        isBooked = true;
+                        break; // Move to the next subject once a teacher is found
                     }
                 }
             });
         });
     });
+
 
     // 5. Book Additional Subjects
     daysOfWeek.forEach(day => {

@@ -445,7 +445,6 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       if (currentUser) {
         setIsSyncing(true);
         try {
-          // Force refresh the token to ensure it's valid for Drive API
           const token = await getIdToken(currentUser, true);
           const driveService = new GoogleDriveService();
           await driveService.init(token);
@@ -465,10 +464,8 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
           toast({
             variant: "destructive",
             title: "Sync Error",
-            description: "Could not connect to Google Drive. Please try logging out and in again.",
+            description: "Could not connect to Google Drive. Your data is safe locally.",
           });
-          // Log out on critical sync failure to allow retrying the auth flow.
-          handleLogout();
         } finally {
           setIsSyncing(false);
         }
@@ -480,7 +477,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     });
 
     return () => unsubscribe();
-  }, [toast, setFullState, handleLogout]);
+  }, [toast, setFullState]);
 
   // Debounced save effect
   useEffect(() => {

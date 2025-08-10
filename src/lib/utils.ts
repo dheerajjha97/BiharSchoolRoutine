@@ -63,3 +63,17 @@ export const sortClasses = (a: string, b: string): number => {
   if (gradeA !== gradeB) return gradeA - gradeB;
   return a.localeCompare(b);
 };
+
+export const dateToDay = (dateString: string): "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | null => {
+    const date = new Date(dateString);
+    // adjust for timezone offset to prevent day shifts
+    const userTimezoneOffset = date.getTimezoneOffset() * 60000;
+    const adjustedDate = new Date(date.getTime() + userTimezoneOffset);
+    
+    const dayIndex = adjustedDate.getDay();
+    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const dayName = days[dayIndex];
+
+    if (dayName === "Sunday") return null;
+    return dayName as "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday";
+}

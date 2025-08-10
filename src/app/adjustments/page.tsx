@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { cn } from "@/lib/utils";
+import { cn, dateToDay } from "@/lib/utils";
 import { Check as CheckIcon, PlusCircle } from "lucide-react";
 import { generateSubstitutionPlan, type SubstitutionPlan } from "@/lib/substitution-generator";
 import SubstitutionPlanDisplay from "@/components/routine/substitution-plan";
@@ -79,6 +79,11 @@ export default function AdjustmentsPage() {
         }
         if (absentTeachers.length === 0) {
             toast({ variant: "destructive", title: "No Absent Teachers", description: "Please select at least one absent teacher." });
+            return;
+        }
+
+        if (dateToDay(date) === null) {
+            toast({ variant: "destructive", title: "Cannot Generate for Sunday", description: "Sunday is a holiday." });
             return;
         }
 

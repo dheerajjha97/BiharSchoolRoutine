@@ -225,7 +225,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 
   const calculatedTeacherLoad = useMemo(() => {
     const load: TeacherLoad = {};
-    if (!activeRoutine?.schedule || !appState.teachers) return {};
+    if (!activeRoutine?.schedule?.schedule || !appState.teachers) return {};
 
     const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Total"];
     
@@ -236,7 +236,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         });
     });
 
-    activeRoutine.schedule.forEach(entry => {
+    activeRoutine.schedule.schedule.forEach(entry => {
         if(entry.subject === "Prayer" || entry.subject === "Lunch" || entry.subject === "---") return;
         
         const teachersInEntry = entry.teacher.split(' & ').map(t => t.trim());

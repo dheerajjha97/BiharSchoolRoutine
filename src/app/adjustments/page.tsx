@@ -75,7 +75,7 @@ export default function AdjustmentsPage() {
     const activeRoutine = routineHistory.find(r => r.id === activeRoutineId);
 
     const handleGeneratePlan = () => {
-        if (!activeRoutine?.schedule) {
+        if (!activeRoutine?.schedule?.schedule) {
             toast({ variant: "destructive", title: "No Active Routine Found", description: "Please generate or select a master routine on the dashboard first." });
             return;
         }
@@ -91,7 +91,7 @@ export default function AdjustmentsPage() {
 
         try {
             const plan = generateSubstitutionPlan({
-                schedule: activeRoutine.schedule,
+                schedule: activeRoutine.schedule.schedule,
                 allTeachers: teachers,
                 absentTeachers,
                 date: date, // Pass the date string directly

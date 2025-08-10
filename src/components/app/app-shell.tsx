@@ -32,7 +32,7 @@ const navItems = [
   { href: "/data", label: "Data Management", icon: Database },
   { href: "/config", label: "Configuration", icon: SlidersHorizontal },
   { href: "/adjustments", label: "Adjustments", icon: Replace },
-  { href: "/reports", label: "Reports", icon: ClipboardCheck },
+  { href: "/reports", label: "Exams & Reports", icon: ClipboardCheck },
 ];
 
 function ThemeToggle() {

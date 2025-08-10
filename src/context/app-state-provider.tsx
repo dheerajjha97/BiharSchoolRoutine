@@ -31,6 +31,13 @@ export type SplitClassRule = {
     }[];
 }
 
+export type RoutineVersion = {
+    id: string;
+    name: string;
+    createdAt: string;
+    schedule: GenerateScheduleOutput;
+};
+
 export type SchoolConfig = {
   classRequirements: Record<string, string[]>;
   subjectPriorities: Record<string, SubjectPriority>;
@@ -78,7 +85,8 @@ export type AppState = {
   rooms: string[];
   pdfHeader: string;
   config: SchoolConfig;
-  routine: GenerateScheduleOutput | null;
+  routineHistory: RoutineVersion[];
+  activeRoutineId: string | null;
   teacherLoad: TeacherLoad;
   examTimetable: ExamEntry[];
   // Non-persistent state for daily adjustments
@@ -92,7 +100,7 @@ export type AppState = {
 interface AppStateContextType {
   appState: AppState;
   updateState: <K extends keyof AppState>(key: K, value: AppState[K]) => void;
-  setFullState: (newState: AppState) => void;
+  setFullState: (newState: Partial<AppState>) => void;
   updateConfig: <K extends keyof SchoolConfig>(key: K, value: SchoolConfig[K]) => void;
   updateAdjustments: <K extends keyof AppState['adjustments']>(key: K, value: AppState['adjustments'][K]) => void;
   isLoading: boolean;
@@ -102,6 +110,14 @@ interface AppStateContextType {
   user: User | null;
   handleGoogleSignIn: () => void;
   handleLogout: () => void;
+  
+  // Routine History Management
+  routineHistory: RoutineVersion[];
+  activeRoutineId: string | null;
+  setActiveRoutineId: (id: string | null) => void;
+  addRoutineVersion: (schedule: GenerateScheduleOutput) => void;
+  updateRoutineVersion: (id: string, updates: Partial<Omit<RoutineVersion, 'id' | 'createdAt'>>) => void;
+  deleteRoutineVersion: (id: string) => void;
 }
 
 export const AppStateContext = createContext<AppStateContextType>({} as AppStateContextType);
@@ -186,15 +202,15 @@ const DEFAULT_APP_STATE: AppState = {
     combinedClasses: [],
     splitClasses: [],
   },
-  routine: null,
+  routineHistory: [],
+  activeRoutineId: null,
   teacherLoad: {},
   examTimetable: [],
   adjustments: DEFAULT_ADJUSTMENTS_STATE,
 };
 
-// Function to strip non-persistent state for saving
-const getPersistentState = (state: AppState): Omit<AppState, 'adjustments'> => {
-  const { adjustments, ...persistentState } = state;
+const getPersistentState = (state: AppState): Omit<AppState, 'adjustments' | 'teacherLoad'> => {
+  const { adjustments, teacherLoad, ...persistentState } = state;
   return persistentState;
 };
 
@@ -207,87 +223,18 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   const { toast } = useToast();
   const driveServiceRef = useRef<GoogleDriveService | null>(null);
   const stateRef = useRef(appState);
+  const isInitialLoadDone = useRef(false);
 
   useEffect(() => {
     stateRef.current = appState;
   }, [appState]);
-
-  const calculatedTeacherLoad = useMemo(() => {
-    const load: TeacherLoad = {};
-    if (!appState.routine?.schedule || !appState.teachers) return {};
-
-    const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Total"];
-    
-    appState.teachers.forEach(teacher => {
-        load[teacher] = {};
-        days.forEach(day => {
-            load[teacher][day] = { total: 0, main: 0, additional: 0 };
-        });
-    });
-
-    appState.routine.schedule.forEach(entry => {
-        if(entry.subject === "Prayer" || entry.subject === "Lunch" || entry.subject === "---") return;
-        
-        const teachersInEntry = entry.teacher.split(' & ').map(t => t.trim());
-        const subjectsInEntry = entry.subject.split(' / ').map(s => s.trim());
-
-        teachersInEntry.forEach((teacher, index) => {
-            if (teacher && teacher !== "N/A" && load[teacher]) {
-                const subject = subjectsInEntry[index] || subjectsInEntry[0]; // For split, match teacher to subject
-                const category = appState.config.subjectCategories[subject] || 'additional';
-
-                if (load[teacher][entry.day]) {
-                    load[teacher][entry.day].total++;
-                    if (category === 'main') {
-                        load[teacher][entry.day].main++;
-                    } else {
-                        load[teacher][entry.day].additional++;
-                    }
-                }
-                
-                // Update weekly total
-                load[teacher].Total.total++;
-                if (category === 'main') {
-                    load[teacher].Total.main++;
-                } else {
-                    load[teacher].Total.additional++;
-                }
-            }
-        });
-    });
-
-    return load;
-  }, [appState.routine, appState.teachers, appState.config.subjectCategories]);
-
-  useEffect(() => {
-    updateState('teacherLoad', calculatedTeacherLoad);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [calculatedTeacherLoad]);
-
-  const handleLogout = useCallback(async (withSave = true) => {
-    const auth = getFirebaseAuth();
-    setIsAuthLoading(true);
-    if (withSave && user && driveServiceRef.current?.isReady()) {
-        toast({ title: "Saving your work...", description: "Saving your final changes to Google Drive before logging out." });
-        await saveStateToDrive(true); 
-    }
-    await signOut(auth);
-    setAppState(DEFAULT_APP_STATE);
-    driveServiceRef.current = null;
-    setUser(null);
-    setIsAuthLoading(false);
-    toast({ title: "Logged Out", description: "You have been successfully logged out." });
-  }, [user, toast]);
-
+  
   const saveStateToDrive = useCallback(async (showToast = false) => {
-    if (!driveServiceRef.current || !driveServiceRef.current.isReady()) return;
+    if (!driveServiceRef.current || !driveServiceRef.current.isReady() || !user) return;
     setIsSyncing(true);
     try {
-      // Pass only the persistent part of the state to be saved
       await driveServiceRef.current.saveBackup(getPersistentState(stateRef.current));
-      if (showToast) {
-        toast({ title: "Progress Saved", description: "Your data has been saved to Google Drive." });
-      }
+      if (showToast) toast({ title: "Progress Saved", description: "Your data has been saved to Google Drive." });
     } catch (error: any) {
       console.error("Failed to save state to Google Drive:", error);
        if (error.message.includes('401') || error.message.includes('Authentication Error')) {
@@ -299,80 +246,228 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     } finally {
       setIsSyncing(false);
     }
-  }, [toast, handleLogout]);
+  }, [toast, user]);
   
+  const saveStateToLocalStorage = useCallback(() => {
+    try {
+      const stateToSave = getPersistentState(stateRef.current);
+      localStorage.setItem('schoolRoutineAppState', JSON.stringify(stateToSave));
+    } catch (error) {
+      console.error("Failed to save state to local storage:", error);
+    }
+  }, []);
+
   const debouncedSave = useRef(
     (() => {
       let timeout: NodeJS.Timeout;
       return () => {
         clearTimeout(timeout);
         timeout = setTimeout(() => {
-          saveStateToDrive(false);
-        }, 3000); 
+          if (user) {
+            saveStateToDrive(false);
+          } else {
+            saveStateToLocalStorage();
+          }
+        }, 2000); 
       };
     })()
   ).current;
 
   useEffect(() => {
-    if (user && driveServiceRef.current?.isReady()) {
-      debouncedSave();
-    }
+      if (isInitialLoadDone.current) {
+        debouncedSave();
+      }
   }, [appState, user, debouncedSave]);
-  
-  const setFullState = (newState: AppState) => {
-    // Merge loaded config with default config to ensure new properties are present
-    const mergedConfig = { ...DEFAULT_APP_STATE.config, ...newState.config };
-    // Merge loaded state with default state
-    const mergedState = { 
-        ...DEFAULT_APP_STATE, 
-        ...newState, 
-        config: mergedConfig,
-        adjustments: DEFAULT_ADJUSTMENTS_STATE // Always reset adjustments on full state load
-    };
-    
-    if(mergedState.timeSlots) {
-      mergedState.timeSlots = sortTimeSlots(mergedState.timeSlots);
-    }
-    setAppState(mergedState);
+
+  const setFullState = (newState: Partial<AppState>) => {
+    setAppState(prevState => {
+      const mergedConfig = { ...DEFAULT_APP_STATE.config, ...newState.config };
+      const mergedState = { 
+          ...DEFAULT_APP_STATE,
+          ...prevState, 
+          ...newState, 
+          config: mergedConfig,
+          adjustments: DEFAULT_ADJUSTMENTS_STATE
+      };
+      
+      if(mergedState.timeSlots) mergedState.timeSlots = sortTimeSlots(mergedState.timeSlots);
+      
+      // Ensure activeRoutineId is valid
+      if (mergedState.routineHistory.length > 0 && !mergedState.routineHistory.find(r => r.id === mergedState.activeRoutineId)) {
+        mergedState.activeRoutineId = mergedState.routineHistory[0].id;
+      }
+      if(mergedState.routineHistory.length === 0) {
+        mergedState.activeRoutineId = null;
+      }
+
+      return mergedState;
+    });
   };
   
   const loadStateFromDrive = useCallback(async (driveService: GoogleDriveService) => {
       setIsLoading(true);
       try {
-        toast({ title: "Loading data...", description: "Fetching your saved data from Google Drive." });
         const loadedState = await driveService.loadBackup();
-        if (loadedState && loadedState.teachers && loadedState.teachers.length > 0) {
-          setFullState(loadedState as AppState);
-          toast({ title: "Data Loaded Successfully", description: "Your data has been restored from Google Drive." });
+        if (loadedState && loadedState.teachers) {
+          setFullState(loadedState);
+          toast({ title: "Data Loaded", description: "Restored your data from Google Drive." });
         } else {
-            setAppState(DEFAULT_APP_STATE);
-            toast({ title: "No backup found", description: "Starting with sample data. Your work will be saved automatically." });
+            setFullState(DEFAULT_APP_STATE);
+            toast({ title: "No backup found", description: "Starting fresh. Your work will be saved automatically to Google Drive." });
             await driveService.saveBackup(getPersistentState(DEFAULT_APP_STATE));
         }
       } catch (error) {
-        console.error("Failed to load state from Google Drive:", error);
-        toast({ variant: "destructive", title: "Load Failed", description: "Could not load data. Using default sample data." });
-        setAppState(DEFAULT_APP_STATE);
+        console.error("Failed to load from Drive:", error);
+        toast({ variant: "destructive", title: "Load Failed", description: "Using local data." });
       } finally {
         setIsLoading(false);
+        isInitialLoadDone.current = true;
       }
   }, [toast]);
+  
+  const loadStateFromLocalStorage = useCallback(() => {
+      setIsLoading(true);
+      try {
+          const savedStateJSON = localStorage.getItem('schoolRoutineAppState');
+          if (savedStateJSON) {
+              const savedState = JSON.parse(savedStateJSON);
+              setFullState(savedState);
+          } else {
+              setFullState(DEFAULT_APP_STATE);
+          }
+      } catch (error) {
+          console.error("Failed to load from local storage:", error);
+          setFullState(DEFAULT_APP_STATE);
+      } finally {
+        setIsLoading(false);
+        isInitialLoadDone.current = true;
+      }
+  }, []);
+
+  const handleGoogleSignIn = async () => {
+    setIsAuthLoading(true);
+    const auth = getFirebaseAuth();
+    const provider = new GoogleAuthProvider();
+    provider.addScope('https://www.googleapis.com/auth/drive.file');
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      if (credential?.accessToken) {
+        setUser(result.user);
+        if (!driveServiceRef.current) driveServiceRef.current = new GoogleDriveService();
+        await driveServiceRef.current.init(credential.accessToken);
+        
+        // Sync local storage to drive if there's data
+        const localDataJSON = localStorage.getItem('schoolRoutineAppState');
+        if (localDataJSON) {
+            const localData = JSON.parse(localDataJSON);
+            await driveServiceRef.current.saveBackup(localData);
+            localStorage.removeItem('schoolRoutineAppState');
+        }
+        await loadStateFromDrive(driveServiceRef.current);
+      }
+    } catch (error) {
+        console.error("Google Sign-In Error:", error);
+        toast({ variant: "destructive", title: "Login Failed", description: (error as AuthError).message });
+    } finally {
+       setIsAuthLoading(false); 
+    }
+  };
+
+  const handleLogout = useCallback(async (withSave = true) => {
+    const auth = getFirebaseAuth();
+    setIsAuthLoading(true);
+    if (withSave && user && driveServiceRef.current?.isReady()) {
+        await saveStateToDrive(true);
+    }
+    await signOut(auth);
+    setUser(null);
+    driveServiceRef.current = null;
+    isInitialLoadDone.current = false;
+    setFullState(DEFAULT_APP_STATE); // Reset to default state
+    loadStateFromLocalStorage(); // Load any potentially existing local data
+    setIsAuthLoading(false);
+    toast({ title: "Logged Out", description: "You are now working in offline mode." });
+  }, [user, saveStateToDrive, toast, loadStateFromLocalStorage]);
 
   useEffect(() => {
     const auth = getFirebaseAuth();
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setUser(user);
-      } else {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        if (!user || user.uid !== currentUser.uid) { // new login or refresh
+          setUser(currentUser);
+          setIsAuthLoading(true);
+          const idTokenResult = await currentUser.getIdTokenResult(true);
+          const credential = GoogleAuthProvider.credential(idTokenResult.token);
+          if (credential?.accessToken) {
+            if (!driveServiceRef.current) driveServiceRef.current = new GoogleDriveService();
+            await driveServiceRef.current.init(credential.accessToken);
+            await loadStateFromDrive(driveServiceRef.current);
+          }
+           setIsAuthLoading(false);
+        }
+      } else { // No user logged in
         setUser(null);
         driveServiceRef.current = null;
-        setAppState(DEFAULT_APP_STATE);
+        if (!isInitialLoadDone.current) { // only load from local on initial app load
+          loadStateFromLocalStorage();
+        }
       }
-      setIsAuthLoading(false);
     });
     return () => unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const activeRoutine = useMemo(() => {
+    if (!appState.activeRoutineId || !appState.routineHistory) return null;
+    return appState.routineHistory.find(r => r.id === appState.activeRoutineId) || null;
+  }, [appState.activeRoutineId, appState.routineHistory]);
+
+  const calculatedTeacherLoad = useMemo(() => {
+    const load: TeacherLoad = {};
+    if (!activeRoutine?.schedule.schedule || !appState.teachers) return {};
+
+    const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Total"];
+    
+    appState.teachers.forEach(teacher => {
+        load[teacher] = {};
+        days.forEach(day => {
+            load[teacher][day] = { total: 0, main: 0, additional: 0 };
+        });
+    });
+
+    activeRoutine.schedule.schedule.forEach(entry => {
+        if(entry.subject === "Prayer" || entry.subject === "Lunch" || entry.subject === "---") return;
+        
+        const teachersInEntry = entry.teacher.split(' & ').map(t => t.trim());
+        const subjectsInEntry = entry.subject.split(' / ').map(s => s.trim());
+
+        teachersInEntry.forEach((teacher, index) => {
+            if (teacher && teacher !== "N/A" && load[teacher]) {
+                const subject = subjectsInEntry[index] || subjectsInEntry[0];
+                const category = appState.config.subjectCategories[subject] || 'additional';
+
+                if (load[teacher][entry.day]) {
+                    load[teacher][entry.day].total++;
+                    if (category === 'main') load[teacher][entry.day].main++;
+                    else load[teacher][entry.day].additional++;
+                }
+                
+                load[teacher].Total.total++;
+                if (category === 'main') load[teacher].Total.main++;
+                else load[teacher].Total.additional++;
+            }
+        });
+    });
+
+    return load;
+  }, [activeRoutine, appState.teachers, appState.config.subjectCategories]);
+
+  useEffect(() => {
+    updateState('teacherLoad', calculatedTeacherLoad);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [calculatedTeacherLoad]);
+  
   const updateState = useCallback(<K extends keyof AppState>(key: K, value: AppState[K]) => {
     setAppState(prevState => {
       const newState = { ...prevState, [key]: value };
@@ -380,11 +475,10 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         newState.timeSlots = sortTimeSlots(value as string[]);
       }
       if (['teachers', 'classes', 'subjects', 'timeSlots'].includes(key as string)) {
-          newState.routine = null;
+          newState.routineHistory = [];
+          newState.activeRoutineId = null;
           newState.teacherLoad = {};
           newState.adjustments = DEFAULT_ADJUSTMENTS_STATE;
-      }
-      if (key === 'rooms') {
           newState.examTimetable = [];
       }
       return newState;
@@ -395,7 +489,8 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
      setAppState(prevState => ({
         ...prevState,
         config: { ...prevState.config, [key]: value },
-        routine: null, 
+        routineHistory: [],
+        activeRoutineId: null, 
         teacherLoad: {},
         adjustments: DEFAULT_ADJUSTMENTS_STATE,
     }));
@@ -407,39 +502,44 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       adjustments: { ...prevState.adjustments, [key]: value },
     }));
   }, []);
-
-  const handleGoogleSignIn = async () => {
-    setIsAuthLoading(true);
-    const auth = getFirebaseAuth();
-    const provider = new GoogleAuthProvider();
-    provider.addScope('https://www.googleapis.com/auth/drive.file');
-    try {
-      const result = await signInWithPopup(auth, provider);
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      if (credential) {
-        const token = credential.accessToken;
-        if (token) {
-          if (!driveServiceRef.current) {
-            driveServiceRef.current = new GoogleDriveService();
-          }
-          await driveServiceRef.current.init(token);
-          await loadStateFromDrive(driveServiceRef.current);
-        }
-      }
-    } catch (error: any) {
-        const authError = error as AuthError;
-        console.error("Google Sign-In Error:", authError);
-        toast({ 
-            variant: "destructive", 
-            title: "Login Failed", 
-            description: `Error: ${authError.code} - ${authError.message}`,
-            duration: 9000
-        });
-    } finally {
-       setIsAuthLoading(false); 
-    }
-  };
   
+  const addRoutineVersion = (schedule: GenerateScheduleOutput) => {
+    setAppState(prevState => {
+      const newVersion: RoutineVersion = {
+        id: `routine_${Date.now()}`,
+        name: `Routine - ${new Date().toLocaleString()}`,
+        createdAt: new Date().toISOString(),
+        schedule: schedule,
+      };
+      const newHistory = [newVersion, ...prevState.routineHistory].slice(0, 5); // Keep last 5
+      return { ...prevState, routineHistory: newHistory, activeRoutineId: newVersion.id };
+    });
+  };
+
+  const updateRoutineVersion = (id: string, updates: Partial<Omit<RoutineVersion, 'id' | 'createdAt'>>) => {
+    setAppState(prevState => {
+        const newHistory = prevState.routineHistory.map(v => 
+            v.id === id ? { ...v, ...updates } : v
+        );
+        return { ...prevState, routineHistory: newHistory };
+    });
+  };
+
+  const deleteRoutineVersion = (id: string) => {
+    setAppState(prevState => {
+        const newHistory = prevState.routineHistory.filter(v => v.id !== id);
+        let newActiveId = prevState.activeRoutineId;
+        if (newActiveId === id) {
+            newActiveId = newHistory.length > 0 ? newHistory[0].id : null;
+        }
+        return { ...prevState, routineHistory: newHistory, activeRoutineId: newActiveId };
+    });
+  };
+
+  const setActiveRoutineId = (id: string | null) => {
+      setAppState(prevState => ({ ...prevState, activeRoutineId: id }));
+  };
+
   return (
     <AppStateContext.Provider value={{ 
         appState, 
@@ -454,6 +554,12 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         user,
         handleGoogleSignIn,
         handleLogout: () => handleLogout(true),
+        routineHistory: appState.routineHistory,
+        activeRoutineId: appState.activeRoutineId,
+        setActiveRoutineId,
+        addRoutineVersion,
+        updateRoutineVersion,
+        deleteRoutineVersion
     }}>
       {children}
     </AppStateContext.Provider>

@@ -288,6 +288,14 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     updateState('teacherLoad', calculatedTeacherLoad);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [calculatedTeacherLoad]);
+
+  const setFullState = useCallback((newState: Partial<AppState>) => {
+    setAppState(prevState => ({
+        ...prevState,
+        ...newState,
+        adjustments: DEFAULT_ADJUSTMENTS_STATE,
+    }));
+  }, []);
   
   const updateState = useCallback(<K extends keyof AppState>(key: K, value: AppState[K]) => {
     setAppState(prevState => {
@@ -385,8 +393,8 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         isAuthLoading,
         isSyncing,
         user,
-        handleGoogleSignIn,
-        handleLogout: handleLogout,
+        handleGoogleSignIn: () => {},
+        handleLogout: () => {},
         routineHistory: appState.routineHistory,
         activeRoutineId: appState.activeRoutineId,
         setActiveRoutineId: (id: string) => updateState('activeRoutineId', id),

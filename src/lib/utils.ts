@@ -65,12 +65,16 @@ export const sortClasses = (a: string, b: string): number => {
 };
 
 export const dateToDay = (dateString: string): "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | null => {
-    const date = new Date(dateString);
-    // adjust for timezone offset to prevent day shifts
-    const userTimezoneOffset = date.getTimezoneOffset() * 60000;
-    const adjustedDate = new Date(date.getTime() + userTimezoneOffset);
-    
-    const dayIndex = adjustedDate.getDay();
+    if (!dateString || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        return null;
+    }
+    // Parsing the date string manually to avoid timezone issues.
+    // 'YYYY-MM-DD' is treated as UTC by `new Date()`, which can cause off-by-one day errors.
+    const [year, month, day] = dateString.split('-').map(Number);
+    // Note: month is 0-indexed in JavaScript Date
+    const date = new Date(year, month - 1, day);
+
+    const dayIndex = date.getDay();
     const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const dayName = days[dayIndex];
 

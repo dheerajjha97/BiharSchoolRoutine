@@ -68,7 +68,7 @@ function MultiSelectPopover({ options, selected, onSelectedChange, placeholder }
 
 export default function AdjustmentsPage() {
     const { appState, updateAdjustments } = useContext(AppStateContext);
-    const { teachers, routine, timeSlots, teacherLoad, config } = appState;
+    const { teachers, routine, teacherLoad } = appState;
     const { date, absentTeachers, substitutionPlan } = appState.adjustments;
     const { toast } = useToast();
 
@@ -87,7 +87,7 @@ export default function AdjustmentsPage() {
                 schedule: routine.schedule,
                 allTeachers: teachers,
                 absentTeachers,
-                date,
+                date: date, // Pass the date string directly
                 teacherLoad
             });
             updateAdjustments('substitutionPlan', plan);
@@ -131,7 +131,10 @@ export default function AdjustmentsPage() {
                             <MultiSelectPopover 
                                 options={teachers} 
                                 selected={absentTeachers} 
-                                onSelectedChange={(newSelection) => updateAdjustments('absentTeachers', newSelection)}
+                                onSelectedChange={(newSelection) => {
+                                    updateAdjustments('absentTeachers', newSelection);
+                                    updateAdjustments('substitutionPlan', null); // Reset plan if selection changes
+                                }}
                                 placeholder="Select absent teachers..." 
                             />
                         </div>

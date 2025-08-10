@@ -76,29 +76,43 @@ export class GoogleDriveService {
     const backupData = JSON.stringify(state, null, 2);
     const blob = new Blob([backupData], { type: BACKUP_MIME_TYPE });
     
-    const headers = new Headers({ 'Authorization': `Bearer ${this.accessToken}` });
-    const form = new FormData();
-    const metadata = { name: BACKUP_FILE_NAME, mimeType: BACKUP_MIME_TYPE };
+    const headers = new Headers({ 'Authorization': 'Bearer ' + this.accessToken });
 
-    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-    form.append('file', blob, BACKUP_FILE_NAME);
-
-    const uploadUrl = fileId 
-      ? `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`
-      : `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart`;
+    if (fileId) {
+      const formData = new FormData();
+      const metadata = { name: BACKUP_FILE_NAME, mimeType: BACKUP_MIME_TYPE };
+      formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+      formData.append('file', blob);
       
-    const method = fileId ? 'PATCH' : 'POST';
+      const response = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`, {
+        method: 'PATCH',
+        headers,
+        body: formData,
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('Error updating file:', error);
+        throw new Error('Failed to update backup file.');
+      }
 
-    const response = await fetch(uploadUrl, {
-      method,
-      headers,
-      body: form,
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Error ${method === 'POST' ? 'creating' : 'updating'} file:`, errorText);
-      throw new Error(`Failed to ${method === 'POST' ? 'create' : 'update'} backup file. Status: ${response.status}. Message: ${errorText}`);
+    } else {
+      const formData = new FormData();
+      const metadata = { name: BACKUP_FILE_NAME, mimeType: BACKUP_MIME_TYPE, parents: ['root'] };
+      formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+      formData.append('file', blob);
+
+      const response = await fetch(`https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('Error creating file:', error);
+        throw new Error('Failed to create backup file.');
+      }
     }
   }
 }
+
+    

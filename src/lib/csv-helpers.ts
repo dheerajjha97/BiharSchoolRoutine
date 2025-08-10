@@ -4,14 +4,7 @@ import { sortTimeSlots } from "./utils";
 
 export const exportToJSON = (data: AppState, filename: string) => {
   try {
-    const persistentState = { ...data };
-    // @ts-ignore - We are intentionally removing these for export
-    delete persistentState.adjustments;
-    // @ts-ignore
-    delete persistentState.teacherLoad;
-
-
-    const jsonString = JSON.stringify(persistentState, null, 2);
+    const jsonString = JSON.stringify(data, null, 2);
     const blob = new Blob([jsonString], { type: 'application/json' });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);

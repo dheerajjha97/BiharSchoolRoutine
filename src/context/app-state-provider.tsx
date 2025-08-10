@@ -3,7 +3,7 @@
 
 import { createContext, useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
-import type { GenerateScheduleOutput, RoutineVersion } from "@/ai/flows/generate-schedule";
+import type { GenerateScheduleOutput } from "@/ai/flows/generate-schedule";
 import type { SubjectCategory, SubjectPriority } from "@/lib/schedule-generator";
 import { sortTimeSlots } from "@/lib/utils";
 import { getFirebaseAuth, getFirebaseApp } from "@/lib/firebase";
@@ -30,6 +30,13 @@ export type SplitClassRule = {
         teacher: string;
     }[];
 }
+
+export type RoutineVersion = {
+    id: string;
+    name: string;
+    createdAt: string;
+    schedule: GenerateScheduleOutput;
+};
 
 export type SchoolConfig = {
   classRequirements: Record<string, string[]>;
@@ -93,7 +100,7 @@ export type AppState = {
 interface AppStateContextType {
   appState: AppState;
   updateState: <K extends keyof AppState>(key: K, value: AppState[K]) => void;
-  setFullState: (newState: AppState) => void;
+  setFullState: (newState: Partial<AppState>) => void;
   updateConfig: <K extends keyof SchoolConfig>(key: K, value: SchoolConfig[K]) => void;
   updateAdjustments: <K extends keyof AppState['adjustments']>(key: K, value: AppState['adjustments'][K]) => void;
   isLoading: boolean;
@@ -103,8 +110,11 @@ interface AppStateContextType {
   user: User | null;
   handleGoogleSignIn: () => void;
   handleLogout: () => void;
+  // Routine history management
+  routineHistory: RoutineVersion[];
+  activeRoutineId: string | null;
   setActiveRoutineId: (id: string) => void;
-  addRoutineVersion: (schedule: GenerateScheduleOutput, name: string) => void;
+  addRoutineVersion: (schedule: GenerateScheduleOutput, name?: string) => void;
   updateRoutineVersion: (id: string, updates: Partial<Omit<RoutineVersion, 'id' | 'createdAt'>>) => void;
   deleteRoutineVersion: (id: string) => void;
 }
@@ -224,7 +234,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   }, [appState]);
 
   const activeRoutine = useMemo(() => {
-    if (!appState.activeRoutineId) return null;
+    if (!appState.activeRoutineId || !appState.routineHistory) return null;
     return appState.routineHistory.find(r => r.id === appState.activeRoutineId);
   }, [appState.routineHistory, appState.activeRoutineId]);
 
@@ -436,13 +446,11 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       if (key === 'timeSlots' && Array.isArray(value)) {
         newState.timeSlots = sortTimeSlots(value as string[]);
       }
-      if (['teachers', 'classes', 'subjects', 'timeSlots'].includes(key as string)) {
+      if (['teachers', 'classes', 'subjects', 'timeSlots', 'rooms'].includes(key as string)) {
           newState.routineHistory = [];
           newState.activeRoutineId = null;
           newState.teacherLoad = {};
           newState.adjustments = DEFAULT_ADJUSTMENTS_STATE;
-      }
-      if (key === 'rooms') {
           newState.examTimetable = [];
       }
       return newState;
@@ -467,15 +475,11 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     }));
   }, []);
   
-  const setActiveRoutineId = (id: string) => {
-    updateState('activeRoutineId', id);
-  };
-
-  const addRoutineVersion = (schedule: GenerateScheduleOutput, name: string) => {
+  const addRoutineVersion = useCallback((schedule: GenerateScheduleOutput, name?: string) => {
     const newVersion: RoutineVersion = {
       id: `routine_${Date.now()}`,
       createdAt: new Date().toISOString(),
-      name,
+      name: name || `Routine - ${new Date().toLocaleString()}`,
       schedule,
     };
 
@@ -487,18 +491,18 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
             activeRoutineId: newVersion.id,
         }
     });
-  };
+  }, []);
 
-  const updateRoutineVersion = (id: string, updates: Partial<Omit<RoutineVersion, 'id' | 'createdAt'>>) => {
+  const updateRoutineVersion = useCallback((id: string, updates: Partial<Omit<RoutineVersion, 'id' | 'createdAt'>>) => {
     setAppState(prevState => ({
       ...prevState,
       routineHistory: prevState.routineHistory.map(r => 
         r.id === id ? { ...r, ...updates } : r
       )
     }));
-  };
+  }, []);
 
-  const deleteRoutineVersion = (id: string) => {
+  const deleteRoutineVersion = useCallback((id: string) => {
     setAppState(prevState => {
       const newHistory = prevState.routineHistory.filter(r => r.id !== id);
       let newActiveId = prevState.activeRoutineId;
@@ -518,7 +522,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         activeRoutineId: newActiveId,
       };
     });
-  };
+  }, []);
 
   return (
     <AppStateContext.Provider value={{ 
@@ -534,7 +538,9 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         user,
         handleGoogleSignIn,
         handleLogout: handleLogout,
-        setActiveRoutineId,
+        routineHistory: appState.routineHistory,
+        activeRoutineId: appState.activeRoutineId,
+        setActiveRoutineId: (id: string) => updateState('activeRoutineId', id),
         addRoutineVersion,
         updateRoutineVersion,
         deleteRoutineVersion
@@ -543,3 +549,5 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     </AppStateContext.Provider>
   );
 };
+
+    

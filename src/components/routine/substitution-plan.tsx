@@ -15,12 +15,12 @@ import { Textarea } from '../ui/textarea';
 
 interface SubstitutionPlanProps {
   plan: SubstitutionPlan;
+  pdfHeader?: string;
 }
 
-export default function SubstitutionPlanDisplay({ plan }: SubstitutionPlanProps) {
+export default function SubstitutionPlanDisplay({ plan, pdfHeader = "" }: SubstitutionPlanProps) {
   const { toast } = useToast();
   const [isDownloading, setIsDownloading] = useState(false);
-  const [pdfHeader, setPdfHeader] = useState("");
 
   const handleDownloadPdf = async (elementId: string, fileName: string) => {
     const originalElement = document.getElementById(elementId);
@@ -38,16 +38,6 @@ export default function SubstitutionPlanDisplay({ plan }: SubstitutionPlanProps)
     
     const wrapperDiv = document.createElement('div');
     
-    const title = `Substitution Plan - ${new Date(plan.date).toLocaleDateString('en-GB')}`;
-    const mainTitle = document.createElement('h2');
-    mainTitle.textContent = title;
-    mainTitle.style.textAlign = 'center';
-    mainTitle.style.marginBottom = '10px';
-    mainTitle.style.width = '100%';
-    mainTitle.style.fontSize = '18px';
-    
-    wrapperDiv.appendChild(mainTitle);
-
     if (pdfHeader.trim()) {
         const headerDiv = document.createElement('div');
         headerDiv.style.textAlign = 'center';
@@ -64,6 +54,16 @@ export default function SubstitutionPlanDisplay({ plan }: SubstitutionPlanProps)
         });
         wrapperDiv.appendChild(headerDiv);
     }
+    
+    const title = `Substitution Plan - ${new Date(plan.date).toLocaleDateString('en-GB')}`;
+    const mainTitle = document.createElement('h2');
+    mainTitle.textContent = title;
+    mainTitle.style.textAlign = 'center';
+    mainTitle.style.marginBottom = '10px';
+    mainTitle.style.width = '100%';
+    mainTitle.style.fontSize = '18px';
+    
+    wrapperDiv.appendChild(mainTitle);
 
     const clonedElement = originalElement.cloneNode(true) as HTMLElement;
     const table = clonedElement.querySelector('table');
@@ -143,16 +143,6 @@ export default function SubstitutionPlanDisplay({ plan }: SubstitutionPlanProps)
               )}
               {isDownloading ? 'Generating...' : 'Download PDF'}
             </Button>
-        </div>
-        <div className='pt-4'>
-            <Label htmlFor="pdf-header-substitution">PDF Header (Optional)</Label>
-            <Textarea 
-                id="pdf-header-substitution"
-                placeholder="e.g. My School Name - Daily Adjustments"
-                value={pdfHeader}
-                onChange={(e) => setPdfHeader(e.target.value)}
-                className="mt-1"
-            />
         </div>
       </CardHeader>
       <CardContent>

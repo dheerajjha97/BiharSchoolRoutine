@@ -10,10 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Upload, Download, User, School, Book, Clock, DoorOpen } from "lucide-react";
 import { importFromJSON, exportToJSON } from "@/lib/csv-helpers";
 import PageHeader from "@/components/app/page-header";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function DataManagementPage() {
     const { appState, updateState, setFullState } = useContext(AppStateContext);
-    const { teachers, classes, subjects, timeSlots, rooms } = appState;
+    const { teachers, classes, subjects, timeSlots, rooms, pdfHeader } = appState;
     const { toast } = useToast();
     const jsonInputRef = useRef<HTMLInputElement>(null);
     const backupExtension = ".bsr";
@@ -51,23 +54,45 @@ export default function DataManagementPage() {
         <div className="space-y-6">
             <PageHeader 
                 title="Data Management"
-                description={`Manage the core data for your school. You can also export your entire configuration (including routines) as a secure ${backupExtension} file to share or as a backup.`}
+                description={`Manage core data and global settings. You can also export your entire configuration as a secure ${backupExtension} file.`}
             />
-             <div className="flex items-center gap-2">
-                <input
-                    type="file"
-                    ref={jsonInputRef}
-                    onChange={handleFileImportJson}
-                    className="hidden"
-                    accept={backupExtension}
-                />
-                <Button variant="outline" onClick={handleImportJsonClick}>
-                    <Upload className="mr-2 h-4 w-4" /> Import from {backupExtension} File
-                </Button>
-                <Button variant="outline" onClick={handleExportJson}>
-                    <Download className="mr-2 h-4 w-4" /> Export to {backupExtension} File
-                </Button>
-            </div>
+            
+            <Card>
+                <CardHeader>
+                    <CardTitle>Global Settings</CardTitle>
+                    <CardDescription>These settings will be applied across the entire application.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div>
+                        <Label htmlFor="pdf-header-global">Global PDF Header</Label>
+                        <Textarea 
+                            id="pdf-header-global"
+                            placeholder="e.g. My School Name&#10;Academic Year: 2024-25&#10;Weekly Class Routine"
+                            value={pdfHeader}
+                            onChange={(e) => updateState('pdfHeader', e.target.value)}
+                            className="mt-1"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">This header will be used on all PDF downloads.</p>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-4">
+                        <input
+                            type="file"
+                            ref={jsonInputRef}
+                            onChange={handleFileImportJson}
+                            className="hidden"
+                            accept={backupExtension}
+                        />
+                        <Button variant="outline" onClick={handleImportJsonClick}>
+                            <Upload className="mr-2 h-4 w-4" /> Import from {backupExtension} File
+                        </Button>
+                        <Button variant="outline" onClick={handleExportJson}>
+                            <Download className="mr-2 h-4 w-4" /> Export to {backupExtension} File
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                 <DataManager 
                     title="Teachers" 

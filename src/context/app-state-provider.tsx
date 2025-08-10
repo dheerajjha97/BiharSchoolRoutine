@@ -76,6 +76,7 @@ export type AppState = {
   subjects: string[];
   timeSlots: string[];
   rooms: string[];
+  pdfHeader: string;
   config: SchoolConfig;
   routine: GenerateScheduleOutput | null;
   teacherLoad: TeacherLoad;
@@ -127,6 +128,7 @@ const DEFAULT_APP_STATE: AppState = {
     "02:30 - 03:15"
   ],
   rooms: ["Room 101", "Room 102", "Room 103", "Hall A", "Hall B"],
+  pdfHeader: "",
   config: {
     teacherSubjects: {
       "Mr. Sharma": ["Math", "Physics"],

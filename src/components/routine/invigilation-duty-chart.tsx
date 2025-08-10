@@ -15,12 +15,12 @@ import { Textarea } from '../ui/textarea';
 
 interface InvigilationDutyChartProps {
   dutyChart: DutyChart;
+  pdfHeader?: string;
 }
 
-export default function InvigilationDutyChart({ dutyChart }: InvigilationDutyChartProps) {
+export default function InvigilationDutyChart({ dutyChart, pdfHeader = "" }: InvigilationDutyChartProps) {
   const { toast } = useToast();
   const [isDownloading, setIsDownloading] = useState(false);
-  const [pdfHeader, setPdfHeader] = useState("");
 
   const handleDownloadPdf = async (elementId: string, fileName: string) => {
     const originalElement = document.getElementById(elementId);
@@ -131,16 +131,6 @@ export default function InvigilationDutyChart({ dutyChart }: InvigilationDutyCha
               )}
               {isDownloading ? 'Generating...' : 'Download PDF'}
             </Button>
-        </div>
-        <div className='pt-4'>
-            <Label htmlFor="pdf-header-duty">PDF Header (Optional)</Label>
-            <Textarea 
-                id="pdf-header-duty"
-                placeholder="e.g. Mid-Term Examination 2024 - Invigilation Duty"
-                value={pdfHeader}
-                onChange={(e) => setPdfHeader(e.target.value)}
-                className="mt-1"
-            />
         </div>
       </CardHeader>
       <CardContent>

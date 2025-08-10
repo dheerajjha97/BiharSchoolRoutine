@@ -10,21 +10,18 @@ import { Button } from "../ui/button";
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { Label } from '../ui/label';
-import { Textarea } from '../ui/textarea';
-
 
 interface TeacherLoadProps {
   teacherLoad: TeacherLoadType;
+  pdfHeader?: string;
 }
 
 const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Total"];
 
-export default function TeacherLoad({ teacherLoad }: TeacherLoadProps) {
+export default function TeacherLoad({ teacherLoad, pdfHeader = "" }: TeacherLoadProps) {
   const teachers = Object.keys(teacherLoad).sort();
   const { toast } = useToast();
   const [isDownloading, setIsDownloading] = useState(false);
-  const [pdfHeader, setPdfHeader] = useState("");
 
   if (teachers.length === 0) {
     return null;
@@ -144,16 +141,6 @@ export default function TeacherLoad({ teacherLoad }: TeacherLoadProps) {
               {isDownloading ? 'Generating...' : 'Download PDF'}
             </Button>
           </div>
-           <div className='pt-4'>
-                <Label htmlFor="pdf-header-teacher">PDF Header (Optional)</Label>
-                <Textarea 
-                    id="pdf-header-teacher"
-                    placeholder="e.g. Teacher Workload Summary"
-                    value={pdfHeader}
-                    onChange={(e) => setPdfHeader(e.target.value)}
-                    className="mt-1"
-                />
-            </div>
         </CardHeader>
         <CardContent id="teacher-load-table-container">
           <div className="border rounded-lg overflow-x-auto">

@@ -105,7 +105,7 @@ interface AppStateContextType {
   handleLogout: () => void;
   setActiveRoutineId: (id: string) => void;
   addRoutineVersion: (schedule: GenerateScheduleOutput, name: string) => void;
-  updateRoutineVersion: (id: string, updates: Partial<RoutineVersion>) => void;
+  updateRoutineVersion: (id: string, updates: Partial<Omit<RoutineVersion, 'id' | 'createdAt'>>) => void;
   deleteRoutineVersion: (id: string) => void;
 }
 
@@ -216,12 +216,15 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   const { toast } = useToast();
   const driveServiceRef = useRef<GoogleDriveService | null>(null);
   const stateRef = useRef(appState);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
 
   useEffect(() => {
     stateRef.current = appState;
   }, [appState]);
 
   const activeRoutine = useMemo(() => {
+    if (!appState.activeRoutineId) return null;
     return appState.routineHistory.find(r => r.id === appState.activeRoutineId);
   }, [appState.routineHistory, appState.activeRoutineId]);
 
@@ -246,7 +249,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 
         teachersInEntry.forEach((teacher, index) => {
             if (teacher && teacher !== "N/A" && load[teacher]) {
-                const subject = subjectsInEntry[index] || subjectsInEntry[0]; // For split, match teacher to subject
+                const subject = subjectsInEntry[index] || subjectsInEntry[0];
                 const category = appState.config.subjectCategories[subject] || 'additional';
 
                 if (load[teacher][entry.day]) {
@@ -300,19 +303,17 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     });
   }, []);
 
-  const saveStateToDrive = useCallback(async (stateToSave: AppState, showToast = false) => {
+  const saveStateToDrive = useCallback(async (stateToSave: AppState) => {
     if (!driveServiceRef.current || !driveServiceRef.current.isReady()) return;
+    
     setIsSyncing(true);
     try {
       await driveServiceRef.current.saveBackup(getPersistentState(stateToSave));
-      if (showToast) {
-        toast({ title: "Progress Saved", description: "Your data has been saved to Google Drive." });
-      }
     } catch (error: any) {
       console.error("Failed to save state to Google Drive:", error);
        if (error.message.includes('401') || error.message.includes('Authentication Error')) {
             toast({ variant: "destructive", title: "Authentication Error", description: "Please log out and log in again to refresh your session.", duration: 5000 });
-            await handleLogout(false);
+            await signOut(getFirebaseAuth());
         } else {
             toast({ variant: "destructive", title: "Sync Failed", description: "Could not save data to Google Drive." });
         }
@@ -321,63 +322,40 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     }
   }, [toast]);
 
-  const loadStateFromDrive = useCallback(async (driveService: GoogleDriveService) => {
-      setIsLoading(true);
-      try {
-        toast({ title: "Loading data...", description: "Fetching your saved data from Google Drive." });
-        const loadedState = await driveService.loadBackup();
-        if (loadedState && loadedState.teachers && loadedState.teachers.length > 0) {
-          setFullState(loadedState as AppState);
-          toast({ title: "Data Loaded Successfully", description: "Your data has been restored from Google Drive." });
-        } else {
-            setFullState(DEFAULT_APP_STATE);
-            toast({ title: "No backup found", description: "Starting with sample data. Your work will be saved automatically to your Drive." });
-            await saveStateToDrive(DEFAULT_APP_STATE, false);
-        }
-      } catch (error) {
-        console.error("Failed to load state from Google Drive:", error);
-        toast({ variant: "destructive", title: "Load Failed", description: "Could not load data from Drive. Using local data if available." });
-      } finally {
-        setIsLoading(false);
-      }
-  }, [toast, setFullState, saveStateToDrive]);
-
+  // Debounced save effect
   useEffect(() => {
-    // This effect runs once on mount to load initial data for guest users
-    if (typeof window !== "undefined") {
-      try {
-        const localData = localStorage.getItem(LOCAL_STORAGE_KEY);
-        if (localData) {
-          setFullState(JSON.parse(localData));
-        }
-      } catch (error) {
-        console.error("Failed to load data from local storage:", error);
-        setFullState(DEFAULT_APP_STATE);
+    if (isLoading || isAuthLoading) return;
+
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    saveTimeoutRef.current = setTimeout(() => {
+      if (user) {
+        saveStateToDrive(stateRef.current);
+      } else {
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(getPersistentState(stateRef.current)));
       }
-    }
-    setIsLoading(false);
-  }, [setFullState]);
-  
-  // This effect handles saving data based on user login state
-  useEffect(() => {
-    if (isLoading) return; // Don't save while initially loading
+    }, 2000); // Debounce time: 2 seconds
 
-    if (user) {
-        saveStateToDrive(appState, false);
-    } else {
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(getPersistentState(appState)));
-    }
-  }, [appState, user, isLoading, saveStateToDrive]);
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [appState, user, isLoading, isAuthLoading, saveStateToDrive]);
 
 
-  const handleLogout = useCallback(async (withSave = true) => {
+  const handleLogout = useCallback(async () => {
     const auth = getFirebaseAuth();
     setIsAuthLoading(true);
-    if (withSave && user && driveServiceRef.current?.isReady()) {
-        toast({ title: "Saving your work...", description: "Saving your final changes to Google Drive before logging out." });
-        await saveStateToDrive(stateRef.current, true); 
+    if (user && driveServiceRef.current?.isReady()) {
+        toast({ title: "Saving your work...", description: "Saving final changes to Google Drive." });
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+        await saveStateToDrive(stateRef.current); 
     }
     await signOut(auth);
+    // onAuthStateChanged will handle setting user to null and loading local data
   }, [user, toast, saveStateToDrive]);
 
   const handleGoogleSignIn = async () => {
@@ -407,49 +385,50 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       setIsAuthLoading(true);
       if (newUser) {
         setUser(newUser);
-        if (!driveServiceRef.current) {
-            driveServiceRef.current = new GoogleDriveService();
-        }
         
         try {
             const token = await newUser.getIdToken(true);
+            if (!driveServiceRef.current) {
+                driveServiceRef.current = new GoogleDriveService();
+            }
             await driveServiceRef.current.init(token);
             
-            // Sync local data with drive on login
             const localDataString = localStorage.getItem(LOCAL_STORAGE_KEY);
             const localData = localDataString ? JSON.parse(localDataString) : null;
             const driveData = await driveServiceRef.current.loadBackup();
 
             if (localData && (!driveData || new Date(localData.routineHistory?.[0]?.createdAt || 0) > new Date(driveData.routineHistory?.[0]?.createdAt || 0))) {
                 toast({title: "Syncing Local Data", description: "Uploading your locally saved work to Google Drive."});
-                await saveStateToDrive(localData, true);
                 setFullState(localData);
+                await driveServiceRef.current.saveBackup(localData);
             } else if (driveData) {
-                toast({title: "Syncing from Drive", description: "Loading your latest data from Google Drive."});
                 setFullState(driveData);
             } else {
                  setFullState(DEFAULT_APP_STATE);
-                 await saveStateToDrive(DEFAULT_APP_STATE);
+                 await driveServiceRef.current.saveBackup(DEFAULT_APP_STATE);
             }
-            localStorage.removeItem(LOCAL_STORAGE_KEY); // Clear local after sync
+            localStorage.removeItem(LOCAL_STORAGE_KEY);
         } catch(error) {
             console.error("Failed to init drive or sync data:", error);
             toast({ variant: "destructive", title: "Sync Error", description: "Could not connect to Google Drive. Please try logging in again." });
-            await handleLogout(false);
+            await signOut(auth);
         }
 
-      } else {
-        // User logged out or is a guest
+      } else { // User logged out or is a guest
         setUser(null);
         driveServiceRef.current = null;
-        const localData = localStorage.getItem(LOCAL_STORAGE_KEY);
-        setFullState(localData ? JSON.parse(localData) : DEFAULT_APP_STATE);
+        try {
+          const localData = localStorage.getItem(LOCAL_STORAGE_KEY);
+          setFullState(localData ? JSON.parse(localData) : DEFAULT_APP_STATE);
+        } catch (error) {
+           setFullState(DEFAULT_APP_STATE);
+        }
       }
       setIsAuthLoading(false);
       setIsLoading(false);
     });
     return () => unsubscribe();
-  }, [setFullState, toast, saveStateToDrive, handleLogout]);
+  }, [setFullState, toast]);
 
   const updateState = useCallback(<K extends keyof AppState>(key: K, value: AppState[K]) => {
     setAppState(prevState => {
@@ -510,11 +489,11 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     });
   };
 
-  const updateRoutineVersion = (id: string, updates: Partial<RoutineVersion>) => {
+  const updateRoutineVersion = (id: string, updates: Partial<Omit<RoutineVersion, 'id' | 'createdAt'>>) => {
     setAppState(prevState => ({
       ...prevState,
       routineHistory: prevState.routineHistory.map(r => 
-        r.id === id ? { ...r, ...updates, id: r.id, createdAt: r.createdAt } : r
+        r.id === id ? { ...r, ...updates } : r
       )
     }));
   };
@@ -554,7 +533,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         isSyncing,
         user,
         handleGoogleSignIn,
-        handleLogout: () => handleLogout(true),
+        handleLogout: handleLogout,
         setActiveRoutineId,
         addRoutineVersion,
         updateRoutineVersion,

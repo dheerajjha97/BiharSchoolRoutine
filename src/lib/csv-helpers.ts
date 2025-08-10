@@ -4,10 +4,12 @@ import { sortTimeSlots } from "./utils";
 
 export const exportToJSON = (data: AppState, filename: string) => {
   try {
-    // We only export the persistent state, not the daily adjustments
     const persistentState = { ...data };
-    // @ts-ignore
+    // @ts-ignore - We are intentionally removing these for export
     delete persistentState.adjustments;
+    // @ts-ignore
+    delete persistentState.teacherLoad;
+
 
     const jsonString = JSON.stringify(persistentState, null, 2);
     const blob = new Blob([jsonString], { type: 'application/json' });
@@ -52,7 +54,7 @@ export const importFromJSON = (file: File): Promise<AppState> => {
                 if (error instanceof SyntaxError) {
                     reject(new Error("Invalid JSON file. Please check the file content."));
                 } else {
-                    reject(error);
+                    reject(error as Error);
                 }
             }
         };

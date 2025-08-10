@@ -27,9 +27,9 @@ export class GoogleDriveService {
 
     const response = await fetch(url, { method: 'GET', headers });
     if (!response.ok) {
-        const error = await response.json();
-        console.error('Error listing files:', error);
-        throw new Error(`Failed to list files from Google Drive. Status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('Error listing files:', errorText);
+        throw new Error(`Failed to list files from Google Drive. Status: ${response.status}. Message: ${errorText}`);
     }
     
     const data = await response.json();
@@ -56,8 +56,9 @@ export class GoogleDriveService {
     const response = await fetch(url, { method: 'GET', headers });
 
     if (!response.ok) {
-        console.error('Error loading backup:', await response.text());
-        throw new Error(`Failed to load backup from Google Drive. Status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('Error loading backup:', errorText);
+        throw new Error(`Failed to load backup from Google Drive. Status: ${response.status}. Message: ${errorText}`);
     }
 
     try {
@@ -77,41 +78,27 @@ export class GoogleDriveService {
     
     const headers = new Headers({ 'Authorization': `Bearer ${this.accessToken}` });
     const form = new FormData();
+    const metadata = { name: BACKUP_FILE_NAME, mimeType: BACKUP_MIME_TYPE };
 
-    if (fileId) {
-      // If file exists, update it
-      const metadata = { name: BACKUP_FILE_NAME, mimeType: BACKUP_MIME_TYPE };
-      form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-      form.append('file', blob);
+    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+    form.append('file', blob, BACKUP_FILE_NAME);
+
+    const uploadUrl = fileId 
+      ? `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`
+      : `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart`;
       
-      const response = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`, {
-        method: 'PATCH',
-        headers,
-        body: form,
-      });
+    const method = fileId ? 'PATCH' : 'POST';
 
-      if (!response.ok) {
-        const error = await response.json();
-        console.error('Error updating file:', error);
-        throw new Error(`Failed to update backup file. Status: ${response.status}`);
-      }
-
-    } else {
-      // If file doesn't exist, create a new one
-      const metadata = { name: BACKUP_FILE_NAME, mimeType: BACKUP_MIME_TYPE, parents: ['root'] };
-      form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-      form.append('file', blob);
-
-      const response = await fetch(`https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart`, {
-        method: 'POST',
-        headers,
-        body: form,
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        console.error('Error creating file:', error);
-        throw new Error(`Failed to create backup file. Status: ${response.status}`);
-      }
+    const response = await fetch(uploadUrl, {
+      method,
+      headers,
+      body: form,
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Error ${method === 'POST' ? 'creating' : 'updating'} file:`, errorText);
+      throw new Error(`Failed to ${method === 'POST' ? 'create' : 'update'} backup file. Status: ${response.status}. Message: ${errorText}`);
     }
   }
 }

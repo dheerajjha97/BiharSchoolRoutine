@@ -40,13 +40,13 @@ import { Label } from "@/components/ui/label";
 const daysOfWeek: ScheduleEntry['day'][] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export default function Home() {
-  const { appState, updateState, isLoading, setIsLoading, setActiveRoutineId, addRoutineVersion, updateRoutineVersion, deleteRoutineVersion } = useContext(AppStateContext);
+  const { appState, isLoading, setIsLoading, addRoutineVersion, routineHistory, activeRoutineId, setActiveRoutineId, updateRoutineVersion, deleteRoutineVersion } = useContext(AppStateContext);
   const { toast } = useToast();
   const [renameValue, setRenameValue] = useState("");
   const [routineToRename, setRoutineToRename] = useState<RoutineVersion | null>(null);
 
 
-  const activeRoutine = appState.routineHistory.find(r => r.id === appState.activeRoutineId);
+  const activeRoutine = routineHistory && routineHistory.find(r => r.id === activeRoutineId);
 
   const handleGenerateRoutine = async () => {
     setIsLoading(true);
@@ -159,7 +159,7 @@ export default function Home() {
   };
   
   const ConfirmationWrapper = ({ onConfirm, children, disabled }: { onConfirm: () => void; children: React.ReactNode, disabled: boolean }) => {
-    if (appState.routineHistory.length === 0) {
+    if (!routineHistory || routineHistory.length === 0) {
       return <div onClick={onConfirm}>{children}</div>;
     }
 
@@ -227,7 +227,7 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        {appState.routineHistory.length > 0 && (
+        {routineHistory && routineHistory.length > 0 && (
           <Card>
             <CardHeader>
               <CardTitle>Manage Active Routine</CardTitle>
@@ -244,7 +244,7 @@ export default function Home() {
                   <DropdownMenuContent align="start">
                     <DropdownMenuLabel>Switch to Routine Version</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    {appState.routineHistory.map(routine => (
+                    {routineHistory.map(routine => (
                       <DropdownMenuItem 
                         key={routine.id} 
                         className="flex justify-between items-center"

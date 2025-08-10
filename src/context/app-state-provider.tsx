@@ -9,6 +9,7 @@ import { sortTimeSlots } from "@/lib/utils";
 import { getFirebaseAuth } from "@/lib/firebase";
 import { onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, type User, type AuthError } from "firebase/auth";
 import { GoogleDriveService } from "@/lib/google-drive-service";
+import type { SubstitutionPlan } from "@/lib/substitution-generator";
 
 type Unavailability = {
   teacher: string;
@@ -75,10 +76,17 @@ export type AppState = {
   subjects: string[];
   timeSlots: string[];
   rooms: string[];
+  pdfHeader: string;
   config: SchoolConfig;
   routine: GenerateScheduleOutput | null;
   teacherLoad: TeacherLoad;
   examTimetable: ExamEntry[];
+  // Non-persistent state for daily adjustments
+  adjustments: {
+    date: string;
+    absentTeachers: string[];
+    substitutionPlan: SubstitutionPlan | null;
+  }
 }
 
 interface AppStateContextType {
@@ -86,6 +94,7 @@ interface AppStateContextType {
   updateState: <K extends keyof AppState>(key: K, value: AppState[K]) => void;
   setFullState: (newState: AppState) => void;
   updateConfig: <K extends keyof SchoolConfig>(key: K, value: SchoolConfig[K]) => void;
+  updateAdjustments: <K extends keyof AppState['adjustments']>(key: K, value: AppState['adjustments'][K]) => void;
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
   isAuthLoading: boolean;
@@ -96,6 +105,12 @@ interface AppStateContextType {
 }
 
 export const AppStateContext = createContext<AppStateContextType>({} as AppStateContextType);
+
+const DEFAULT_ADJUSTMENTS_STATE = {
+    date: new Date().toISOString().split('T')[0], // Today's date
+    absentTeachers: [],
+    substitutionPlan: null
+};
 
 const DEFAULT_APP_STATE: AppState = {
   teachers: ["Mr. Sharma", "Mrs. Gupta", "Ms. Singh", "Mr. Kumar", "Mrs. Roy", "Mr. Das"],
@@ -113,6 +128,7 @@ const DEFAULT_APP_STATE: AppState = {
     "02:30 - 03:15"
   ],
   rooms: ["Room 101", "Room 102", "Room 103", "Hall A", "Hall B"],
+  pdfHeader: "",
   config: {
     teacherSubjects: {
       "Mr. Sharma": ["Math", "Physics"],
@@ -173,6 +189,13 @@ const DEFAULT_APP_STATE: AppState = {
   routine: null,
   teacherLoad: {},
   examTimetable: [],
+  adjustments: DEFAULT_ADJUSTMENTS_STATE,
+};
+
+// Function to strip non-persistent state for saving
+const getPersistentState = (state: AppState): Omit<AppState, 'adjustments'> => {
+  const { adjustments, ...persistentState } = state;
+  return persistentState;
 };
 
 export const AppStateProvider = ({ children }: { children: React.ReactNode }) => {
@@ -245,7 +268,8 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     if (!driveServiceRef.current || !driveServiceRef.current.isReady()) return;
     setIsSyncing(true);
     try {
-      await driveServiceRef.current.saveBackup(stateRef.current);
+      // Pass only the persistent part of the state to be saved
+      await driveServiceRef.current.saveBackup(getPersistentState(stateRef.current));
       if (showToast) {
         toast({ title: "Progress Saved", description: "Your data has been saved to Google Drive." });
       }
@@ -284,7 +308,12 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     // Merge loaded config with default config to ensure new properties are present
     const mergedConfig = { ...DEFAULT_APP_STATE.config, ...newState.config };
     // Merge loaded state with default state
-    const mergedState = { ...DEFAULT_APP_STATE, ...newState, config: mergedConfig };
+    const mergedState = { 
+        ...DEFAULT_APP_STATE, 
+        ...newState, 
+        config: mergedConfig,
+        adjustments: DEFAULT_ADJUSTMENTS_STATE // Always reset adjustments on full state load
+    };
     
     if(mergedState.timeSlots) {
       mergedState.timeSlots = sortTimeSlots(mergedState.timeSlots);
@@ -298,12 +327,12 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         toast({ title: "Loading data...", description: "Fetching your saved data from Google Drive." });
         const loadedState = await driveService.loadBackup();
         if (loadedState && loadedState.teachers && loadedState.teachers.length > 0) {
-          setFullState(loadedState);
+          setFullState(loadedState as AppState);
           toast({ title: "Data Loaded Successfully", description: "Your data has been restored from Google Drive." });
         } else {
             setAppState(DEFAULT_APP_STATE);
             toast({ title: "No backup found", description: "Starting with sample data. Your work will be saved automatically." });
-            await driveService.saveBackup(DEFAULT_APP_STATE);
+            await driveService.saveBackup(getPersistentState(DEFAULT_APP_STATE));
         }
       } catch (error) {
         console.error("Failed to load state from Google Drive:", error);
@@ -353,6 +382,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       if (['teachers', 'classes', 'subjects', 'timeSlots'].includes(key as string)) {
           newState.routine = null;
           newState.teacherLoad = {};
+          newState.adjustments = DEFAULT_ADJUSTMENTS_STATE;
       }
       if (key === 'rooms') {
           newState.examTimetable = [];
@@ -367,6 +397,14 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         config: { ...prevState.config, [key]: value },
         routine: null, 
         teacherLoad: {},
+        adjustments: DEFAULT_ADJUSTMENTS_STATE,
+    }));
+  }, []);
+
+  const updateAdjustments = useCallback(<K extends keyof AppState['adjustments']>(key: K, value: AppState['adjustments'][K]) => {
+    setAppState(prevState => ({
+      ...prevState,
+      adjustments: { ...prevState.adjustments, [key]: value },
     }));
   }, []);
 
@@ -407,7 +445,8 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         appState, 
         updateState, 
         setFullState,
-        updateConfig, 
+        updateConfig,
+        updateAdjustments,
         isLoading, 
         setIsLoading,
         isAuthLoading,

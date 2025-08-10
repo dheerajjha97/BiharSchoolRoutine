@@ -40,6 +40,7 @@ interface RoutineDisplayProps {
   teacherSubjects: Record<string, string[]>;
   onScheduleChange: (newSchedule: ScheduleEntry[]) => void;
   dailyPeriodQuota: number;
+  pdfHeader?: string;
 }
 
 type GridSchedule = Record<string, Record<string, Record<string, ScheduleEntry[]>>>;
@@ -89,14 +90,13 @@ const toRoman = (num: number): string => {
     return result;
 };
 
-const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, teacherSubjects, onScheduleChange, dailyPeriodQuota }: RoutineDisplayProps) => {
+const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, teacherSubjects, onScheduleChange, dailyPeriodQuota, pdfHeader = "" }: RoutineDisplayProps) => {
   const { toast } = useToast();
   
   const [isCellDialogOpen, setIsCellDialogOpen] = React.useState(false);
   const [currentCell, setCurrentCell] = React.useState<CurrentCell | null>(null);
   const [cellData, setCellData] = React.useState<CellData>({ subject: "", className: "", teacher: "" });
   const [isDownloading, setIsDownloading] = React.useState(false);
-  const [pdfHeader, setPdfHeader] = React.useState("");
   
   const { secondaryClasses, seniorSecondaryClasses } = useMemo(() => categorizeClasses(classes), [classes]);
 
@@ -529,16 +529,6 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                     {seniorSecondaryClasses.length > 0 && <DropdownMenuItem onClick={() => handleDownloadPdf('routine-table-senior-secondary', 'senior-secondary-routine.pdf')}>Senior Secondary Routine</DropdownMenuItem>}
                   </DropdownMenuContent>
                 </DropdownMenu>
-            </div>
-            <div className='pt-4'>
-                <Label htmlFor="pdf-header">PDF Header (Optional)</Label>
-                <Textarea 
-                    id="pdf-header"
-                    placeholder="e.g. My School Name&#10;Academic Year: 2024-25"
-                    value={pdfHeader}
-                    onChange={(e) => setPdfHeader(e.target.value)}
-                    className="mt-1"
-                />
             </div>
         </CardHeader>
         <CardContent className="p-0">

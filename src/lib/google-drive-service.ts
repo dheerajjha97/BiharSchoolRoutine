@@ -39,7 +39,7 @@ export class GoogleDriveService {
     return null;
   }
 
-  public async loadBackup(): Promise<AppState | null> {
+  public async loadBackup(): Promise<Omit<AppState, 'adjustments'> | null> {
     if (!this.isReady()) throw new Error('Google Drive API not ready.');
     
     const fileId = await this.getFileId();
@@ -60,10 +60,10 @@ export class GoogleDriveService {
         throw new Error('Failed to load backup from Google Drive.');
     }
 
-    return response.json() as Promise<AppState>;
+    return response.json() as Promise<Omit<AppState, 'adjustments'>>;
   }
 
-  public async saveBackup(state: AppState): Promise<void> {
+  public async saveBackup(state: Omit<AppState, 'adjustments'>): Promise<void> {
     if (!this.isReady()) throw new Error('Google Drive API not ready.');
 
     const fileId = await this.getFileId();

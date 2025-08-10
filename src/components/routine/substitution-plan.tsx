@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from 'react';
-import type { DutyChart } from '@/context/app-state-provider';
+import type { SubstitutionPlan } from '@/lib/substitution-generator';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
@@ -13,12 +13,12 @@ import { FileDown, Loader2 } from 'lucide-react';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 
-interface InvigilationDutyChartProps {
-  dutyChart: DutyChart;
+interface SubstitutionPlanProps {
+  plan: SubstitutionPlan;
   pdfHeader?: string;
 }
 
-export default function InvigilationDutyChart({ dutyChart, pdfHeader = "" }: InvigilationDutyChartProps) {
+export default function SubstitutionPlanDisplay({ plan, pdfHeader = "" }: SubstitutionPlanProps) {
   const { toast } = useToast();
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -30,7 +30,7 @@ export default function InvigilationDutyChart({ dutyChart, pdfHeader = "" }: Inv
     }
     setIsDownloading(true);
 
-    const pdfContainer = document.getElementById('pdf-container-duty');
+    const pdfContainer = document.getElementById('pdf-container-substitution');
     if (!pdfContainer) {
         setIsDownloading(false);
         return;
@@ -54,6 +54,16 @@ export default function InvigilationDutyChart({ dutyChart, pdfHeader = "" }: Inv
         });
         wrapperDiv.appendChild(headerDiv);
     }
+    
+    const title = `Substitution Plan - ${new Date(plan.date).toLocaleDateString('en-GB')}`;
+    const mainTitle = document.createElement('h2');
+    mainTitle.textContent = title;
+    mainTitle.style.textAlign = 'center';
+    mainTitle.style.marginBottom = '10px';
+    mainTitle.style.width = '100%';
+    mainTitle.style.fontSize = '18px';
+    
+    wrapperDiv.appendChild(mainTitle);
 
     const clonedElement = originalElement.cloneNode(true) as HTMLElement;
     const table = clonedElement.querySelector('table');
@@ -113,17 +123,19 @@ export default function InvigilationDutyChart({ dutyChart, pdfHeader = "" }: Inv
     }
   }
 
+  const dayOfWeek = new Date(plan.date).toLocaleDateString('en-US', { weekday: 'long' });
+
   return (
     <Card>
       <CardHeader>
         <div className="flex flex-wrap justify-between items-start gap-4">
             <div>
-              <CardTitle>Generated Invigilation Duty Chart</CardTitle>
+              <CardTitle>Generated Substitution Plan</CardTitle>
               <CardDescription>
-                The following chart shows the assigned invigilation duties for each exam slot.
+                Plan for {dayOfWeek}, {new Date(plan.date).toLocaleDateString('en-GB')}.
               </CardDescription>
             </div>
-            <Button size="sm" variant="outline" disabled={isDownloading} onClick={() => handleDownloadPdf('duty-chart-table', 'invigilation-duty-chart.pdf')}>
+            <Button size="sm" variant="outline" disabled={isDownloading} onClick={() => handleDownloadPdf('substitution-table', `substitution-plan-${plan.date}.pdf`)}>
               {isDownloading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
@@ -134,59 +146,36 @@ export default function InvigilationDutyChart({ dutyChart, pdfHeader = "" }: Inv
         </div>
       </CardHeader>
       <CardContent>
-         <div id="pdf-container-duty" className="absolute -left-[9999px] top-auto" aria-hidden="true"></div>
-         <div id="duty-chart-table" className="border rounded-lg overflow-x-auto">
+         <div id="pdf-container-substitution" className="absolute -left-[9999px] top-auto" aria-hidden="true"></div>
+         <div id="substitution-table" className="border rounded-lg overflow-x-auto">
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead className='font-semibold'>Date</TableHead>
-                        <TableHead className='font-semibold'>Time</TableHead>
-                        <TableHead className='font-semibold'>Room</TableHead>
-                        <TableHead className='font-semibold'>Invigilators</TableHead>
+                        <TableHead className='font-semibold'>Time Slot</TableHead>
+                        <TableHead className='font-semibold'>Class</TableHead>
+                        <TableHead className='font-semibold'>Subject</TableHead>
+                        <TableHead className='font-semibold'>Absent Teacher</TableHead>
+                        <TableHead className='font-semibold'>Assigned Substitute</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {dutyChart.examSlots.map(slot => {
-                        const key = `${slot.date}-${slot.startTime}`;
-                        const dutiesForSlot = dutyChart.duties[key] || {};
-                        const roomsInSlot = Object.keys(dutiesForSlot).sort();
-                        
-                        if (roomsInSlot.length === 0) {
-                            return (
-                                <TableRow key={key}>
-                                    <TableCell className="font-medium">{slot.date}</TableCell>
-                                    <TableCell className="font-medium">{slot.startTime} - {slot.endTime}</TableCell>
-                                    <TableCell colSpan={2} className="text-center text-muted-foreground">No duties assigned</TableCell>
-                                </TableRow>
-                            );
-                        }
-
-                        return roomsInSlot.map((room, index) => {
-                            const invigilators = dutiesForSlot[room] || [];
-                            return (
-                                <TableRow key={`${key}-${room}`}>
-                                    {index === 0 && (
-                                        <>
-                                            <TableCell className="font-medium align-top" rowSpan={roomsInSlot.length}>{slot.date}</TableCell>
-                                            <TableCell className="font-medium align-top" rowSpan={roomsInSlot.length}>{slot.startTime} - {slot.endTime}</TableCell>
-                                        </>
-                                    )}
-                                    <TableCell className="font-medium">{room}</TableCell>
-                                    <TableCell>
-                                        <div className="flex flex-col gap-1">
-                                            {invigilators.length > 0 ? (
-                                                invigilators.map((teacher, idx) => (
-                                                    <span key={idx} className="text-xs bg-secondary p-1 rounded-md">{teacher}</span>
-                                                ))
-                                            ) : (
-                                                <span className='text-xs text-muted-foreground'>-</span>
-                                            )}
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            );
-                        });
-                    })}
+                    {plan.substitutions.length > 0 ? (
+                        plan.substitutions.map((sub, index) => (
+                            <TableRow key={index}>
+                                <TableCell>{sub.timeSlot}</TableCell>
+                                <TableCell>{sub.className}</TableCell>
+                                <TableCell>{sub.subject}</TableCell>
+                                <TableCell className="text-destructive">{sub.absentTeacher}</TableCell>
+                                <TableCell className="text-green-600 font-semibold">{sub.substituteTeacher}</TableCell>
+                            </TableRow>
+                        ))
+                    ) : (
+                         <TableRow>
+                            <TableCell colSpan={5} className="text-center text-muted-foreground h-24">
+                                No substitutions needed for the selected absent teachers on this day.
+                            </TableCell>
+                        </TableRow>
+                    )}
                 </TableBody>
             </Table>
          </div>

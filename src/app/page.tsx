@@ -172,10 +172,12 @@ export default function Home() {
           teachers={appState.teachers}
           teacherSubjects={appState.config.teacherSubjects}
           dailyPeriodQuota={appState.config.dailyPeriodQuota}
+          pdfHeader={appState.pdfHeader}
         />
         
         <TeacherLoad 
             teacherLoad={appState.teacherLoad}
+            pdfHeader={appState.pdfHeader}
         />
     </div>
   );

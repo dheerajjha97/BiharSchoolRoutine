@@ -3,7 +3,7 @@ import type { AppState } from "@/context/app-state-provider";
 import { sortTimeSlots } from "./utils";
 
 // This function is no longer used but kept for potential legacy support or alternative export options.
-export const exportToCsv = (data: Omit<AppState, 'config' | 'routine' | 'teacherLoad' | 'examTimetable'>, filename: string) => {
+export const exportToCsv = (data: Omit<AppState, 'config' | 'routine' | 'teacherLoad' | 'adjustments' | 'teacherLoad'>, filename: string) => {
   const { teachers, classes, subjects, timeSlots = [], rooms = [] } = data;
   
   const headers = ['teachers', 'classes', 'subjects', 'timeSlots', 'rooms'];
@@ -49,12 +49,35 @@ export const importFromCsv = (file: File): Promise<Omit<AppState, 'config' | 'ro
         const lines = csv.split(/[\r\n]+/).filter(line => line.trim() !== '');
         
         if (lines.length < 2) {
-            resolve({ teachers: [], classes: [], subjects: [], timeSlots: [], rooms: [], examTimetable: [] });
+            // Ensure the resolved object matches the return type
+            resolve({ 
+                teachers: [], 
+                classes: [], 
+                subjects: [], 
+                timeSlots: [], 
+                rooms: [], 
+                examTimetable: [],
+                pdfHeader: "",
+                adjustments: {
+                    date: new Date().toISOString().split('T')[0],
+                    absentTeachers: [],
+                    substitutionPlan: null
+                }
+            });
             return;
         }
 
         const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-        const data: Required<Omit<AppState, 'config' | 'routine' | 'teacherLoad'>> = { teachers: [], classes: [], subjects: [], timeSlots: [], rooms: [], examTimetable: [] };
+        const data: Required<Omit<AppState, 'config' | 'routine' | 'teacherLoad' | 'adjustments'>> & { adjustments: any } = { 
+            teachers: [], 
+            classes: [], 
+            subjects: [], 
+            timeSlots: [], 
+            rooms: [], 
+            examTimetable: [],
+            pdfHeader: "",
+            adjustments: {}
+        };
 
         const requiredHeaders = ['teachers', 'classes', 'subjects'];
         if (!requiredHeaders.every(h => headers.includes(h))) {
@@ -84,6 +107,12 @@ export const importFromCsv = (file: File): Promise<Omit<AppState, 'config' | 'ro
           timeSlots: sortTimeSlots([...new Set(data.timeSlots)]),
           rooms: [...new Set(data.rooms)].sort(),
           examTimetable: [], // CSV import doesn't handle complex objects
+          pdfHeader: "",
+          adjustments: {
+              date: new Date().toISOString().split('T')[0],
+              absentTeachers: [],
+              substitutionPlan: null
+          }
         };
         
         resolve(finalData);

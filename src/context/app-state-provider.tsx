@@ -397,7 +397,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         setUser(newUser);
         
         try {
-            const token = await newUser.getIdToken(true);
+            const token = await newUser.getIdToken(true); // Force refresh the token
             if (!driveServiceRef.current) {
                 driveServiceRef.current = new GoogleDriveService();
             }
@@ -418,9 +418,13 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
                  await driveServiceRef.current.saveBackup(DEFAULT_APP_STATE);
             }
             localStorage.removeItem(LOCAL_STORAGE_KEY);
-        } catch(error) {
+        } catch(error: any) {
             console.error("Failed to init drive or sync data:", error);
-            toast({ variant: "destructive", title: "Sync Error", description: "Could not connect to Google Drive. Please try logging in again." });
+            if (error.message.includes('401')) {
+                 toast({ variant: "destructive", title: "Authentication Error", description: "Your session has expired. Please log out and log in again." });
+            } else {
+                 toast({ variant: "destructive", title: "Sync Error", description: "Could not connect to Google Drive. Please try logging in again." });
+            }
             await signOut(auth);
         }
 

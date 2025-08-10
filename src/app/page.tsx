@@ -299,7 +299,7 @@ export default function Home() {
           scheduleData={activeRoutine ? activeRoutine.schedule : null}
           onScheduleChange={(newSchedule) => {
             if (activeRoutine) {
-              updateRoutineVersion(activeRoutine.id, { schedule: newSchedule });
+              updateRoutineVersion(activeRoutine.id, { schedule: { schedule: newSchedule } });
             }
           }}
           timeSlots={appState.timeSlots} 

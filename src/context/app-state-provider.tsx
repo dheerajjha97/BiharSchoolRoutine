@@ -224,7 +224,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   const [isSyncing, setIsSyncing] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const { toast } = useToast();
-  const driveServiceRef = useRef<GoogleDriveService | null>(null);
+  const driveServiceRef = useRef(new GoogleDriveService());
   const stateRef = useRef(appState);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -402,10 +402,9 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   
   const handleLogout = useCallback(async () => {
     setIsAuthLoading(true);
-    driveServiceRef.current = null;
     try {
       await signOut(getFirebaseAuth());
-      setAppState(DEFAULT_APP_STATE); // Reset to default state on logout
+      setFullState(DEFAULT_APP_STATE); // Reset to default state on logout
       localStorage.removeItem(LOCAL_STORAGE_KEY);
       toast({ title: "Logged out successfully." });
     } catch (error) {
@@ -418,7 +417,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     } finally {
       setIsAuthLoading(false);
     }
-  }, [toast]);
+  }, [toast, setFullState]);
 
   // Load from Local Storage on initial mount (for guest users)
   useEffect(() => {
@@ -445,18 +444,15 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       if (currentUser) {
         setIsSyncing(true);
         try {
-          const token = await getIdToken(currentUser, true);
-          const driveService = new GoogleDriveService();
-          await driveService.init(token);
-          driveServiceRef.current = driveService;
-
-          const backup = await driveService.loadBackup();
+          const token = await getIdToken(currentUser, true); // Force refresh the token
+          const backup = await driveServiceRef.current.loadBackup(token);
+          
           if (backup) {
             setFullState(backup);
             toast({ title: "Data restored from Google Drive." });
           } else {
             // If no backup on Drive, save the current local state to Drive.
-            await driveService.saveBackup(getPersistentState(stateRef.current));
+            await driveServiceRef.current.saveBackup(getPersistentState(stateRef.current), token);
             toast({ title: "Local data synced to Google Drive." });
           }
         } catch (error) {
@@ -469,8 +465,6 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         } finally {
           setIsSyncing(false);
         }
-      } else {
-        driveServiceRef.current = null;
       }
       setIsAuthLoading(false);
       setIsLoading(false);
@@ -481,24 +475,27 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 
   // Debounced save effect
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || isAuthLoading) return;
 
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
 
-    saveTimeoutRef.current = setTimeout(() => {
+    saveTimeoutRef.current = setTimeout(async () => {
       try {
         const stateToSave = getPersistentState(stateRef.current);
-        if (user && driveServiceRef.current?.isReady()) {
+        if (user) {
           setIsSyncing(true);
-          driveServiceRef.current.saveBackup(stateToSave)
-            .then(() => console.log("Data saved to Google Drive."))
-            .catch(err => {
-              console.error("Failed to save to Google Drive:", err);
-              toast({ variant: "destructive", title: "Google Drive Sync Failed", description: "Could not save latest changes." });
-            })
-            .finally(() => setIsSyncing(false));
+          try {
+            const token = await getIdToken(user, true); // Get fresh token for saving
+            await driveServiceRef.current.saveBackup(stateToSave, token);
+            console.log("Data saved to Google Drive.");
+          } catch (err) {
+            console.error("Failed to save to Google Drive:", err);
+            toast({ variant: "destructive", title: "Google Drive Sync Failed", description: "Could not save latest changes." });
+          } finally {
+            setIsSyncing(false);
+          }
         } else {
           localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
           console.log("Data saved to local storage.");
@@ -514,7 +511,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [appState, user, isLoading, toast]);
+  }, [appState, user, isLoading, isAuthLoading, toast]);
 
   return (
     <AppStateContext.Provider value={{ 

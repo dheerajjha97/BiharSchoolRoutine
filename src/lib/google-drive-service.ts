@@ -5,21 +5,12 @@ const BACKUP_FILE_NAME = 'school-routine-data.json';
 const BACKUP_MIME_TYPE = 'application/json';
 
 export class GoogleDriveService {
-  private accessToken: string | null = null;
 
-  public async init(token: string) {
-    this.accessToken = token;
-  }
-
-  public isReady(): boolean {
-    return !!this.accessToken;
-  }
-
-  private async getFileId(): Promise<string | null> {
-    if (!this.isReady()) throw new Error('Google Drive API not ready.');
+  private async getFileId(accessToken: string): Promise<string | null> {
+    if (!accessToken) throw new Error('Google Drive API requires an access token.');
 
     const headers = new Headers({
-      'Authorization': `Bearer ${this.accessToken}`,
+      'Authorization': `Bearer ${accessToken}`,
     });
 
     const query = encodeURIComponent(`name='${BACKUP_FILE_NAME}' and mimeType='${BACKUP_MIME_TYPE}' and trashed=false`);
@@ -39,17 +30,17 @@ export class GoogleDriveService {
     return null;
   }
 
-  public async loadBackup(): Promise<Omit<AppState, 'adjustments' | 'teacherLoad'> | null> {
-    if (!this.isReady()) throw new Error('Google Drive API not ready.');
+  public async loadBackup(accessToken: string): Promise<Omit<AppState, 'adjustments' | 'teacherLoad'> | null> {
+    if (!accessToken) throw new Error('Google Drive API requires an access token.');
     
-    const fileId = await this.getFileId();
+    const fileId = await this.getFileId(accessToken);
     if (!fileId) {
       console.log("No backup file found in Google Drive.");
       return null;
     }
     
     const headers = new Headers({
-      'Authorization': `Bearer ${this.accessToken}`,
+      'Authorization': `Bearer ${accessToken}`,
     });
     
     const url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
@@ -70,14 +61,14 @@ export class GoogleDriveService {
     }
   }
 
-  public async saveBackup(state: Omit<AppState, 'adjustments' | 'teacherLoad'>): Promise<void> {
-    if (!this.isReady()) throw new Error('Google Drive API not ready.');
+  public async saveBackup(state: Omit<AppState, 'adjustments' | 'teacherLoad'>, accessToken: string): Promise<void> {
+    if (!accessToken) throw new Error('Google Drive API requires an access token.');
 
-    const fileId = await this.getFileId();
+    const fileId = await this.getFileId(accessToken);
     const backupData = JSON.stringify(state, null, 2);
     const blob = new Blob([backupData], { type: BACKUP_MIME_TYPE });
     
-    const headers = new Headers({ 'Authorization': 'Bearer ' + this.accessToken });
+    const headers = new Headers({ 'Authorization': 'Bearer ' + accessToken });
     const formData = new FormData();
       
     if (fileId) {

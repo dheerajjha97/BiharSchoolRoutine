@@ -116,7 +116,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <Separator className="my-2" />
         <p className="text-center">Created by Dheeraj Jha</p>
          <Button asChild variant="outline" size="sm" className="w-full">
-              <a href="mailto:dheerajjha.brgovt@gmail.com?subject=Feedback for BiharSchoolRoutine App">
+              <a href="mailto:dheerajjha.brgovt@gmail.com?subject=Feedback for School Routine App">
                   <Mail className="mr-2 h-4 w-4" /> Send Feedback
               </a>
           </Button>
@@ -156,7 +156,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <SheetTitle>
           <Link href="/" onClick={() => setIsSheetOpen(false)} className="flex items-center gap-2 font-semibold">
             <Logo className="h-6 w-6 text-primary" />
-            <span>BiharSchoolRoutine</span>
+            <span>School Routine</span>
           </Link>
         </SheetTitle>
       </SheetHeader>
@@ -204,7 +204,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <div className="hidden lg:block">
           <Link href="/" className="flex items-center gap-2 font-semibold text-lg">
             <Logo className="h-6 w-6 text-primary" />
-            <span>BiharSchoolRoutine</span>
+            <span>School Routine</span>
           </Link>
         </div>
         <div className="flex-1" />

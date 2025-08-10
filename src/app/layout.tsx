@@ -12,8 +12,8 @@ const poppins = Poppins({
   weight: ['400', '500', '600', '700'] 
 });
 
-const APP_NAME = "BiharSchoolRoutine";
-const APP_DEFAULT_TITLE = "BiharSchoolRoutine";
+const APP_NAME = "School Routine";
+const APP_DEFAULT_TITLE = "School Routine";
 const APP_TITLE_TEMPLATE = "%s - School Routine";
 const APP_DESCRIPTION = "AI-Powered School Routine Generator";
 

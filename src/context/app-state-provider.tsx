@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { GenerateScheduleOutput } from "@/ai/flows/generate-schedule";
 import type { SubjectCategory, SubjectPriority } from "@/lib/schedule-generator";
 import { sortTimeSlots } from "@/lib/utils";
-import { getFirebaseAuth, getFirebaseApp } from "@/lib/firebase";
+import { getFirebaseAuth } from "@/lib/firebase";
 import { onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, type User, type AuthError, getIdToken } from "firebase/auth";
 import { GoogleDriveService } from "@/lib/google-drive-service";
 import type { SubstitutionPlan } from "@/lib/substitution-generator";
@@ -336,7 +336,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     const newVersion: RoutineVersion = {
       id: `routine_${Date.now()}`,
       createdAt: new Date().toISOString(),
-      name: name || `Routine - ${new Date().toLocaleString()}`,
+      name: name || `School Routine - ${new Date().toLocaleString()}`,
       schedule,
     };
 
@@ -452,7 +452,8 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
             toast({ title: "Data restored from Google Drive." });
           } else {
             // If no backup on Drive, save the current local state to Drive.
-            await driveServiceRef.current.saveBackup(getPersistentState(stateRef.current), token);
+            const freshTokenForSave = await getIdToken(currentUser, true);
+            await driveServiceRef.current.saveBackup(getPersistentState(stateRef.current), freshTokenForSave);
             toast({ title: "Local data synced to Google Drive." });
           }
         } catch (error) {

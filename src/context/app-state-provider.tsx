@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { GenerateScheduleOutput } from "@/ai/flows/generate-schedule";
 import type { SubjectCategory, SubjectPriority } from "@/lib/schedule-generator";
 import { sortTimeSlots } from "@/lib/utils";
-import { getFirebaseAuth, getFirebaseApp } from "@/lib/firebase";
+import { getFirebaseAuth } from "@/lib/firebase";
 import { onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, type User, type AuthError, getIdToken } from "firebase/auth";
 import { GoogleDriveService } from "@/lib/google-drive-service";
 import type { SubstitutionPlan } from "@/lib/substitution-generator";
@@ -224,7 +224,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   const [isSyncing, setIsSyncing] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const { toast } = useToast();
-  const driveServiceRef = useRef<GoogleDriveService | null>(null);
+  const driveServiceRef = useRef(new GoogleDriveService());
   const stateRef = useRef(appState);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -336,7 +336,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     const newVersion: RoutineVersion = {
       id: `routine_${Date.now()}`,
       createdAt: new Date().toISOString(),
-      name: name || `Routine - ${new Date().toLocaleString()}`,
+      name: name || `School Routine - ${new Date().toLocaleString()}`,
       schedule,
     };
 
@@ -402,10 +402,9 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   
   const handleLogout = useCallback(async () => {
     setIsAuthLoading(true);
-    driveServiceRef.current = null;
     try {
       await signOut(getFirebaseAuth());
-      setAppState(DEFAULT_APP_STATE); // Reset to default state on logout
+      setFullState(DEFAULT_APP_STATE); // Reset to default state on logout
       localStorage.removeItem(LOCAL_STORAGE_KEY);
       toast({ title: "Logged out successfully." });
     } catch (error) {
@@ -418,7 +417,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     } finally {
       setIsAuthLoading(false);
     }
-  }, [toast]);
+  }, [toast, setFullState]);
 
   // Load from Local Storage on initial mount (for guest users)
   useEffect(() => {
@@ -445,19 +444,16 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       if (currentUser) {
         setIsSyncing(true);
         try {
-          // Force refresh the token to ensure it's valid for Drive API
-          const token = await getIdToken(currentUser, true);
-          const driveService = new GoogleDriveService();
-          await driveService.init(token);
-          driveServiceRef.current = driveService;
-
-          const backup = await driveService.loadBackup();
+          const token = await getIdToken(currentUser, true); // Force refresh the token
+          const backup = await driveServiceRef.current.loadBackup(token);
+          
           if (backup) {
             setFullState(backup);
             toast({ title: "Data restored from Google Drive." });
           } else {
             // If no backup on Drive, save the current local state to Drive.
-            await driveService.saveBackup(getPersistentState(stateRef.current));
+            const freshTokenForSave = await getIdToken(currentUser, true);
+            await driveServiceRef.current.saveBackup(getPersistentState(stateRef.current), freshTokenForSave);
             toast({ title: "Local data synced to Google Drive." });
           }
         } catch (error) {
@@ -465,43 +461,42 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
           toast({
             variant: "destructive",
             title: "Sync Error",
-            description: "Could not connect to Google Drive. Please try logging out and in again.",
+            description: "Could not connect to Google Drive. Your data is safe locally.",
           });
-          // Log out on critical sync failure to allow retrying the auth flow.
-          handleLogout();
         } finally {
           setIsSyncing(false);
         }
-      } else {
-        driveServiceRef.current = null;
       }
       setIsAuthLoading(false);
       setIsLoading(false);
     });
 
     return () => unsubscribe();
-  }, [toast, setFullState, handleLogout]);
+  }, [toast, setFullState]);
 
   // Debounced save effect
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || isAuthLoading) return;
 
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
 
-    saveTimeoutRef.current = setTimeout(() => {
+    saveTimeoutRef.current = setTimeout(async () => {
       try {
         const stateToSave = getPersistentState(stateRef.current);
-        if (user && driveServiceRef.current?.isReady()) {
+        if (user) {
           setIsSyncing(true);
-          driveServiceRef.current.saveBackup(stateToSave)
-            .then(() => console.log("Data saved to Google Drive."))
-            .catch(err => {
-              console.error("Failed to save to Google Drive:", err);
-              toast({ variant: "destructive", title: "Google Drive Sync Failed", description: "Could not save latest changes." });
-            })
-            .finally(() => setIsSyncing(false));
+          try {
+            const token = await getIdToken(user, true); // Get fresh token for saving
+            await driveServiceRef.current.saveBackup(stateToSave, token);
+            console.log("Data saved to Google Drive.");
+          } catch (err) {
+            console.error("Failed to save to Google Drive:", err);
+            toast({ variant: "destructive", title: "Google Drive Sync Failed", description: "Could not save latest changes." });
+          } finally {
+            setIsSyncing(false);
+          }
         } else {
           localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
           console.log("Data saved to local storage.");
@@ -517,7 +512,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [appState, user, isLoading, toast]);
+  }, [appState, user, isLoading, isAuthLoading, toast]);
 
   return (
     <AppStateContext.Provider value={{ 

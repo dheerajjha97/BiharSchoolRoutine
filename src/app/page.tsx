@@ -20,7 +20,8 @@ import { Input } from "@/components/ui/input";
 const daysOfWeek: ScheduleEntry['day'][] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export default function Home() {
-  const { appState, isLoading, setIsLoading, addRoutineVersion, routineHistory, activeRoutineId, setActiveRoutineId, updateRoutineVersion, deleteRoutineVersion } = useContext(AppStateContext);
+  const { appState, isLoading, setIsLoading, addRoutineVersion, deleteRoutineVersion, updateRoutineVersion } = useContext(AppStateContext);
+  const { routineHistory, activeRoutineId, setActiveRoutineId } = appState;
   const { toast } = useToast();
   const [renameValue, setRenameValue] = useState("");
   const [routineToRename, setRoutineToRename] = useState<RoutineVersion | null>(null);
@@ -123,6 +124,8 @@ export default function Home() {
     }
   };
 
+  const hasHistory = routineHistory && routineHistory.length > 0;
+
   return (
     <div className="space-y-6">
        <PageHeader 
@@ -139,14 +142,14 @@ export default function Home() {
           </CardHeader>
           <CardContent>
               <div className="flex flex-wrap gap-4">
-                 <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                        <Button size="lg" disabled={isLoading}>
-                            {isLoading ? (<Loader2 className="mr-2 h-5 w-5 animate-spin" />) : (<Wand2 className="mr-2 h-5 w-5" />)}
-                            Generate Routine
-                        </Button>
-                    </AlertDialogTrigger>
-                    {appState.routineHistory && appState.routineHistory.length > 0 && (
+                 {hasHistory ? (
+                     <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button size="lg" disabled={isLoading}>
+                                {isLoading ? (<Loader2 className="mr-2 h-5 w-5 animate-spin" />) : (<Wand2 className="mr-2 h-5 w-5" />)}
+                                Generate Routine
+                            </Button>
+                        </AlertDialogTrigger>
                         <AlertDialogContent>
                             <AlertDialogHeader>
                                 <AlertDialogTitle>Are you sure?</AlertDialogTitle>
@@ -159,36 +162,46 @@ export default function Home() {
                                 <AlertDialogAction onClick={handleGenerateRoutine}>Continue</AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
-                    )}
-                 </AlertDialog>
+                     </AlertDialog>
+                 ) : (
+                     <Button size="lg" disabled={isLoading} onClick={handleGenerateRoutine}>
+                        {isLoading ? (<Loader2 className="mr-2 h-5 w-5 animate-spin" />) : (<Wand2 className="mr-2 h-5 w-5" />)}
+                        Generate Routine
+                    </Button>
+                 )}
                 
-                 <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                        <Button size="lg" variant="outline" disabled={isLoading}>
-                            <PlusSquare className="mr-2 h-5 w-5" />
-                            Create Blank Routine
-                        </Button>
-                    </AlertDialogTrigger>
-                    {appState.routineHistory && appState.routineHistory.length > 0 && (
-                       <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                This will create a new version of the routine, leaving your current active routine untouched in the history. Do you want to continue?
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleCreateBlankRoutine}>Continue</AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    )}
-                 </AlertDialog>
+                 {hasHistory ? (
+                     <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button size="lg" variant="outline" disabled={isLoading}>
+                                <PlusSquare className="mr-2 h-5 w-5" />
+                                Create Blank Routine
+                            </Button>
+                        </AlertDialogTrigger>
+                           <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                    This will create a new version of the routine, leaving your current active routine untouched in the history. Do you want to continue?
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleCreateBlankRoutine}>Continue</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                     </AlertDialog>
+                 ) : (
+                    <Button size="lg" variant="outline" disabled={isLoading} onClick={handleCreateBlankRoutine}>
+                        <PlusSquare className="mr-2 h-5 w-5" />
+                        Create Blank Routine
+                    </Button>
+                 )}
               </div>
           </CardContent>
         </Card>
 
-        {routineHistory && routineHistory.length > 0 && (
+        {routineHistory && routineHistory.length > 0 && activeRoutine && (
             <Card>
                 <CardHeader>
                     <CardTitle>Manage Active Routine</CardTitle>
@@ -197,7 +210,7 @@ export default function Home() {
                 <CardContent>
                     <div className="flex flex-col sm:flex-row gap-2 items-center">
                         <div className="w-full sm:w-auto sm:flex-grow">
-                             {routineToRename && activeRoutine && routineToRename.id === activeRoutine.id ? (
+                             {routineToRename && routineToRename.id === activeRoutine.id ? (
                                 <div className="flex gap-2">
                                     <Input value={renameValue} onChange={(e) => setRenameValue(e.target.value)} />
                                     <Button size="icon" onClick={confirmRename}><Check className="h-4 w-4" /></Button>

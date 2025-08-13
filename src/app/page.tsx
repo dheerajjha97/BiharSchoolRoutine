@@ -313,8 +313,13 @@ export default function Home() {
           timeSlots={appState.timeSlots} 
           classes={appState.classes}
           subjects={appState.subjects}
-          teachers={teachers}
-          teacherSubjects={appState.config.teacherSubjects}
+          teachers={appState.teachers.map(t => t.name)}
+          teacherSubjects={Object.fromEntries(
+            Object.entries(appState.config.teacherSubjects).map(([teacherId, subjects]) => {
+                const teacherName = appState.teachers.find(t => t.id === teacherId)?.name;
+                return teacherName ? [teacherName, subjects] : [];
+            })
+          )}
           dailyPeriodQuota={appState.config.dailyPeriodQuota}
           pdfHeader={appState.pdfHeader}
         />

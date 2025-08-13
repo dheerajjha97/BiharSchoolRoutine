@@ -68,12 +68,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     isSyncing,
   } = useContext(AppStateContext);
 
-  // A simple way to determine role. Assumes admin is NOT in the teachers list.
-  // A more robust role system could be implemented later.
-  const isTeacher = user && appState.teachers.some(t => t === user.displayName);
-  const isAdmin = user && !isTeacher; // Simplified logic for now
+  const loggedInTeacher = user ? appState.teachers.find(t => t.email === user.email) : null;
+  const isAdmin = user && !loggedInTeacher;
 
-  const navItems = isTeacher ? teacherNavItems : adminNavItems;
+  const navItems = loggedInTeacher ? teacherNavItems : adminNavItems;
+  const displayName = loggedInTeacher ? loggedInTeacher.name : user?.displayName;
 
   const authControls = (
     <div className="flex items-center gap-2">
@@ -87,8 +86,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       {user ? (
         <>
           <Avatar className="h-8 w-8">
-            <AvatarImage src={user.photoURL || undefined} alt={user.displayName || user.email || 'User'} />
-            <AvatarFallback>{user.displayName?.charAt(0) || user.email?.charAt(0)}</AvatarFallback>
+            <AvatarImage src={user.photoURL || undefined} alt={displayName || user.email || 'User'} />
+            <AvatarFallback>{displayName?.charAt(0) || user.email?.charAt(0)}</AvatarFallback>
           </Avatar>
           <Button variant="outline" size="sm" onClick={handleLogout} disabled={isAuthLoading}>
             <LogOut className="mr-2 h-4 w-4" />
@@ -113,11 +112,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <Separator className="my-2" />
       <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary">
         <Avatar className="h-9 w-9">
-          <AvatarImage src={user.photoURL || undefined} alt={user.displayName || user.email || 'User'} />
-          <AvatarFallback>{user.displayName?.charAt(0) || user.email?.charAt(0)}</AvatarFallback>
+          <AvatarImage src={user.photoURL || undefined} alt={displayName || user.email || 'User'} />
+          <AvatarFallback>{displayName?.charAt(0) || user.email?.charAt(0)}</AvatarFallback>
         </Avatar>
         <div className="flex flex-col text-sm">
-          <span className="font-semibold text-foreground">{user.displayName}</span>
+          <span className="font-semibold text-foreground">{displayName}</span>
           <span className="text-muted-foreground truncate max-w-[180px]">{user.email}</span>
         </div>
       </div>

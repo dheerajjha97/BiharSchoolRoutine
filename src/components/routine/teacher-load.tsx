@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import type { TeacherLoad as TeacherLoadType } from '@/context/app-state-provider';
+import type { TeacherLoad as TeacherLoadType, Teacher } from '@/context/app-state-provider';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Users, FileDown, Loader2 } from "lucide-react";
@@ -13,17 +13,18 @@ import html2canvas from 'html2canvas';
 
 interface TeacherLoadProps {
   teacherLoad: TeacherLoadType;
+  teachers: Teacher[];
   pdfHeader?: string;
 }
 
 const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Total"];
 
-export default function TeacherLoad({ teacherLoad, pdfHeader = "" }: TeacherLoadProps) {
-  const teachers = Object.keys(teacherLoad).sort();
+export default function TeacherLoad({ teacherLoad, teachers, pdfHeader = "" }: TeacherLoadProps) {
+  const teacherIds = Object.keys(teacherLoad).sort();
   const { toast } = useToast();
   const [isDownloading, setIsDownloading] = useState(false);
 
-  if (teachers.length === 0) {
+  if (teacherIds.length === 0) {
     return (
        <Card>
           <CardHeader>
@@ -41,6 +42,8 @@ export default function TeacherLoad({ teacherLoad, pdfHeader = "" }: TeacherLoad
        </Card>
     );
   }
+
+  const getTeacherName = (id: string) => teachers.find(t => t.id === id)?.name || id;
   
   const handleDownloadPdf = async (elementId: string, fileName: string) => {
     const originalElement = document.getElementById(elementId);
@@ -178,13 +181,13 @@ export default function TeacherLoad({ teacherLoad, pdfHeader = "" }: TeacherLoad
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {teachers.map(teacher => (
-                  <TableRow key={teacher}>
-                    <TableCell className="font-medium sticky left-0 bg-card z-10">{teacher}</TableCell>
+                {teacherIds.map(teacherId => (
+                  <TableRow key={teacherId}>
+                    <TableCell className="font-medium sticky left-0 bg-card z-10">{getTeacherName(teacherId)}</TableCell>
                     {daysOfWeek.map(day => {
-                      const load = teacherLoad[teacher]?.[day] ?? { total: 0, main: 0, additional: 0 };
+                      const load = teacherLoad[teacherId]?.[day] ?? { total: 0, main: 0, additional: 0 };
                       return (
-                         <React.Fragment key={`${teacher}-${day}`}>
+                         <React.Fragment key={`${teacherId}-${day}`}>
                             <TableCell className="text-center">{load.main}</TableCell>
                             <TableCell className="text-center">{load.additional}</TableCell>
                             <TableCell className="text-center font-bold bg-secondary/50">{load.total}</TableCell>

@@ -22,7 +22,7 @@ const daysOfWeek: ScheduleEntry['day'][] = ["Monday", "Tuesday", "Wednesday", "T
 
 export default function Home() {
   const { appState, isLoading, setIsLoading, addRoutineVersion, deleteRoutineVersion, updateRoutineVersion, setActiveRoutineId, user } = useContext(AppStateContext);
-  const { routineHistory, activeRoutineId } = appState;
+  const { routineHistory, activeRoutineId, teachers } = appState;
   const { toast } = useToast();
   const [renameValue, setRenameValue] = useState("");
   const [routineToRename, setRoutineToRename] = useState<RoutineVersion | null>(null);
@@ -44,7 +44,7 @@ export default function Home() {
       }
       
       const input: GenerateScheduleLogicInput = {
-        teacherNames: teachers,
+        teachers,
         classes,
         subjects,
         timeSlots,
@@ -134,7 +134,7 @@ export default function Home() {
             <TooltipProvider>
                 <div className="flex flex-wrap gap-4">
                     <Tooltip>
-                        <TooltipTrigger>
+                        <TooltipTrigger asChild>
                             <Button size="lg" disabled>
                                 <Wand2 className="mr-2 h-5 w-5" />
                                 Generate Routine
@@ -145,7 +145,7 @@ export default function Home() {
                         </TooltipContent>
                     </Tooltip>
                     <Tooltip>
-                        <TooltipTrigger>
+                        <TooltipTrigger asChild>
                              <Button size="lg" variant="outline" disabled>
                                 <PlusSquare className="mr-2 h-5 w-5" />
                                 Create Blank Routine
@@ -313,14 +313,20 @@ export default function Home() {
           timeSlots={appState.timeSlots} 
           classes={appState.classes}
           subjects={appState.subjects}
-          teachers={appState.teachers}
-          teacherSubjects={appState.config.teacherSubjects}
+          teachers={appState.teachers.map(t => t.name)}
+          teacherSubjects={Object.fromEntries(
+            Object.entries(appState.config.teacherSubjects).map(([teacherId, subjects]) => {
+                const teacherName = appState.teachers.find(t => t.id === teacherId)?.name;
+                return teacherName ? [teacherName, subjects] : [];
+            })
+          )}
           dailyPeriodQuota={appState.config.dailyPeriodQuota}
           pdfHeader={appState.pdfHeader}
         />
         
         <TeacherLoad 
             teacherLoad={appState.teacherLoad}
+            teachers={teachers}
             pdfHeader={appState.pdfHeader}
         />
     </div>

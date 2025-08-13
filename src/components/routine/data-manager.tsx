@@ -8,19 +8,73 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { X } from "lucide-react";
+import { X, User, School, Book, Clock, DoorOpen } from "lucide-react";
 import { sortTimeSlots } from "@/lib/utils";
+import type { Teacher } from "@/context/app-state-provider";
+import { v4 as uuidv4 } from 'uuid';
 
 interface DataManagerProps {
-  title: string;
+  title: "Teachers" | "Classes" | "Subjects" | "Time Slots" | "Rooms / Halls";
   icon: LucideIcon;
-  items: string[];
-  setItems: (items: string[]) => void;
+  items: any[];
+  setItems: (items: any[]) => void;
   placeholder: string;
   description: string;
 }
 
-export default function DataManager({ title, icon: Icon, items, setItems, placeholder, description }: DataManagerProps) {
+const TeacherManager = ({ items, setItems }: { items: Teacher[], setItems: (items: Teacher[]) => void }) => {
+    const [newName, setNewName] = useState("");
+    const [newEmail, setNewEmail] = useState("");
+
+    const handleAddItem = () => {
+        const name = newName.trim();
+        const email = newEmail.trim().toLowerCase();
+        if (!name || !email) return;
+
+        if (!items.some(t => t.email === email)) {
+            const newTeacher: Teacher = { id: uuidv4(), name, email };
+            const newItemsList = [newTeacher, ...items].sort((a, b) => a.name.localeCompare(b.name));
+            setItems(newItemsList);
+            setNewName("");
+            setNewEmail("");
+        }
+    };
+    
+    const handleRemoveItem = (idToRemove: string) => {
+        setItems(items.filter(item => item.id !== idToRemove));
+    };
+
+    return (
+        <>
+            <div className="flex w-full items-center space-x-2">
+                <Input placeholder="Teacher name..." value={newName} onChange={e => setNewName(e.target.value)} />
+                <Input placeholder="Teacher email..." value={newEmail} onChange={e => setNewEmail(e.target.value)} />
+                <Button onClick={handleAddItem}>Add</Button>
+            </div>
+            <ScrollArea className="flex-grow h-64 border rounded-md p-2">
+              <div className="space-y-2">
+                {items.length > 0 ? (
+                  items.map((item, index) => (
+                    <div key={`${item.id}-${index}`} className="flex items-center justify-between bg-secondary p-2 rounded-md text-sm">
+                      <div className="flex flex-col">
+                        <span className="font-medium">{item.name}</span>
+                        <span className="text-xs text-muted-foreground">{item.email}</span>
+                      </div>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveItem(item.id)}>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-sm text-muted-foreground text-center py-10">No teachers added yet.</div>
+                )}
+              </div>
+            </ScrollArea>
+        </>
+    );
+};
+
+const StringListManager = ({ title, items, setItems, placeholder }: { title: string, items: string[], setItems: (items: string[]) => void, placeholder: string }) => {
   const [newItem, setNewItem] = useState("");
 
   const handleAddItem = () => {
@@ -28,12 +82,13 @@ export default function DataManager({ title, icon: Icon, items, setItems, placeh
     if (!finalNewItem) return;
     
     if (!items.includes(finalNewItem)) {
-      const newItemsList = [finalNewItem, ...items];
+      let newItemsList = [finalNewItem, ...items];
       if (title === 'Time Slots') {
-        setItems(sortTimeSlots(newItemsList));
+        newItemsList = sortTimeSlots(newItemsList);
       } else {
-        setItems(newItemsList.sort());
+        newItemsList = newItemsList.sort();
       }
+      setItems(newItemsList);
       setNewItem("");
     }
   };
@@ -62,6 +117,40 @@ export default function DataManager({ title, icon: Icon, items, setItems, placeh
   const isTimeSlotManager = title === 'Time Slots';
 
   return (
+    <>
+        <div className="flex w-full items-center space-x-2">
+          <Input
+            placeholder={placeholder}
+            value={newItem}
+            onChange={isTimeSlotManager ? handleTimeSlotChange : (e) => setNewItem(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAddItem()}
+            maxLength={isTimeSlotManager ? 13 : undefined}
+          />
+          <Button onClick={handleAddItem}>Add</Button>
+        </div>
+        <ScrollArea className="flex-grow h-64 border rounded-md p-2">
+          <div className="space-y-2">
+            {items.length > 0 ? (
+              items.map((item, index) => (
+                <div key={`${item}-${index}`} className="flex items-center justify-between bg-secondary p-2 rounded-md text-sm">
+                  <span>{item}</span>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveItem(item)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))
+            ) : (
+              <div className="text-sm text-muted-foreground text-center py-10">No {title.toLowerCase()} added yet.</div>
+            )}
+          </div>
+        </ScrollArea>
+    </>
+  );
+}
+
+
+export default function DataManager({ title, icon: Icon, items, setItems, placeholder, description }: DataManagerProps) {
+  return (
     <Card className="flex flex-col h-full">
       <CardHeader>
         <CardTitle className="flex items-center gap-3">
@@ -76,32 +165,11 @@ export default function DataManager({ title, icon: Icon, items, setItems, placeh
         <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col gap-4">
-        <div className="flex w-full items-center space-x-2">
-          <Input
-            placeholder={placeholder}
-            value={newItem}
-            onChange={isTimeSlotManager ? handleTimeSlotChange : (e) => setNewItem(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleAddItem()}
-            maxLength={isTimeSlotManager ? 13 : undefined}
-          />
-          <Button onClick={handleAddItem}>Add</Button>
-        </div>
-        <ScrollArea className="flex-grow h-64 border rounded-md p-2">
-          <div className="space-y-2">
-            {items.length > 0 ? (
-              items.map(item => (
-                <div key={item} className="flex items-center justify-between bg-secondary p-2 rounded-md text-sm">
-                  <span>{item}</span>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveItem(item)}>
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))
-            ) : (
-              <div className="text-sm text-muted-foreground text-center py-10">No {title.toLowerCase()} added yet.</div>
-            )}
-          </div>
-        </ScrollArea>
+        {title === 'Teachers' ? (
+          <TeacherManager items={items as Teacher[]} setItems={setItems} />
+        ) : (
+          <StringListManager title={title} items={items as string[]} setItems={setItems} placeholder={placeholder} />
+        )}
       </CardContent>
     </Card>
   );

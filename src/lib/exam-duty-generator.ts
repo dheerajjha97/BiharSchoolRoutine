@@ -1,13 +1,13 @@
 
-import type { ExamEntry, DutyChart } from "@/context/app-state-provider";
+import type { ExamEntry, DutyChart, Teacher } from "@/context/app-state-provider";
 
 export function generateInvigilationDuty(
     examTimetable: ExamEntry[],
-    allTeachers: string[]
+    allTeachers: Teacher[]
 ): DutyChart {
     const duties: DutyChart['duties'] = {};
     const teacherDutyCount: Record<string, number> = {};
-    allTeachers.forEach(t => { teacherDutyCount[t] = 0; });
+    allTeachers.forEach(t => { teacherDutyCount[t.id] = 0; });
 
     const uniqueExamSlots = examTimetable.reduce((acc, exam) => {
         const key = `${exam.date}-${exam.startTime}`;
@@ -39,20 +39,20 @@ export function generateInvigilationDuty(
             const availableTeachers = [...allTeachers];
             
             // Sort available teachers by their current duty count (ascending) to balance the load
-            const sortedAvailableTeachers = availableTeachers.sort((a, b) => teacherDutyCount[a] - teacherDutyCount[b]);
+            const sortedAvailableTeachers = availableTeachers.sort((a, b) => teacherDutyCount[a.id] - teacherDutyCount[b.id]);
             
             // Assign a certain number of teachers for invigilation per room, e.g., 2
             const numInvigilatorsPerRoom = Math.min(sortedAvailableTeachers.length, 2); 
             
             // Find teachers who are not already assigned in this slot (in another room)
             const teachersAssignedInThisSlot = Object.values(duties[key]).flat();
-            const unassignedTeachers = sortedAvailableTeachers.filter(t => !teachersAssignedInThisSlot.includes(t));
+            const unassignedTeachers = sortedAvailableTeachers.filter(t => !teachersAssignedInThisSlot.includes(t.id));
 
             const teachersToAssign = unassignedTeachers.slice(0, numInvigilatorsPerRoom);
 
-            duties[key][room].push(...teachersToAssign);
+            duties[key][room].push(...teachersToAssign.map(t => t.id));
             teachersToAssign.forEach(teacher => {
-                teacherDutyCount[teacher]++;
+                teacherDutyCount[teacher.id]++;
             });
         });
     });

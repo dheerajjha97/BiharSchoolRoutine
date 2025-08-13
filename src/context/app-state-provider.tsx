@@ -10,9 +10,16 @@ import { getFirebaseAuth, getFirestoreDB } from "@/lib/firebase";
 import { onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, type User, type AuthError } from "firebase/auth";
 import { doc, setDoc, getDoc, onSnapshot, type Unsubscribe } from "firebase/firestore";
 import type { SubstitutionPlan } from "@/lib/substitution-generator";
+import { v4 as uuidv4 } from 'uuid';
+
+export type Teacher = {
+  id: string;
+  name: string;
+  email: string;
+};
 
 type Unavailability = {
-  teacher: string;
+  teacherId: string; // Changed from teacher
   day: string;
   timeSlot: string;
 }
@@ -20,14 +27,14 @@ type Unavailability = {
 export type CombinedClassRule = {
     classes: string[];
     subject: string;
-    teacher: string;
+    teacherId: string; // Changed from teacher
 }
 
 export type SplitClassRule = {
     className: string;
     parts: {
         subject: string;
-        teacher: string;
+        teacherId: string; // Changed from teacher
     }[];
 }
 
@@ -42,9 +49,9 @@ export type SchoolConfig = {
   classRequirements: Record<string, string[]>;
   subjectPriorities: Record<string, SubjectPriority>;
   unavailability: Unavailability[];
-  teacherSubjects: Record<string, string[]>;
-  teacherClasses: Record<string, string[]>;
-  classTeachers: Record<string, string>;
+  teacherSubjects: Record<string, string[]>; // Key is teacherId
+  teacherClasses: Record<string, string[]>; // Key is teacherId
+  classTeachers: Record<string, string>; // Key is className, value is teacherId
   prayerTimeSlot: string;
   lunchTimeSlot: string;
   preventConsecutiveClasses: boolean;
@@ -59,7 +66,7 @@ export type TeacherLoadDetail = {
     main: number;
     additional: number;
 };
-export type TeacherLoad = Record<string, Record<string, TeacherLoadDetail>>;
+export type TeacherLoad = Record<string, Record<string, TeacherLoadDetail>>; // Key is teacherId
 
 export type ExamEntry = {
     id: string;
@@ -72,13 +79,13 @@ export type ExamEntry = {
 };
 
 export type DutyChart = {
-    duties: Record<string, Record<string, string[]>>; // Key: "date-startTime", Value: { room: [teachers] }
+    duties: Record<string, Record<string, string[]>>; // Key: "date-startTime", Value: { room: [teacherIds] }
     examSlots: { date: string, startTime: string, endTime: string }[];
 };
 
 
 export type AppState = {
-  teachers: string[];
+  teachers: Teacher[];
   classes: string[];
   subjects: string[];
   timeSlots: string[];
@@ -92,7 +99,7 @@ export type AppState = {
   // Non-persistent state for daily adjustments
   adjustments: {
     date: string;
-    absentTeachers: string[];
+    absentTeacherIds: string[]; // Changed from absentTeachers
     substitutionPlan: SubstitutionPlan | null;
   }
 }
@@ -123,14 +130,23 @@ export const AppStateContext = createContext<AppStateContextType>({} as AppState
 
 const DEFAULT_ADJUSTMENTS_STATE = {
     date: new Date().toISOString().split('T')[0], // Today's date
-    absentTeachers: [],
+    absentTeacherIds: [],
     substitutionPlan: null
 };
 
 const LOCAL_STORAGE_KEY = "schoolRoutineState";
 
+const defaultTeachers: Teacher[] = [
+    { id: uuidv4(), name: "Mr. Sharma", email: "sharma@example.com" },
+    { id: uuidv4(), name: "Mrs. Gupta", email: "gupta@example.com" },
+    { id: uuidv4(), name: "Ms. Singh", email: "singh@example.com" },
+    { id: uuidv4(), name: "Mr. Kumar", email: "kumar@example.com" },
+    { id: uuidv4(), name: "Mrs. Roy", email: "roy@example.com" },
+    { id: uuidv4(), name: "Mr. Das", email: "das@example.com" }
+];
+
 const DEFAULT_APP_STATE: AppState = {
-  teachers: ["Mr. Sharma", "Mrs. Gupta", "Ms. Singh", "Mr. Kumar", "Mrs. Roy", "Mr. Das"],
+  teachers: defaultTeachers,
   classes: ["Class 9A", "Class 9B", "Class 10A", "Class 10B", "Class 11 Sci", "Class 12 Sci"],
   subjects: ["Math", "Science", "English", "History", "Physics", "Chemistry", "Biology", "Computer Science", "Hindi", "Attendance", "Library", "Art"],
   timeSlots: [
@@ -147,22 +163,8 @@ const DEFAULT_APP_STATE: AppState = {
   rooms: ["Room 101", "Room 102", "Room 103", "Hall A", "Hall B"],
   pdfHeader: "My School Name\nWeekly Class Routine\n2024-25",
   config: {
-    teacherSubjects: {
-      "Mr. Sharma": ["Math", "Physics"],
-      "Mrs. Gupta": ["English", "History", "Library"],
-      "Ms. Singh": ["Science", "Biology", "Chemistry"],
-      "Mr. Kumar": ["Computer Science", "Math"],
-      "Mrs. Roy": ["Hindi", "History", "Art"],
-      "Mr. Das": ["Physics", "Chemistry"]
-    },
-    teacherClasses: {
-        "Mr. Sharma": ["Class 10A", "Class 10B", "Class 11 Sci", "Class 12 Sci"],
-        "Mrs. Gupta": ["Class 9A", "Class 9B", "Class 10A", "Class 10B"],
-        "Ms. Singh": ["Class 9A", "Class 9B", "Class 10A", "Class 11 Sci"],
-        "Mr. Kumar": ["Class 9A", "Class 10A", "Class 11 Sci", "Class 12 Sci"],
-        "Mrs. Roy": ["Class 9A", "Class 9B"],
-        "Mr. Das": ["Class 11 Sci", "Class 12 Sci"],
-    },
+    teacherSubjects: {}, // populated dynamically
+    teacherClasses: {}, // populated dynamically
     classRequirements: {
         "Class 9A": ["Math", "Science", "English", "History", "Hindi", "Computer Science", "Library", "Art"],
         "Class 9B": ["Math", "Science", "English", "History", "Hindi", "Art"],
@@ -171,11 +173,7 @@ const DEFAULT_APP_STATE: AppState = {
         "Class 11 Sci": ["Physics", "Chemistry", "Math", "English", "Computer Science"],
         "Class 12 Sci": ["Physics", "Biology", "Math", "English", "Computer Science"],
     },
-    classTeachers: {
-      "Class 9A": "Mrs. Gupta",
-      "Class 9B": "Mrs. Roy",
-      "Class 10A": "Mr. Kumar",
-    },
+    classTeachers: {}, // populated dynamically
     subjectCategories: {
         "Math": "main",
         "Science": "main",
@@ -260,37 +258,37 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Total"];
     
     appState.teachers.forEach(teacher => {
-        load[teacher] = {};
+        load[teacher.id] = {};
         days.forEach(day => {
-            load[teacher][day] = { total: 0, main: 0, additional: 0 };
+            load[teacher.id][day] = { total: 0, main: 0, additional: 0 };
         });
     });
 
     activeRoutine.schedule.schedule.forEach(entry => {
         if(entry.subject === "Prayer" || entry.subject === "Lunch" || entry.subject === "---") return;
         
-        const teachersInEntry = entry.teacher.split(' & ').map(t => t.trim());
+        const teacherIdsInEntry = entry.teacher.split(' & ').map(tId => tId.trim());
         const subjectsInEntry = entry.subject.split(' / ').map(s => s.trim());
 
-        teachersInEntry.forEach((teacher, index) => {
-            if (teacher && teacher !== "N/A" && load[teacher]) {
+        teacherIdsInEntry.forEach((teacherId, index) => {
+            if (teacherId && teacherId !== "N/A" && load[teacherId]) {
                 const subject = subjectsInEntry[index] || subjectsInEntry[0];
                 const category = appState.config.subjectCategories[subject] || 'additional';
 
-                if (load[teacher][entry.day]) {
-                    load[teacher][entry.day].total++;
+                if (load[teacherId][entry.day]) {
+                    load[teacherId][entry.day].total++;
                     if (category === 'main') {
-                        load[teacher][entry.day].main++;
+                        load[teacherId][entry.day].main++;
                     } else {
-                        load[teacher][entry.day].additional++;
+                        load[teacherId][entry.day].additional++;
                     }
                 }
                 
-                load[teacher].Total.total++;
+                load[teacherId].Total.total++;
                 if (category === 'main') {
-                    load[teacher].Total.main++;
+                    load[teacherId].Total.main++;
                 } else {
-                    load[teacher].Total.additional++;
+                    load[teacherId].Total.additional++;
                 }
             }
         });

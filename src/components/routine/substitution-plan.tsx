@@ -3,6 +3,7 @@
 
 import { useState } from 'react';
 import type { SubstitutionPlan } from '@/lib/substitution-generator';
+import type { Teacher } from '@/context/app-state-provider';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
@@ -15,12 +16,18 @@ import { Textarea } from '../ui/textarea';
 
 interface SubstitutionPlanProps {
   plan: SubstitutionPlan;
+  teachers: Teacher[];
   pdfHeader?: string;
 }
 
-export default function SubstitutionPlanDisplay({ plan, pdfHeader = "" }: SubstitutionPlanProps) {
+export default function SubstitutionPlanDisplay({ plan, teachers, pdfHeader = "" }: SubstitutionPlanProps) {
   const { toast } = useToast();
   const [isDownloading, setIsDownloading] = useState(false);
+
+  const getTeacherName = (id: string): string => {
+    if (id === "No Substitute Available") return id;
+    return teachers.find(t => t.id === id)?.name || id;
+  };
 
   const handleDownloadPdf = async (elementId: string, fileName: string) => {
     const originalElement = document.getElementById(elementId);
@@ -165,8 +172,8 @@ export default function SubstitutionPlanDisplay({ plan, pdfHeader = "" }: Substi
                                 <TableCell>{sub.timeSlot}</TableCell>
                                 <TableCell>{sub.className}</TableCell>
                                 <TableCell>{sub.subject}</TableCell>
-                                <TableCell className="text-destructive">{sub.absentTeacher}</TableCell>
-                                <TableCell className="text-green-600 font-semibold">{sub.substituteTeacher}</TableCell>
+                                <TableCell className="text-destructive">{getTeacherName(sub.absentTeacherId)}</TableCell>
+                                <TableCell className="text-green-600 font-semibold">{getTeacherName(sub.substituteTeacherId)}</TableCell>
                             </TableRow>
                         ))
                     ) : (

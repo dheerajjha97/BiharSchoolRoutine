@@ -2,7 +2,7 @@
 "use client";
 
 import { useContext, useMemo, useState } from "react";
-import { AppStateContext, type Teacher } from "@/context/app-state-provider";
+import { AppStateContext } from "@/context/app-state-provider";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";

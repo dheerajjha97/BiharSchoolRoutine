@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { X, User, School, Book, Clock, DoorOpen } from "lucide-react";
 import { sortTimeSlots } from "@/lib/utils";
-import type { Teacher } from "@/context/app-state-provider";
+import type { Teacher } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 
 interface DataManagerProps {

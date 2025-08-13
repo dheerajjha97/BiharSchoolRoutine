@@ -221,6 +221,17 @@ export default function Home() {
     );
   };
 
+  const formattedTeacherSubjects = useMemo(() => {
+    return Object.fromEntries(
+        Object.entries(appState.config.teacherSubjects)
+            .map(([teacherId, subjects]) => {
+                const teacherName = appState.teachers.find(t => t.id === teacherId)?.name;
+                return teacherName ? [teacherName, subjects] : null;
+            })
+            .filter((entry): entry is [string, string[]] => entry !== null)
+    );
+  }, [appState.config.teacherSubjects, appState.teachers]);
+
 
   return (
     <div className="space-y-6">
@@ -314,12 +325,7 @@ export default function Home() {
           classes={appState.classes}
           subjects={appState.subjects}
           teachers={appState.teachers.map(t => t.name)}
-          teacherSubjects={Object.fromEntries(
-            Object.entries(appState.config.teacherSubjects).map(([teacherId, subjects]) => {
-                const teacherName = appState.teachers.find(t => t.id === teacherId)?.name;
-                return teacherName ? [teacherName, subjects] : [];
-            })
-          )}
+          teacherSubjects={formattedTeacherSubjects}
           dailyPeriodQuota={appState.config.dailyPeriodQuota}
           pdfHeader={appState.pdfHeader}
         />
@@ -332,3 +338,5 @@ export default function Home() {
     </div>
   );
 }
+
+    

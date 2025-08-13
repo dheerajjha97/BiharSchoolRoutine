@@ -17,7 +17,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Trash2, PlusCircle, AlertTriangle } from "lucide-react";
-import type { SchoolConfig, CombinedClassRule, SplitClassRule } from "@/context/app-state-provider";
+import type { SchoolConfig, CombinedClassRule, SplitClassRule, Teacher } from "@/context/app-state-provider";
 import type { SubjectPriority, SubjectCategory } from "@/lib/schedule-generator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogTrigger } from "../ui/dialog";
 import { Popover, PopoverTrigger, PopoverContent } from "../ui/popover";
@@ -26,13 +26,13 @@ import { Check as CheckIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Unavailability = {
-  teacher: string;
+  teacherId: string;
   day: string;
   timeSlot: string;
 }
 
 interface RoutineControlsProps {
-  teachers: string[];
+  teachers: Teacher[];
   classes: string[];
   subjects: string[];
   timeSlots: string[];
@@ -101,17 +101,17 @@ export default function RoutineControls({
   updateConfig
 }: RoutineControlsProps) {
   
-  const [newUnavailability, setNewUnavailability] = useState<Omit<Unavailability, ''>>({ teacher: '', day: '', timeSlot: '' });
+  const [newUnavailability, setNewUnavailability] = useState<Omit<Unavailability, ''>>({ teacherId: '', day: '', timeSlot: '' });
   const [ruleType, setRuleType] = useState<'combined' | 'split'>('combined');
   
   // State for new combined rule
   const [combinedRuleClasses, setCombinedRuleClasses] = useState<string[]>([]);
   const [combinedRuleSubject, setCombinedRuleSubject] = useState('');
-  const [combinedRuleTeacher, setCombinedRuleTeacher] = useState('');
+  const [combinedRuleTeacherId, setCombinedRuleTeacherId] = useState('');
 
   // State for new split rule
   const [splitRuleClass, setSplitRuleClass] = useState('');
-  const [splitRuleParts, setSplitRuleParts] = useState<{ subject: string, teacher: string }[]>([{ subject: '', teacher: '' }]);
+  const [splitRuleParts, setSplitRuleParts] = useState<{ subject: string, teacherId: string }[]>([{ subject: '', teacherId: '' }]);
 
   const handleRequirementChange = (className: string, subject: string, checked: boolean) => {
     const currentReqs = config.classRequirements[className] || [];
@@ -121,32 +121,32 @@ export default function RoutineControls({
     updateConfig('classRequirements', { ...config.classRequirements, [className]: newReqs });
   };
 
-  const handleTeacherSubjectChange = (teacher: string, subject: string, checked: boolean) => {
-    const currentSubjects = config.teacherSubjects[teacher] || [];
+  const handleTeacherSubjectChange = (teacherId: string, subject: string, checked: boolean) => {
+    const currentSubjects = config.teacherSubjects[teacherId] || [];
     const newSubjects = checked
       ? [...currentSubjects, subject]
       : currentSubjects.filter(s => s !== subject);
-    updateConfig('teacherSubjects', { ...config.teacherSubjects, [teacher]: newSubjects });
+    updateConfig('teacherSubjects', { ...config.teacherSubjects, [teacherId]: newSubjects });
   };
 
-  const handleTeacherClassChange = (teacher: string, className: string, checked: boolean) => {
-    const currentClasses = config.teacherClasses[teacher] || [];
+  const handleTeacherClassChange = (teacherId: string, className: string, checked: boolean) => {
+    const currentClasses = config.teacherClasses[teacherId] || [];
     const newClasses = checked
       ? [...currentClasses, className]
       : currentClasses.filter(c => c !== className);
-    updateConfig('teacherClasses', { ...config.teacherClasses, [teacher]: newClasses });
+    updateConfig('teacherClasses', { ...config.teacherClasses, [teacherId]: newClasses });
   };
   
   const handleAddUnavailability = () => {
-    if (newUnavailability.teacher && newUnavailability.day && newUnavailability.timeSlot) {
+    if (newUnavailability.teacherId && newUnavailability.day && newUnavailability.timeSlot) {
       if (!config.unavailability.some(u => 
-          u.teacher === newUnavailability.teacher && 
+          u.teacherId === newUnavailability.teacherId && 
           u.day === newUnavailability.day && 
           u.timeSlot === newUnavailability.timeSlot
       )) {
         updateConfig('unavailability', [...config.unavailability, newUnavailability as Unavailability]);
       }
-      setNewUnavailability({ teacher: '', day: '', timeSlot: '' });
+      setNewUnavailability({ teacherId: '', day: '', timeSlot: '' });
     }
   };
 
@@ -156,36 +156,38 @@ export default function RoutineControls({
   
   const handleAddSpecialRule = () => {
     if (ruleType === 'combined') {
-        if (combinedRuleClasses.length > 1 && combinedRuleSubject && combinedRuleTeacher) {
-            const newRule: CombinedClassRule = { classes: combinedRuleClasses, subject: combinedRuleSubject, teacher: combinedRuleTeacher };
+        if (combinedRuleClasses.length > 1 && combinedRuleSubject && combinedRuleTeacherId) {
+            const newRule: CombinedClassRule = { classes: combinedRuleClasses, subject: combinedRuleSubject, teacherId: combinedRuleTeacherId };
             updateConfig('combinedClasses', [...(config.combinedClasses || []), newRule]);
             setCombinedRuleClasses([]);
             setCombinedRuleSubject('');
-            setCombinedRuleTeacher('');
+            setCombinedRuleTeacherId('');
         }
     } else { // split
-        if (splitRuleClass && splitRuleParts.length > 1 && splitRuleParts.every(p => p.subject && p.teacher)) {
+        if (splitRuleClass && splitRuleParts.length > 1 && splitRuleParts.every(p => p.subject && p.teacherId)) {
             const newRule: SplitClassRule = { className: splitRuleClass, parts: splitRuleParts };
             updateConfig('splitClasses', [...(config.splitClasses || []), newRule]);
             setSplitRuleClass('');
-            setSplitRuleParts([{ subject: '', teacher: '' }]);
+            setSplitRuleParts([{ subject: '', teacherId: '' }]);
         }
     }
   };
 
-  const handleUpdateSplitPart = (index: number, field: 'subject' | 'teacher', value: string) => {
+  const handleUpdateSplitPart = (index: number, field: 'subject' | 'teacherId', value: string) => {
     const newParts = [...splitRuleParts];
     newParts[index][field] = value;
     setSplitRuleParts(newParts);
   };
   
   const handleAddSplitPart = () => {
-    setSplitRuleParts([...splitRuleParts, { subject: '', teacher: '' }]);
+    setSplitRuleParts([...splitRuleParts, { subject: '', teacherId: '' }]);
   };
   
   const handleRemoveSplitPart = (index: number) => {
     setSplitRuleParts(splitRuleParts.filter((_, i) => i !== index));
   };
+  
+  const getTeacherName = (id: string) => teachers.find(t => t.id === id)?.name || id;
 
 
   return (
@@ -246,7 +248,7 @@ export default function RoutineControls({
                                     <h4 className="font-medium">Define Combined Class</h4>
                                     <div><Label>Classes to Combine</Label><MultiSelectPopover options={classes} selected={combinedRuleClasses} onSelectedChange={setCombinedRuleClasses} placeholder="Select classes..." /></div>
                                     <div><Label>Subject</Label><Select value={combinedRuleSubject} onValueChange={setCombinedRuleSubject}><SelectTrigger><SelectValue placeholder="Select subject" /></SelectTrigger><SelectContent>{subjects.map(s=><SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
-                                    <div><Label>Teacher</Label><Select value={combinedRuleTeacher} onValueChange={setCombinedRuleTeacher}><SelectTrigger><SelectValue placeholder="Select teacher" /></SelectTrigger><SelectContent>{teachers.map(t=><SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
+                                    <div><Label>Teacher</Label><Select value={combinedRuleTeacherId} onValueChange={setCombinedRuleTeacherId}><SelectTrigger><SelectValue placeholder="Select teacher" /></SelectTrigger><SelectContent>{teachers.map(t=><SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent></Select></div>
                                 </div>
                             ) : (
                                 <div className="space-y-4 p-4 border rounded-md">
@@ -257,7 +259,7 @@ export default function RoutineControls({
                                         {splitRuleParts.map((part, index) => (
                                             <div key={index} className="flex gap-2 items-center">
                                                 <Select value={part.subject} onValueChange={(v) => handleUpdateSplitPart(index, 'subject', v)}><SelectTrigger><SelectValue placeholder="Subject" /></SelectTrigger><SelectContent>{subjects.map(s=><SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
-                                                <Select value={part.teacher} onValueChange={(v) => handleUpdateSplitPart(index, 'teacher', v)}><SelectTrigger><SelectValue placeholder="Teacher" /></SelectTrigger><SelectContent>{teachers.map(t=><SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select>
+                                                <Select value={part.teacherId} onValueChange={(v) => handleUpdateSplitPart(index, 'teacherId', v)}><SelectTrigger><SelectValue placeholder="Teacher" /></SelectTrigger><SelectContent>{teachers.map(t=><SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent></Select>
                                                 <Button variant="ghost" size="icon" onClick={() => handleRemoveSplitPart(index)} disabled={splitRuleParts.length <= 1}><Trash2 className="h-4 w-4" /></Button>
                                             </div>
                                         ))}
@@ -284,7 +286,7 @@ export default function RoutineControls({
                             {config.combinedClasses?.map((rule, index) => (
                                 <TableRow key={`c-${index}`}>
                                     <TableCell>Combined</TableCell>
-                                    <TableCell>{rule.classes.join(' & ')} {'->'} {rule.subject} ({rule.teacher})</TableCell>
+                                    <TableCell>{rule.classes.join(' & ')} {'->'} {rule.subject} ({getTeacherName(rule.teacherId)})</TableCell>
                                     <TableCell className="text-right">
                                         <Button variant="ghost" size="icon" onClick={() => updateConfig('combinedClasses', config.combinedClasses.filter((_, i) => i !== index))}>
                                             <Trash2 className="h-4 w-4" />
@@ -295,7 +297,7 @@ export default function RoutineControls({
                              {config.splitClasses?.map((rule, index) => (
                                 <TableRow key={`s-${index}`}>
                                     <TableCell>Split</TableCell>
-                                    <TableCell>{rule.className} {'->'} {rule.parts.map(p => `${p.subject} (${p.teacher})`).join(' | ')}</TableCell>
+                                    <TableCell>{rule.className} {'->'} {rule.parts.map(p => `${p.subject} (${getTeacherName(p.teacherId)})`).join(' | ')}</TableCell>
                                     <TableCell className="text-right">
                                         <Button variant="ghost" size="icon" onClick={() => updateConfig('splitClasses', config.splitClasses.filter((_, i) => i !== index))}>
                                             <Trash2 className="h-4 w-4" />
@@ -336,7 +338,7 @@ export default function RoutineControls({
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="none">None</SelectItem>
-                                        {teachers.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                                        {teachers.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </TableCell>
@@ -352,9 +354,9 @@ export default function RoutineControls({
         <AccordionContent className="space-y-4 pt-4">
            <p className="text-sm text-muted-foreground">Add specific times when a teacher is not available.</p>
            <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
-              <Select value={newUnavailability.teacher} onValueChange={(value) => setNewUnavailability({...newUnavailability, teacher: value})}>
+              <Select value={newUnavailability.teacherId} onValueChange={(value) => setNewUnavailability({...newUnavailability, teacherId: value})}>
                   <SelectTrigger><SelectValue placeholder="Select Teacher" /></SelectTrigger>
-                  <SelectContent>{teachers.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                  <SelectContent>{teachers.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent>
               </Select>
               <Select value={newUnavailability.day} onValueChange={(value) => setNewUnavailability({...newUnavailability, day: value})}>
                   <SelectTrigger><SelectValue placeholder="Select Day" /></SelectTrigger>
@@ -380,7 +382,7 @@ export default function RoutineControls({
                   <TableBody>
                   {config.unavailability.map((rule, index) => (
                     <TableRow key={index}>
-                      <TableCell>{rule.teacher}</TableCell>
+                      <TableCell>{getTeacherName(rule.teacherId)}</TableCell>
                       <TableCell>{rule.day}</TableCell>
                       <TableCell>{rule.timeSlot}</TableCell>
                       <TableCell className="text-right">
@@ -433,18 +435,18 @@ export default function RoutineControls({
         <AccordionTrigger>Teacher-Subject Mapping</AccordionTrigger>
         <AccordionContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-4">
           {teachers.map(t => (
-            <div key={t}>
-              <h4 className="font-semibold mb-2 border-b pb-2">{t}</h4>
+            <div key={t.id}>
+              <h4 className="font-semibold mb-2 border-b pb-2">{t.name}</h4>
               <ScrollArea className="h-60">
                 <div className="space-y-2 pr-4">
                   {subjects.map(s => (
                     <div key={s} className="flex items-center space-x-2">
                       <Checkbox
-                        id={`${t}-${s}`}
-                        checked={config.teacherSubjects[t]?.includes(s) || false}
-                        onCheckedChange={(checked) => handleTeacherSubjectChange(t, s, !!checked)}
+                        id={`${t.id}-${s}`}
+                        checked={config.teacherSubjects[t.id]?.includes(s) || false}
+                        onCheckedChange={(checked) => handleTeacherSubjectChange(t.id, s, !!checked)}
                       />
-                      <Label htmlFor={`${t}-${s}`} className="font-normal">{s}</Label>
+                      <Label htmlFor={`${t.id}-${s}`} className="font-normal">{s}</Label>
                     </div>
                   ))}
                 </div>
@@ -458,18 +460,18 @@ export default function RoutineControls({
         <AccordionTrigger>Teacher-Class Mapping</AccordionTrigger>
         <AccordionContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-4">
           {teachers.map(t => (
-            <div key={t}>
-              <h4 className="font-semibold mb-2 border-b pb-2">{t}</h4>
+            <div key={t.id}>
+              <h4 className="font-semibold mb-2 border-b pb-2">{t.name}</h4>
                <ScrollArea className="h-60">
                 <div className="space-y-2 pr-4">
                   {classes.map(c => (
                     <div key={c} className="flex items-center space-x-2">
                       <Checkbox
-                        id={`${t}-${c}`}
-                        checked={config.teacherClasses[t]?.includes(c) || false}
-                        onCheckedChange={(checked) => handleTeacherClassChange(t, c, !!checked)}
+                        id={`${t.id}-${c}`}
+                        checked={config.teacherClasses[t.id]?.includes(c) || false}
+                        onCheckedChange={(checked) => handleTeacherClassChange(t.id, c, !!checked)}
                       />
-                      <Label htmlFor={`${t}-${c}`} className="font-normal">{c}</Label>
+                      <Label htmlFor={`${t.id}-${c}`} className="font-normal">{c}</Label>
                     </div>
                   ))}
                 </div>

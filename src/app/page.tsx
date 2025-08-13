@@ -2,7 +2,7 @@
 "use client";
 
 import { useContext, useMemo, useState } from "react";
-import { AppStateContext } from "@/context/app-state-provider";
+import { AppStateContext, type Teacher } from "@/context/app-state-provider";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +22,7 @@ const daysOfWeek: ScheduleEntry['day'][] = ["Monday", "Tuesday", "Wednesday", "T
 
 export default function Home() {
   const { appState, isLoading, setIsLoading, addRoutineVersion, deleteRoutineVersion, updateRoutineVersion, setActiveRoutineId, user } = useContext(AppStateContext);
-  const { routineHistory, activeRoutineId } = appState;
+  const { routineHistory, activeRoutineId, teachers } = appState;
   const { toast } = useToast();
   const [renameValue, setRenameValue] = useState("");
   const [routineToRename, setRoutineToRename] = useState<RoutineVersion | null>(null);
@@ -44,7 +44,7 @@ export default function Home() {
       }
       
       const input: GenerateScheduleLogicInput = {
-        teacherNames: teachers,
+        teachers,
         classes,
         subjects,
         timeSlots,
@@ -313,7 +313,7 @@ export default function Home() {
           timeSlots={appState.timeSlots} 
           classes={appState.classes}
           subjects={appState.subjects}
-          teachers={appState.teachers}
+          teachers={teachers}
           teacherSubjects={appState.config.teacherSubjects}
           dailyPeriodQuota={appState.config.dailyPeriodQuota}
           pdfHeader={appState.pdfHeader}
@@ -321,6 +321,7 @@ export default function Home() {
         
         <TeacherLoad 
             teacherLoad={appState.teacherLoad}
+            teachers={teachers}
             pdfHeader={appState.pdfHeader}
         />
     </div>

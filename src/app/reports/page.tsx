@@ -4,7 +4,7 @@
 import { useContext, useState } from "react";
 import PageHeader from "@/components/app/page-header";
 import { AppStateContext } from "@/context/app-state-provider";
-import type { ExamEntry, DutyChart } from "@/context/app-state-provider";
+import type { ExamEntry, DutyChart, Teacher } from "@/context/app-state-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { generateInvigilationDuty } from "@/lib/exam-duty-generator";
@@ -242,7 +242,7 @@ export default function ReportsPage() {
             </Card>
 
             {dutyChart && (
-                <InvigilationDutyChart dutyChart={dutyChart} pdfHeader={pdfHeader} />
+                <InvigilationDutyChart dutyChart={dutyChart} teachers={teachers} pdfHeader={pdfHeader} />
             )}
         </div>
     );

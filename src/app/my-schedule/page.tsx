@@ -2,7 +2,7 @@
 "use client";
 
 import { useContext, useMemo } from 'react';
-import { AppStateContext } from '@/context/app-state-provider';
+import { AppStateContext, type Teacher } from '@/context/app-state-provider';
 import PageHeader from '@/components/app/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -13,7 +13,7 @@ import { UserCheck } from 'lucide-react';
 
 export default function MySchedulePage() {
     const { appState, user } = useContext(AppStateContext);
-    const { routineHistory, activeRoutineId, timeSlots } = appState;
+    const { routineHistory, activeRoutineId, timeSlots, teachers } = appState;
 
     const activeRoutine = useMemo(() => {
         return routineHistory.find(r => r.id === activeRoutineId);
@@ -23,20 +23,25 @@ export default function MySchedulePage() {
         return dateToDay(new Date().toISOString().split('T')[0]);
     }, []);
 
+    const loggedInTeacher: Teacher | undefined = useMemo(() => {
+        if (!user || !user.email) return undefined;
+        return teachers.find(t => t.email === user.email);
+    }, [user, teachers]);
+
     const teacherSchedule = useMemo(() => {
-        if (!activeRoutine || !user || !user.displayName || !todayDay) return [];
+        if (!activeRoutine || !loggedInTeacher || !todayDay) return [];
         
-        const teacherName = user.displayName;
+        const teacherId = loggedInTeacher.id;
         return activeRoutine.schedule.schedule
             .filter(entry => 
                 entry.day === todayDay && 
-                entry.teacher.includes(teacherName) &&
+                entry.teacher.includes(teacherId) &&
                 entry.subject !== '---' &&
                 entry.subject !== 'Prayer' &&
                 entry.subject !== 'Lunch'
             )
             .sort((a, b) => sortTimeSlots([a.timeSlot, b.timeSlot]).indexOf(a.timeSlot) - sortTimeSlots([a.timeSlot, b.timeSlot]).indexOf(b.timeSlot));
-    }, [activeRoutine, user, todayDay]);
+    }, [activeRoutine, loggedInTeacher, todayDay]);
 
     if (!user) {
         return (
@@ -44,6 +49,16 @@ export default function MySchedulePage() {
                 <UserCheck className="h-4 w-4" />
                 <AlertTitle>Please Log In</AlertTitle>
                 <AlertDescription>You need to be logged in to view your schedule.</AlertDescription>
+            </Alert>
+        );
+    }
+
+    if (!loggedInTeacher) {
+         return (
+             <Alert>
+                <UserCheck className="h-4 w-4" />
+                <AlertTitle>Teacher Not Found</AlertTitle>
+                <AlertDescription>Your email ({user.email}) is not registered as a teacher in the system. Please contact the administrator.</AlertDescription>
             </Alert>
         );
     }
@@ -58,18 +73,21 @@ export default function MySchedulePage() {
         );
     }
 
+    // Helper to get teacher name from ID
+    const getTeacherName = (id: string) => teachers.find(t => t.id === id)?.name || 'N/A';
+
     return (
         <div className="space-y-6">
             <PageHeader 
                 title={`My Schedule for ${todayDay || 'Today'}`}
-                description={`Welcome, ${user.displayName}. Here are your classes for today, ${new Date().toLocaleDateString('en-GB')}.`}
+                description={`Welcome, ${loggedInTeacher.name}. Here are your classes for today, ${new Date().toLocaleDateString('en-GB')}.`}
             />
 
             <Card>
                 <CardHeader>
                     <CardTitle>Today's Classes</CardTitle>
                     <CardDescription>
-                        A summary of your scheduled classes and periods for today.
+                        A summary of your scheduled classes and periods for today. This is based on your registered email: {user.email}.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>

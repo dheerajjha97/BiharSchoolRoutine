@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from 'react';
-import type { DutyChart } from '@/context/app-state-provider';
+import type { DutyChart, Teacher } from '@/context/app-state-provider';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
@@ -15,10 +15,11 @@ import { Textarea } from '../ui/textarea';
 
 interface InvigilationDutyChartProps {
   dutyChart: DutyChart;
+  teachers: Teacher[];
   pdfHeader?: string;
 }
 
-export default function InvigilationDutyChart({ dutyChart, pdfHeader = "" }: InvigilationDutyChartProps) {
+export default function InvigilationDutyChart({ dutyChart, teachers, pdfHeader = "" }: InvigilationDutyChartProps) {
   const { toast } = useToast();
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -112,6 +113,8 @@ export default function InvigilationDutyChart({ dutyChart, pdfHeader = "" }: Inv
         setIsDownloading(false);
     }
   }
+  
+  const getTeacherName = (id: string) => teachers.find(t => t.id === id)?.name || id;
 
   return (
     <Card>
@@ -162,7 +165,7 @@ export default function InvigilationDutyChart({ dutyChart, pdfHeader = "" }: Inv
                         }
 
                         return roomsInSlot.map((room, index) => {
-                            const invigilators = dutiesForSlot[room] || [];
+                            const invigilatorIds = dutiesForSlot[room] || [];
                             return (
                                 <TableRow key={`${key}-${room}`}>
                                     {index === 0 && (
@@ -174,9 +177,9 @@ export default function InvigilationDutyChart({ dutyChart, pdfHeader = "" }: Inv
                                     <TableCell className="font-medium">{room}</TableCell>
                                     <TableCell>
                                         <div className="flex flex-col gap-1">
-                                            {invigilators.length > 0 ? (
-                                                invigilators.map((teacher, idx) => (
-                                                    <span key={idx} className="text-xs bg-secondary p-1 rounded-md">{teacher}</span>
+                                            {invigilatorIds.length > 0 ? (
+                                                invigilatorIds.map((teacherId, idx) => (
+                                                    <span key={idx} className="text-xs bg-secondary p-1 rounded-md">{getTeacherName(teacherId)}</span>
                                                 ))
                                             ) : (
                                                 <span className='text-xs text-muted-foreground'>-</span>

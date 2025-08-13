@@ -1,9 +1,9 @@
 
 "use client";
 
-import { useContext, useState } from "react";
+import { useContext, useState, useMemo } from "react";
 import PageHeader from "@/components/app/page-header";
-import { AppStateContext } from "@/context/app-state-provider";
+import { AppStateContext, type Teacher } from "@/context/app-state-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -13,25 +13,29 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn, dateToDay } from "@/lib/utils";
 import { Check as CheckIcon, PlusCircle } from "lucide-react";
-import { generateSubstitutionPlan, type SubstitutionPlan } from "@/lib/substitution-generator";
+import { generateSubstitutionPlan } from "@/lib/substitution-generator";
 import SubstitutionPlanDisplay from "@/components/routine/substitution-plan";
 
-function MultiSelectPopover({ options, selected, onSelectedChange, placeholder }: { options: string[], selected: string[], onSelectedChange: (selected: string[]) => void, placeholder: string }) {
+function MultiSelectPopover({ options, selected, onSelectedChange, placeholder }: { options: Teacher[], selected: string[], onSelectedChange: (selected: string[]) => void, placeholder: string }) {
     const [open, setOpen] = useState(false);
 
-    const handleSelect = (option: string) => {
-        const newSelected = selected.includes(option)
-            ? selected.filter(item => item !== option)
-            : [...selected, option];
+    const handleSelect = (optionId: string) => {
+        const newSelected = selected.includes(optionId)
+            ? selected.filter(item => item !== optionId)
+            : [...selected, optionId];
         onSelectedChange(newSelected);
     };
+
+    const selectedNames = useMemo(() => {
+        return options.filter(opt => selected.includes(opt.id)).map(opt => opt.name).join(', ');
+    }, [options, selected]);
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
                 <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between">
                     <span className="truncate">
-                        {selected.length > 0 ? selected.join(', ') : placeholder}
+                        {selected.length > 0 ? selectedNames : placeholder}
                     </span>
                     <PlusCircle className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
@@ -44,17 +48,17 @@ function MultiSelectPopover({ options, selected, onSelectedChange, placeholder }
                         <CommandGroup>
                             {options.map((option) => (
                                 <CommandItem
-                                    key={option}
-                                    value={option}
-                                    onSelect={() => handleSelect(option)}
+                                    key={option.id}
+                                    value={option.name}
+                                    onSelect={() => handleSelect(option.id)}
                                 >
                                     <CheckIcon
                                         className={cn(
                                             "mr-2 h-4 w-4",
-                                            selected.includes(option) ? "opacity-100" : "opacity-0"
+                                            selected.includes(option.id) ? "opacity-100" : "opacity-0"
                                         )}
                                     />
-                                    {option}
+                                    {option.name}
                                 </CommandItem>
                             ))}
                         </CommandGroup>
@@ -69,7 +73,7 @@ function MultiSelectPopover({ options, selected, onSelectedChange, placeholder }
 export default function AdjustmentsPage() {
     const { appState, updateAdjustments } = useContext(AppStateContext);
     const { teachers, routineHistory, activeRoutineId, teacherLoad, pdfHeader } = appState;
-    const { date, absentTeachers, substitutionPlan } = appState.adjustments;
+    const { date, absentTeacherIds, substitutionPlan } = appState.adjustments;
     const { toast } = useToast();
 
     const activeRoutine = routineHistory.find(r => r.id === activeRoutineId);
@@ -79,7 +83,7 @@ export default function AdjustmentsPage() {
             toast({ variant: "destructive", title: "No Active Routine Found", description: "Please generate or select a master routine on the dashboard first." });
             return;
         }
-        if (absentTeachers.length === 0) {
+        if (absentTeacherIds.length === 0) {
             toast({ variant: "destructive", title: "No Absent Teachers", description: "Please select at least one absent teacher." });
             return;
         }
@@ -93,8 +97,8 @@ export default function AdjustmentsPage() {
             const plan = generateSubstitutionPlan({
                 schedule: activeRoutine.schedule.schedule,
                 allTeachers: teachers,
-                absentTeachers,
-                date: date, // Pass the date string directly
+                absentTeacherIds,
+                date: date,
                 teacherLoad
             });
             updateAdjustments('substitutionPlan', plan);
@@ -137,9 +141,9 @@ export default function AdjustmentsPage() {
                             <Label>Absent Teachers</Label>
                             <MultiSelectPopover 
                                 options={teachers} 
-                                selected={absentTeachers} 
+                                selected={absentTeacherIds} 
                                 onSelectedChange={(newSelection) => {
-                                    updateAdjustments('absentTeachers', newSelection);
+                                    updateAdjustments('absentTeacherIds', newSelection);
                                     updateAdjustments('substitutionPlan', null); // Reset plan if selection changes
                                 }}
                                 placeholder="Select absent teachers..." 
@@ -153,7 +157,7 @@ export default function AdjustmentsPage() {
             </Card>
 
             {substitutionPlan && (
-                <SubstitutionPlanDisplay plan={substitutionPlan} pdfHeader={pdfHeader} />
+                <SubstitutionPlanDisplay plan={substitutionPlan} teachers={teachers} pdfHeader={pdfHeader} />
             )}
         </div>
     );

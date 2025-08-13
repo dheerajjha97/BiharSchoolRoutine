@@ -32,10 +32,11 @@ export default function MySchedulePage() {
         if (!activeRoutine || !loggedInTeacher || !todayDay) return [];
         
         const teacherId = loggedInTeacher.id;
+
         return activeRoutine.schedule.schedule
             .filter(entry => 
                 entry.day === todayDay && 
-                entry.teacher.includes(teacherId) &&
+                entry.teacher.includes(teacherId) && // Check if teacher's ID is in the teacher string
                 entry.subject !== '---' &&
                 entry.subject !== 'Prayer' &&
                 entry.subject !== 'Lunch'
@@ -72,9 +73,6 @@ export default function MySchedulePage() {
             </Alert>
         );
     }
-
-    // Helper to get teacher name from ID
-    const getTeacherName = (id: string) => teachers.find(t => t.id === id)?.name || 'N/A';
 
     return (
         <div className="space-y-6">

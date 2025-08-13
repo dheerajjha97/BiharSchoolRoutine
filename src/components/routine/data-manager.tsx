@@ -54,8 +54,8 @@ const TeacherManager = ({ items, setItems }: { items: Teacher[], setItems: (item
             <ScrollArea className="flex-grow h-64 border rounded-md p-2">
               <div className="space-y-2">
                 {items.length > 0 ? (
-                  items.map(item => (
-                    <div key={item.id} className="flex items-center justify-between bg-secondary p-2 rounded-md text-sm">
+                  items.map((item, index) => (
+                    <div key={`${item.id}-${index}`} className="flex items-center justify-between bg-secondary p-2 rounded-md text-sm">
                       <div className="flex flex-col">
                         <span className="font-medium">{item.name}</span>
                         <span className="text-xs text-muted-foreground">{item.email}</span>
@@ -131,8 +131,8 @@ const StringListManager = ({ title, items, setItems, placeholder }: { title: str
         <ScrollArea className="flex-grow h-64 border rounded-md p-2">
           <div className="space-y-2">
             {items.length > 0 ? (
-              items.map(item => (
-                <div key={item} className="flex items-center justify-between bg-secondary p-2 rounded-md text-sm">
+              items.map((item, index) => (
+                <div key={`${item}-${index}`} className="flex items-center justify-between bg-secondary p-2 rounded-md text-sm">
                   <span>{item}</span>
                   <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveItem(item)}>
                     <X className="h-4 w-4" />

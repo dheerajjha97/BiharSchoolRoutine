@@ -39,10 +39,9 @@ export function generateSubstitutionPlan(input: SubstitutionInput): Substitution
     
     // Find all periods for absent teachers on the given day
     const periodsToCover = schedule.filter(entry => {
-        const teacherId = getTeacherIdFromName(entry.teacher);
+        const teacherIdsInEntry = entry.teacher.split(' & ').map(tName => getTeacherIdFromName(tName)).filter(id => id !== undefined) as string[];
         return entry.day === dayOfWeek && 
-               teacherId &&
-               absentTeacherIds.includes(teacherId) &&
+               teacherIdsInEntry.some(id => absentTeacherIds.includes(id)) &&
                entry.subject !== 'Prayer' && entry.subject !== 'Lunch' && entry.subject !== '---'
     });
     
@@ -54,12 +53,14 @@ export function generateSubstitutionPlan(input: SubstitutionInput): Substitution
     // Determine when each available teacher is busy on that day
     const busySlotsByTeacher: Record<string, Set<string>> = {};
     availableTeachers.forEach(teacher => {
-        const teacherId = getTeacherIdFromName(teacher.name);
+        const teacherId = teacher.id;
         if (!teacherId) return;
 
         busySlotsByTeacher[teacherId] = new Set(
-            schedule.filter(entry => entry.day === dayOfWeek && entry.teacher === teacher.name)
-                    .map(entry => entry.timeSlot)
+            schedule.filter(entry => {
+                const teacherIdsInEntry = entry.teacher.split(' & ').map(tName => getTeacherIdFromName(tName));
+                return entry.day === dayOfWeek && teacherIdsInEntry.includes(teacherId)
+            }).map(entry => entry.timeSlot)
         );
     });
 
@@ -67,8 +68,11 @@ export function generateSubstitutionPlan(input: SubstitutionInput): Substitution
 
 
     for (const period of sortedPeriodsToCover) {
-        const absentTeacherId = getTeacherIdFromName(period.teacher);
-        if (!absentTeacherId) continue;
+        const absentTeacherNames = period.teacher.split(' & ').map(t => t.trim());
+        const absentIdsInPeriod = absentTeacherNames.map(name => getTeacherIdFromName(name)).filter(id => id && absentTeacherIds.includes(id)) as string[];
+
+        if (absentIdsInPeriod.length === 0) continue;
+        const absentTeacherId = absentIdsInPeriod[0]; // For simplicity, handle one absent teacher per slot for substitution
 
         // Find teachers who are free during this specific time slot
         let potentialSubstitutes = availableTeachers.filter(teacher => 

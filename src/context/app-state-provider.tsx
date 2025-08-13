@@ -6,9 +6,9 @@ import { useToast } from "@/hooks/use-toast";
 import type { GenerateScheduleOutput } from "@/ai/flows/generate-schedule";
 import type { SubjectCategory, SubjectPriority } from "@/lib/schedule-generator";
 import { sortTimeSlots } from "@/lib/utils";
-import { getFirebaseAuth } from "@/lib/firebase";
-import { onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, type User, type AuthError, getIdToken } from "firebase/auth";
-import { GoogleDriveService } from "@/lib/google-drive-service";
+import { getFirebaseAuth, getFirestoreDB } from "@/lib/firebase";
+import { onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, type User, type AuthError } from "firebase/auth";
+import { doc, setDoc, getDoc, onSnapshot, type Unsubscribe } from "firebase/firestore";
 import type { SubstitutionPlan } from "@/lib/substitution-generator";
 
 type Unavailability = {
@@ -212,10 +212,10 @@ const DEFAULT_APP_STATE: AppState = {
 
 // Function to strip non-persistent state for saving
 const getPersistentState = (state: AppState): Omit<AppState, 'adjustments' | 'teacherLoad'> => {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { adjustments, teacherLoad, ...persistentState } = state;
   return persistentState;
 };
+
 
 export const AppStateProvider = ({ children }: { children: React.ReactNode }) => {
   const [appState, setAppState] = useState<AppState>(DEFAULT_APP_STATE);
@@ -224,17 +224,24 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   const [isSyncing, setIsSyncing] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const { toast } = useToast();
-  const driveServiceRef = useRef(new GoogleDriveService());
+
   const stateRef = useRef(appState);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const firestoreUnsubscribeRef = useRef<Unsubscribe | null>(null);
 
   const setFullState = useCallback((newState: Partial<AppState>) => {
-    setAppState(prevState => ({
-        ...DEFAULT_APP_STATE, // Reset to default first
-        ...prevState, // Then apply existing state
-        ...newState, // Then apply new state
-        adjustments: DEFAULT_ADJUSTMENTS_STATE, // Always reset adjustments
-    }));
+    setAppState(prevState => {
+      const mergedState = {
+        ...DEFAULT_APP_STATE,
+        ...prevState,
+        ...newState,
+        adjustments: DEFAULT_ADJUSTMENTS_STATE,
+      };
+       if (newState.timeSlots && Array.isArray(newState.timeSlots)) {
+          mergedState.timeSlots = sortTimeSlots(newState.timeSlots);
+      }
+      return mergedState;
+    });
   }, []);
 
   useEffect(() => {
@@ -294,7 +301,6 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   
   useEffect(() => {
     updateState('teacherLoad', calculatedTeacherLoad);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [calculatedTeacherLoad]);
   
   const updateState = useCallback(<K extends keyof AppState>(key: K, value: AppState[K]) => {
@@ -385,17 +391,11 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     setIsAuthLoading(true);
     const auth = getFirebaseAuth();
     const provider = new GoogleAuthProvider();
-    provider.addScope('https://www.googleapis.com/auth/drive.file');
     try {
       await signInWithPopup(auth, provider);
-      // Auth state change will be handled by the onAuthStateChanged listener
     } catch (error) {
       const authError = error as AuthError;
-      toast({
-        variant: "destructive",
-        title: "Login Failed",
-        description: authError.message,
-      });
+      toast({ variant: "destructive", title: "Login Failed", description: authError.message });
       setIsAuthLoading(false);
     }
   }, [toast]);
@@ -404,75 +404,80 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     setIsAuthLoading(true);
     try {
       await signOut(getFirebaseAuth());
-      setFullState(DEFAULT_APP_STATE); // Reset to default state on logout
+      setFullState(DEFAULT_APP_STATE); 
       localStorage.removeItem(LOCAL_STORAGE_KEY);
       toast({ title: "Logged out successfully." });
     } catch (error) {
       const authError = error as AuthError;
-      toast({
-        variant: "destructive",
-        title: "Logout Failed",
-        description: authError.message,
-      });
+      toast({ variant: "destructive", title: "Logout Failed", description: authError.message });
     } finally {
       setIsAuthLoading(false);
     }
   }, [toast, setFullState]);
 
-  // Load from Local Storage on initial mount (for guest users)
-  useEffect(() => {
-    if (!user) {
-      try {
-        const savedStateJSON = localStorage.getItem(LOCAL_STORAGE_KEY);
-        if (savedStateJSON) {
-          const savedState = JSON.parse(savedStateJSON);
-          setFullState(savedState);
-        }
-      } catch (error) {
-        console.error("Failed to load state from local storage:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-  }, [user, setFullState]);
-
   // Auth state listener
   useEffect(() => {
     const auth = getFirebaseAuth();
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
+      setIsLoading(true);
+
+      // Unsubscribe from any previous Firestore listener
+      if (firestoreUnsubscribeRef.current) {
+        firestoreUnsubscribeRef.current();
+        firestoreUnsubscribeRef.current = null;
+      }
+
       if (currentUser) {
+        // User is logged in, use Firestore
         setIsSyncing(true);
-        try {
-          const token = await getIdToken(currentUser, true); // Force refresh the token
-          const backup = await driveServiceRef.current.loadBackup(token);
-          
-          if (backup) {
-            setFullState(backup);
-            toast({ title: "Data restored from Google Drive." });
+        const db = getFirestoreDB();
+        const userDocRef = doc(db, "userSettings", currentUser.uid);
+
+        firestoreUnsubscribeRef.current = onSnapshot(userDocRef, (docSnap) => {
+          if (docSnap.exists()) {
+            const firestoreData = docSnap.data() as Omit<AppState, 'adjustments' | 'teacherLoad'>;
+            setFullState(firestoreData);
+            console.log("Data loaded from Firestore.");
           } else {
-            // If no backup on Drive, save the current local state to Drive.
-            const freshTokenForSave = await getIdToken(currentUser, true);
-            await driveServiceRef.current.saveBackup(getPersistentState(stateRef.current), freshTokenForSave);
-            toast({ title: "Local data synced to Google Drive." });
+            // No data in Firestore, could be a new user.
+            // Save the current (or default) state to Firestore.
+            console.log("No data in Firestore for this user. Saving initial state.");
+            const stateToSave = getPersistentState(stateRef.current);
+            setDoc(userDocRef, stateToSave);
           }
-        } catch (error: any) {
-          console.error("Google Drive sync error on login:", error);
-          const errorMessage = error.message || "Could not connect to Google Drive. Please try logging out and back in.";
-          toast({
-            variant: "destructive",
-            title: "Sync Error",
-            description: errorMessage,
-          });
-        } finally {
           setIsSyncing(false);
+          setIsLoading(false);
+        }, (error) => {
+          console.error("Firestore snapshot error:", error);
+          toast({ variant: "destructive", title: "Sync Error", description: "Could not sync data from the cloud." });
+          setIsSyncing(false);
+          setIsLoading(false);
+        });
+      } else {
+        // User is logged out, use Local Storage
+        try {
+          const savedStateJSON = localStorage.getItem(LOCAL_STORAGE_KEY);
+          if (savedStateJSON) {
+            setFullState(JSON.parse(savedStateJSON));
+          } else {
+            setFullState(DEFAULT_APP_STATE);
+          }
+        } catch (error) {
+          console.error("Failed to load state from local storage:", error);
+        } finally {
+          setIsLoading(false);
         }
       }
       setIsAuthLoading(false);
-      setIsLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeAuth();
+      if (firestoreUnsubscribeRef.current) {
+        firestoreUnsubscribeRef.current();
+      }
+    };
   }, [toast, setFullState]);
 
   // Debounced save effect
@@ -484,29 +489,27 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     }
 
     saveTimeoutRef.current = setTimeout(async () => {
-      try {
-        const stateToSave = getPersistentState(stateRef.current);
-        if (user) {
-          setIsSyncing(true);
-          try {
-            const token = await getIdToken(user, true); // Get fresh token for saving
-            await driveServiceRef.current.saveBackup(stateToSave, token);
-            console.log("Data saved to Google Drive.");
-          } catch (err) {
-            console.error("Failed to save to Google Drive:", err);
-            toast({ variant: "destructive", title: "Google Drive Sync Failed", description: "Could not save latest changes." });
-          } finally {
-            setIsSyncing(false);
-          }
-        } else {
-          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
-          console.log("Data saved to local storage.");
+      const stateToSave = getPersistentState(stateRef.current);
+      if (user) {
+        // Logged in: save to Firestore
+        setIsSyncing(true);
+        try {
+          const db = getFirestoreDB();
+          const userDocRef = doc(db, "userSettings", user.uid);
+          await setDoc(userDocRef, stateToSave, { merge: true });
+          console.log("Data saved to Firestore.");
+        } catch (err) {
+          console.error("Failed to save to Firestore:", err);
+          toast({ variant: "destructive", title: "Firestore Save Failed", description: "Could not save latest changes." });
+        } finally {
+          setIsSyncing(false);
         }
-      } catch (error) {
-        console.error("Failed to save state:", error);
-        toast({ variant: "destructive", title: "Save Error", description: "Could not save your changes." });
+      } else {
+        // Logged out: save to Local Storage
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
+        console.log("Data saved to local storage.");
       }
-    }, 1500); // 1.5-second debounce delay
+    }, 1500);
 
     return () => {
       if (saveTimeoutRef.current) {

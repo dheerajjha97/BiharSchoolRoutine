@@ -24,15 +24,20 @@ import {
   Mail,
   ClipboardCheck,
   Replace,
+  UserCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const navItems = [
+const adminNavItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/data", label: "Data Management", icon: Database },
   { href: "/config", label: "Configuration", icon: SlidersHorizontal },
   { href: "/adjustments", label: "Adjustments", icon: Replace },
   { href: "/reports", label: "Exams & Reports", icon: ClipboardCheck },
+];
+
+const teacherNavItems = [
+    { href: "/my-schedule", label: "My Schedule", icon: UserCheck },
 ];
 
 function ThemeToggle() {
@@ -55,12 +60,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const {
+    appState,
     user,
     handleGoogleSignIn,
     handleLogout,
     isAuthLoading,
     isSyncing,
   } = useContext(AppStateContext);
+
+  // A simple way to determine role. Assumes admin is NOT in the teachers list.
+  // A more robust role system could be implemented later.
+  const isTeacher = user && appState.teachers.some(t => t === user.displayName);
+  const isAdmin = user && !isTeacher; // Simplified logic for now
+
+  const navItems = isTeacher ? teacherNavItems : adminNavItems;
 
   const authControls = (
     <div className="flex items-center gap-2">

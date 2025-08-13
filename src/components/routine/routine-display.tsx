@@ -36,6 +36,7 @@ interface RoutineDisplayProps {
   onScheduleChange: (newSchedule: ScheduleEntry[]) => void;
   dailyPeriodQuota: number;
   pdfHeader?: string;
+  isEditable: boolean;
 }
 
 type GridSchedule = Record<string, Record<string, Record<string, ScheduleEntry[]>>>;
@@ -85,7 +86,7 @@ const toRoman = (num: number): string => {
     return result;
 };
 
-const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, teacherSubjects, onScheduleChange, dailyPeriodQuota, pdfHeader = "" }: RoutineDisplayProps) => {
+const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, teacherSubjects, onScheduleChange, dailyPeriodQuota, pdfHeader = "", isEditable }: RoutineDisplayProps) => {
   const { toast } = useToast();
   
   const [isCellDialogOpen, setIsCellDialogOpen] = React.useState(false);
@@ -176,6 +177,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   }, [cellData.subject, cellData.teacher, availableTeachers]);
   
   const handleCellClick = (day: ScheduleEntry['day'], timeSlot: string, className: string, entry: ScheduleEntry | null) => {
+    if (!isEditable) return;
     setCurrentCell({ day, timeSlot, className, entry });
     setCellData(entry ? {
         subject: entry.subject,
@@ -384,12 +386,15 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 
     return (
         <div
-            className={cn("h-full min-h-[60px] flex flex-col items-center justify-center p-1 space-y-1 cursor-pointer transition-colors hover:bg-primary/5 relative")}
+            className={cn(
+                "h-full min-h-[60px] flex flex-col items-center justify-center p-1 space-y-1 relative",
+                 isEditable && "cursor-pointer transition-colors hover:bg-primary/5"
+            )}
             onClick={() => handleCellClick(day, timeSlot, className, entries[0] || null)}
         >
             {isClashed && <AlertTriangle className="h-4 w-4 text-destructive absolute top-1 right-1" />}
             {entries.length === 0 ? (
-                <span className="text-muted-foreground text-xs hover:text-primary opacity-0 hover:opacity-100 transition-opacity">+</span>
+                 isEditable && <span className="text-muted-foreground text-xs hover:text-primary opacity-0 hover:opacity-100 transition-opacity">+</span>
             ) : (
                 entries.map((entry, index) => {
                     if (entry.subject === '---') return null;
@@ -443,27 +448,29 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                         <TableCell className="font-semibold align-top sticky left-0 bg-card z-10" rowSpan={displayClasses.length}>
                           <div className="flex items-center gap-2">
                              <span>{day}</span>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-6 w-6">
-                                    <Copy className="h-3 w-3" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent>
-                                    <DropdownMenuSub>
-                                      <DropdownMenuSubTrigger>Paste to...</DropdownMenuSubTrigger>
-                                      <DropdownMenuPortal>
-                                        <DropdownMenuSubContent>
-                                          {daysOfWeek.filter(d => d !== day).map(destinationDay => (
-                                            <DropdownMenuItem key={destinationDay} onClick={() => handleCopyDay(day, destinationDay)}>
-                                              {destinationDay}
-                                            </DropdownMenuItem>
-                                          ))}
-                                        </DropdownMenuSubContent>
-                                      </DropdownMenuPortal>
-                                    </DropdownMenuSub>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                              {isEditable && (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6">
+                                      <Copy className="h-3 w-3" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent>
+                                      <DropdownMenuSub>
+                                        <DropdownMenuSubTrigger>Paste to...</DropdownMenuSubTrigger>
+                                        <DropdownMenuPortal>
+                                          <DropdownMenuSubContent>
+                                            {daysOfWeek.filter(d => d !== day).map(destinationDay => (
+                                              <DropdownMenuItem key={destinationDay} onClick={() => handleCopyDay(day, destinationDay)}>
+                                                {destinationDay}
+                                              </DropdownMenuItem>
+                                            ))}
+                                          </DropdownMenuSubContent>
+                                        </DropdownMenuPortal>
+                                      </DropdownMenuSub>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              )}
                           </div>
                         </TableCell>
                       )}
@@ -492,7 +499,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
         </CardHeader>
         <CardContent>
           <div className="text-center py-12 text-muted-foreground">
-            <p>Click the "Generate Routine" or "Create Blank Routine" button to start.</p>
+            <p>Log in and click the "Generate Routine" or "Create Blank Routine" button to start.</p>
           </div>
         </CardContent>
       </Card>
@@ -506,7 +513,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
             <div className="flex flex-wrap justify-between items-start gap-4">
                 <div>
                     <CardTitle>View Routine</CardTitle>
-                    <CardDescription>View, download, or edit your routine. Use the copy icon next to a day's name to paste its schedule to another day.</CardDescription>
+                    <CardDescription>View, download, or edit your routine. {isEditable && "Use the copy icon next to a day's name to paste its schedule to another day."}</CardDescription>
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

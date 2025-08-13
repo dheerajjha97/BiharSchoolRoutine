@@ -24,7 +24,22 @@ export default function TeacherLoad({ teacherLoad, pdfHeader = "" }: TeacherLoad
   const [isDownloading, setIsDownloading] = useState(false);
 
   if (teachers.length === 0) {
-    return null;
+    return (
+       <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-primary" />
+              <CardTitle>Teacher Workload Analysis</CardTitle>
+            </div>
+            <CardDescription>Detailed breakdown of classes assigned per teacher.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-10 text-muted-foreground">
+                <p>No routine is active. Generate or select a routine to see the workload analysis.</p>
+            </div>
+          </CardContent>
+       </Card>
+    );
   }
   
   const handleDownloadPdf = async (elementId: string, fileName: string) => {

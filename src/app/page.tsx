@@ -324,7 +324,7 @@ export default function Home() {
           timeSlots={appState.timeSlots} 
           classes={appState.classes}
           subjects={appState.subjects}
-          teachers={appState.teachers.map(t => t.name)}
+          teachers={appState.teachers}
           teacherSubjects={formattedTeacherSubjects}
           dailyPeriodQuota={appState.config.dailyPeriodQuota}
           pdfHeader={appState.pdfHeader}

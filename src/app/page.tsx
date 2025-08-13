@@ -134,7 +134,7 @@ export default function Home() {
             <TooltipProvider>
                 <div className="flex flex-wrap gap-4">
                     <Tooltip>
-                        <TooltipTrigger>
+                        <TooltipTrigger asChild>
                             <Button size="lg" disabled>
                                 <Wand2 className="mr-2 h-5 w-5" />
                                 Generate Routine
@@ -145,7 +145,7 @@ export default function Home() {
                         </TooltipContent>
                     </Tooltip>
                     <Tooltip>
-                        <TooltipTrigger>
+                        <TooltipTrigger asChild>
                              <Button size="lg" variant="outline" disabled>
                                 <PlusSquare className="mr-2 h-5 w-5" />
                                 Create Blank Routine

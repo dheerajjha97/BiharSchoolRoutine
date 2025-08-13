@@ -1,6 +1,6 @@
 
 import type { ScheduleEntry } from "@/ai/flows/generate-schedule";
-import type { TeacherLoad, Teacher } from "@/context/app-state-provider";
+import type { Teacher } from "@/context/app-state-provider";
 import { dateToDay, sortTimeSlots } from "./utils";
 
 type Substitution = {
@@ -21,11 +21,10 @@ type SubstitutionInput = {
     allTeachers: Teacher[];
     absentTeacherIds: string[];
     date: string; // YYYY-MM-DD
-    teacherLoad: TeacherLoad;
 }
 
 export function generateSubstitutionPlan(input: SubstitutionInput): SubstitutionPlan {
-    const { schedule, allTeachers, absentTeacherIds, date, teacherLoad } = input;
+    const { schedule, allTeachers, absentTeacherIds, date } = input;
 
     const substitutions: Substitution[] = [];
     const dayOfWeek = dateToDay(date);
@@ -34,12 +33,18 @@ export function generateSubstitutionPlan(input: SubstitutionInput): Substitution
         throw new Error("Invalid date provided for substitution plan.");
     }
     
+    const getTeacherIdFromName = (name: string): string | undefined => {
+        return allTeachers.find(t => t.name === name)?.id;
+    }
+    
     // Find all periods for absent teachers on the given day
-    const periodsToCover = schedule.filter(entry => 
-        entry.day === dayOfWeek && 
-        absentTeacherIds.includes(entry.teacher) &&
-        entry.subject !== 'Prayer' && entry.subject !== 'Lunch' && entry.subject !== '---'
-    );
+    const periodsToCover = schedule.filter(entry => {
+        const teacherId = getTeacherIdFromName(entry.teacher);
+        return entry.day === dayOfWeek && 
+               teacherId &&
+               absentTeacherIds.includes(teacherId) &&
+               entry.subject !== 'Prayer' && entry.subject !== 'Lunch' && entry.subject !== '---'
+    });
     
     // Find all available teachers (not absent)
     const availableTeachers = allTeachers.filter(t => !absentTeacherIds.includes(t.id));
@@ -49,8 +54,11 @@ export function generateSubstitutionPlan(input: SubstitutionInput): Substitution
     // Determine when each available teacher is busy on that day
     const busySlotsByTeacher: Record<string, Set<string>> = {};
     availableTeachers.forEach(teacher => {
-        busySlotsByTeacher[teacher.id] = new Set(
-            schedule.filter(entry => entry.day === dayOfWeek && entry.teacher === teacher.id)
+        const teacherId = getTeacherIdFromName(teacher.name);
+        if (!teacherId) return;
+
+        busySlotsByTeacher[teacherId] = new Set(
+            schedule.filter(entry => entry.day === dayOfWeek && entry.teacher === teacher.name)
                     .map(entry => entry.timeSlot)
         );
     });
@@ -59,9 +67,12 @@ export function generateSubstitutionPlan(input: SubstitutionInput): Substitution
 
 
     for (const period of sortedPeriodsToCover) {
+        const absentTeacherId = getTeacherIdFromName(period.teacher);
+        if (!absentTeacherId) continue;
+
         // Find teachers who are free during this specific time slot
         let potentialSubstitutes = availableTeachers.filter(teacher => 
-            !busySlotsByTeacher[teacher.id].has(period.timeSlot)
+            !busySlotsByTeacher[teacher.id]?.has(period.timeSlot)
         );
 
         if (potentialSubstitutes.length === 0) {
@@ -69,7 +80,7 @@ export function generateSubstitutionPlan(input: SubstitutionInput): Substitution
                 timeSlot: period.timeSlot,
                 className: period.className,
                 subject: period.subject,
-                absentTeacherId: period.teacher,
+                absentTeacherId: absentTeacherId,
                 substituteTeacherId: "No Substitute Available"
             });
             continue;
@@ -84,12 +95,15 @@ export function generateSubstitutionPlan(input: SubstitutionInput): Substitution
             timeSlot: period.timeSlot,
             className: period.className,
             subject: period.subject,
-            absentTeacherId: period.teacher,
+            absentTeacherId: absentTeacherId,
             substituteTeacherId: assignedSubstitute.id,
         });
 
         // Update the assigned substitute's duty count and busy slots for the day
         substituteDutyCount[assignedSubstitute.id]++;
+        if(!busySlotsByTeacher[assignedSubstitute.id]) {
+            busySlotsByTeacher[assignedSubstitute.id] = new Set();
+        }
         busySlotsByTeacher[assignedSubstitute.id].add(period.timeSlot);
     }
 

@@ -99,7 +99,6 @@ export default function AdjustmentsPage() {
                 allTeachers: teachers,
                 absentTeacherIds,
                 date: date,
-                teacherLoad
             });
             updateAdjustments('substitutionPlan', plan);
             toast({ title: "Substitution Plan Generated", description: "Available teachers have been assigned to cover the periods." });

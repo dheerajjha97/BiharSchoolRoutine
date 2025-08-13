@@ -73,9 +73,6 @@ export default function MySchedulePage() {
         );
     }
 
-    // Helper to get teacher name from ID
-    const getTeacherName = (id: string) => teachers.find(t => t.id === id)?.name || 'N/A';
-
     return (
         <div className="space-y-6">
             <PageHeader 

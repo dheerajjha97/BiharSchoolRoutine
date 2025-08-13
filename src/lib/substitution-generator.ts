@@ -1,6 +1,6 @@
 
 import type { ScheduleEntry } from "@/ai/flows/generate-schedule";
-import type { Teacher } from "@/context/app-state-provider";
+import type { TeacherLoad, Teacher } from "@/context/app-state-provider";
 import { dateToDay, sortTimeSlots } from "./utils";
 
 type Substitution = {
@@ -21,10 +21,11 @@ type SubstitutionInput = {
     allTeachers: Teacher[];
     absentTeacherIds: string[];
     date: string; // YYYY-MM-DD
+    teacherLoad: TeacherLoad;
 }
 
 export function generateSubstitutionPlan(input: SubstitutionInput): SubstitutionPlan {
-    const { schedule, allTeachers, absentTeacherIds, date } = input;
+    const { schedule, allTeachers, absentTeacherIds, date, teacherLoad } = input;
 
     const substitutions: Substitution[] = [];
     const dayOfWeek = dateToDay(date);
@@ -33,16 +34,12 @@ export function generateSubstitutionPlan(input: SubstitutionInput): Substitution
         throw new Error("Invalid date provided for substitution plan.");
     }
     
-    const getTeacherIdFromName = (name: string): string | undefined => {
-        return allTeachers.find(t => t.name === name)?.id;
-    }
-    
     // Find all periods for absent teachers on the given day
     const periodsToCover = schedule.filter(entry => {
-        const teacherIdsInEntry = entry.teacher.split(' & ').map(tName => getTeacherIdFromName(tName)).filter(id => id !== undefined) as string[];
+        const teacherIdsInEntry = entry.teacher.split(' & ').map(tId => tId.trim()).filter(id => id !== "N/A");
         return entry.day === dayOfWeek && 
                teacherIdsInEntry.some(id => absentTeacherIds.includes(id)) &&
-               entry.subject !== 'Prayer' && entry.subject !== 'Lunch' && entry.subject !== '---'
+               entry.subject !== 'Prayer' && entry.subject !== 'Lunch' && entry.subject !== '---';
     });
     
     // Find all available teachers (not absent)
@@ -54,22 +51,20 @@ export function generateSubstitutionPlan(input: SubstitutionInput): Substitution
     const busySlotsByTeacher: Record<string, Set<string>> = {};
     availableTeachers.forEach(teacher => {
         const teacherId = teacher.id;
-        if (!teacherId) return;
-
         busySlotsByTeacher[teacherId] = new Set(
-            schedule.filter(entry => {
-                const teacherIdsInEntry = entry.teacher.split(' & ').map(tName => getTeacherIdFromName(tName));
-                return entry.day === dayOfWeek && teacherIdsInEntry.includes(teacherId)
-            }).map(entry => entry.timeSlot)
+            schedule.filter(entry => 
+                entry.day === dayOfWeek && entry.teacher.includes(teacherId)
+            ).map(entry => entry.timeSlot)
         );
     });
 
-    const sortedPeriodsToCover = periodsToCover.sort((a, b) => sortTimeSlots([a.timeSlot, b.timeSlot]).indexOf(a.timeSlot) - sortTimeSlots([a.timeSlot, b.timeSlot]).indexOf(b.timeSlot));
-
+    const sortedPeriodsToCover = periodsToCover.sort((a, b) => 
+        sortTimeSlots([a.timeSlot, b.timeSlot]).indexOf(a.timeSlot) - sortTimeSlots([a.timeSlot, b.timeSlot]).indexOf(b.timeSlot)
+    );
 
     for (const period of sortedPeriodsToCover) {
-        const absentTeacherNames = period.teacher.split(' & ').map(t => t.trim());
-        const absentIdsInPeriod = absentTeacherNames.map(name => getTeacherIdFromName(name)).filter(id => id && absentTeacherIds.includes(id)) as string[];
+        const teacherIdsInPeriod = period.teacher.split(' & ').map(t => t.trim());
+        const absentIdsInPeriod = teacherIdsInPeriod.filter(id => absentTeacherIds.includes(id));
 
         if (absentIdsInPeriod.length === 0) continue;
         const absentTeacherId = absentIdsInPeriod[0]; // For simplicity, handle one absent teacher per slot for substitution

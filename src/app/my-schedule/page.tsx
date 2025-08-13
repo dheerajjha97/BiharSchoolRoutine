@@ -32,20 +32,17 @@ export default function MySchedulePage() {
         if (!activeRoutine || !loggedInTeacher || !todayDay) return [];
         
         const teacherId = loggedInTeacher.id;
-        const getTeacherIdFromName = (name: string): string | undefined => {
-            return teachers.find(t => t.name === name)?.id;
-        }
 
         return activeRoutine.schedule.schedule
             .filter(entry => 
                 entry.day === todayDay && 
-                getTeacherIdFromName(entry.teacher) === teacherId &&
+                entry.teacher.includes(teacherId) && // Check if teacher's ID is in the teacher string
                 entry.subject !== '---' &&
                 entry.subject !== 'Prayer' &&
                 entry.subject !== 'Lunch'
             )
             .sort((a, b) => sortTimeSlots([a.timeSlot, b.timeSlot]).indexOf(a.timeSlot) - sortTimeSlots([a.timeSlot, b.timeSlot]).indexOf(b.timeSlot));
-    }, [activeRoutine, loggedInTeacher, todayDay, teachers]);
+    }, [activeRoutine, loggedInTeacher, todayDay]);
 
     if (!user) {
         return (

@@ -16,11 +16,12 @@ import TeacherLoad from "@/components/routine/teacher-load";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const daysOfWeek: ScheduleEntry['day'][] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export default function Home() {
-  const { appState, isLoading, setIsLoading, addRoutineVersion, deleteRoutineVersion, updateRoutineVersion, setActiveRoutineId } = useContext(AppStateContext);
+  const { appState, user, isLoading, setIsLoading, addRoutineVersion, deleteRoutineVersion, updateRoutineVersion, setActiveRoutineId } = useContext(AppStateContext);
   const { routineHistory, activeRoutineId } = appState;
   const { toast } = useToast();
   const [renameValue, setRenameValue] = useState("");
@@ -32,6 +33,7 @@ export default function Home() {
   }, [routineHistory, activeRoutineId]);
 
   const handleGenerateRoutine = () => {
+    if (!user) return; // Should not happen due to disabled button
     setIsLoading(true);
     try {
       const { 
@@ -69,6 +71,7 @@ export default function Home() {
   };
   
   const handleCreateBlankRoutine = () => {
+    if (!user) return; // Should not happen due to disabled button
     setIsLoading(true);
     try {
       const { classes, timeSlots, config } = appState;
@@ -126,6 +129,91 @@ export default function Home() {
 
   const hasHistory = routineHistory && routineHistory.length > 0;
 
+  const renderGenerateButton = () => {
+     const button = (
+        <Button size="lg" disabled={isLoading || !user} onClick={handleGenerateRoutine}>
+            {isLoading ? (<Loader2 className="mr-2 h-5 w-5 animate-spin" />) : (<Wand2 className="mr-2 h-5 w-5" />)}
+            Generate Routine
+        </Button>
+     );
+
+     if (!user) {
+        return (
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild><div tabIndex={0}>{button}</div></TooltipTrigger>
+                    <TooltipContent><p>Please log in to generate a routine.</p></TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+        );
+     }
+
+     if (hasHistory) {
+         return (
+             <AlertDialog>
+                <AlertDialogTrigger asChild>{button}</AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                        This will create a new version of the routine, leaving your current active routine untouched in the history. Do you want to continue?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleGenerateRoutine}>Continue</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+             </AlertDialog>
+         );
+     }
+     
+     return button;
+  }
+  
+  const renderCreateBlankButton = () => {
+      const button = (
+         <Button size="lg" variant="outline" disabled={isLoading || !user} onClick={handleCreateBlankRoutine}>
+            <PlusSquare className="mr-2 h-5 w-5" />
+            Create Blank Routine
+        </Button>
+      );
+      
+      if (!user) {
+        return (
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild><div tabIndex={0}>{button}</div></TooltipTrigger>
+                    <TooltipContent><p>Please log in to create a routine.</p></TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+        );
+      }
+      
+      if (hasHistory) {
+          return (
+             <AlertDialog>
+                <AlertDialogTrigger asChild>{button}</AlertDialogTrigger>
+                   <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                            This will create a new version of the routine, leaving your current active routine untouched in the history. Do you want to continue?
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleCreateBlankRoutine}>Continue</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+             </AlertDialog>
+          );
+      }
+      
+      return button;
+  }
+
+
   return (
     <div className="space-y-6">
        <PageHeader 
@@ -142,66 +230,13 @@ export default function Home() {
           </CardHeader>
           <CardContent>
               <div className="flex flex-wrap gap-4">
-                 {hasHistory ? (
-                     <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                            <Button size="lg" disabled={isLoading}>
-                                {isLoading ? (<Loader2 className="mr-2 h-5 w-5 animate-spin" />) : (<Wand2 className="mr-2 h-5 w-5" />)}
-                                Generate Routine
-                            </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                This will create a new version of the routine, leaving your current active routine untouched in the history. Do you want to continue?
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleGenerateRoutine}>Continue</AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                     </AlertDialog>
-                 ) : (
-                     <Button size="lg" disabled={isLoading} onClick={handleGenerateRoutine}>
-                        {isLoading ? (<Loader2 className="mr-2 h-5 w-5 animate-spin" />) : (<Wand2 className="mr-2 h-5 w-5" />)}
-                        Generate Routine
-                    </Button>
-                 )}
-                
-                 {hasHistory ? (
-                     <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                            <Button size="lg" variant="outline" disabled={isLoading}>
-                                <PlusSquare className="mr-2 h-5 w-5" />
-                                Create Blank Routine
-                            </Button>
-                        </AlertDialogTrigger>
-                           <AlertDialogContent>
-                                <AlertDialogHeader>
-                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                    This will create a new version of the routine, leaving your current active routine untouched in the history. Do you want to continue?
-                                    </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={handleCreateBlankRoutine}>Continue</AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                     </AlertDialog>
-                 ) : (
-                    <Button size="lg" variant="outline" disabled={isLoading} onClick={handleCreateBlankRoutine}>
-                        <PlusSquare className="mr-2 h-5 w-5" />
-                        Create Blank Routine
-                    </Button>
-                 )}
+                 {renderGenerateButton()}
+                 {renderCreateBlankButton()}
               </div>
           </CardContent>
         </Card>
 
-        {routineHistory && routineHistory.length > 0 && activeRoutine && (
+        {user && routineHistory && routineHistory.length > 0 && activeRoutine && (
             <Card>
                 <CardHeader>
                     <CardTitle>Manage Active Routine</CardTitle>
@@ -276,14 +311,15 @@ export default function Home() {
           teacherSubjects={appState.config.teacherSubjects}
           dailyPeriodQuota={appState.config.dailyPeriodQuota}
           pdfHeader={appState.pdfHeader}
+          isEditable={!!user}
         />
         
-        <TeacherLoad 
-            teacherLoad={appState.teacherLoad}
-            pdfHeader={appState.pdfHeader}
-        />
+        {user && (
+          <TeacherLoad 
+              teacherLoad={appState.teacherLoad}
+              pdfHeader={appState.pdfHeader}
+          />
+        )}
     </div>
   );
 }
-
-    

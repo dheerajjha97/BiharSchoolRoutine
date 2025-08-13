@@ -78,8 +78,8 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
 
     const bookSlot = (entry: ScheduleEntry) => {
         schedule.push(entry);
-        const teachersToBook = entry.teacher.split(' & ').map(t => t.trim()).filter(t => t && t !== "N/A");
-        const classesToBook = entry.className.split(' & ').map(c => c.trim());
+        const teachersToBook = (entry.teacher || '').split(' & ').map(t => t.trim()).filter(t => t && t !== "N/A");
+        const classesToBook = (entry.className || '').split(' & ').map(c => c.trim());
 
         teachersToBook.forEach(teacherId => {
             if (bookings.teacherBookings[teacherId]) {

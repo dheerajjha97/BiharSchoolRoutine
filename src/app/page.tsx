@@ -20,8 +20,8 @@ import { Input } from "@/components/ui/input";
 const daysOfWeek: ScheduleEntry['day'][] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export default function Home() {
-  const { appState, isLoading, setIsLoading, addRoutineVersion, deleteRoutineVersion, updateRoutineVersion } = useContext(AppStateContext);
-  const { routineHistory, activeRoutineId, setActiveRoutineId } = appState;
+  const { appState, isLoading, setIsLoading, addRoutineVersion, deleteRoutineVersion, updateRoutineVersion, setActiveRoutineId } = useContext(AppStateContext);
+  const { routineHistory, activeRoutineId } = appState;
   const { toast } = useToast();
   const [renameValue, setRenameValue] = useState("");
   const [routineToRename, setRoutineToRename] = useState<RoutineVersion | null>(null);
@@ -285,3 +285,5 @@ export default function Home() {
     </div>
   );
 }
+
+    

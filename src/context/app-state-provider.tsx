@@ -3,106 +3,20 @@
 
 import { createContext, useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
-import type { GenerateScheduleOutput } from "@/ai/flows/generate-schedule";
-import type { SubjectCategory, SubjectPriority } from "@/lib/schedule-generator";
 import { sortTimeSlots } from "@/lib/utils";
 import { getFirebaseAuth, getFirestoreDB } from "@/lib/firebase";
 import { onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, type User, type AuthError } from "firebase/auth";
 import { doc, setDoc, getDoc, onSnapshot, type Unsubscribe } from "firebase/firestore";
-import type { SubstitutionPlan } from "@/lib/substitution-generator";
-import { v4 as uuidv4 } from 'uuid';
+import type { 
+    Teacher, 
+    SchoolConfig, 
+    RoutineVersion,
+    TeacherLoad,
+    GenerateScheduleOutput, 
+    AppState,
+} from '@/types';
 
-export type Teacher = {
-  id: string;
-  name: string;
-  email: string;
-};
-
-type Unavailability = {
-  teacherId: string; // Changed from teacher
-  day: string;
-  timeSlot: string;
-}
-
-export type CombinedClassRule = {
-    classes: string[];
-    subject: string;
-    teacherId: string; // Changed from teacher
-}
-
-export type SplitClassRule = {
-    className: string;
-    parts: {
-        subject: string;
-        teacherId: string; // Changed from teacher
-    }[];
-}
-
-export type RoutineVersion = {
-    id: string;
-    name: string;
-    createdAt: string;
-    schedule: GenerateScheduleOutput;
-};
-
-export type SchoolConfig = {
-  classRequirements: Record<string, string[]>;
-  subjectPriorities: Record<string, SubjectPriority>;
-  unavailability: Unavailability[];
-  teacherSubjects: Record<string, string[]>; // Key is teacherId
-  teacherClasses: Record<string, string[]>; // Key is teacherId
-  classTeachers: Record<string, string>; // Key is className, value is teacherId
-  prayerTimeSlot: string;
-  lunchTimeSlot: string;
-  preventConsecutiveClasses: boolean;
-  subjectCategories: Record<string, SubjectCategory>;
-  dailyPeriodQuota: number;
-  combinedClasses: CombinedClassRule[];
-  splitClasses: SplitClassRule[];
-};
-
-export type TeacherLoadDetail = {
-    total: number;
-    main: number;
-    additional: number;
-};
-export type TeacherLoad = Record<string, Record<string, TeacherLoadDetail>>; // Key is teacherId
-
-export type ExamEntry = {
-    id: string;
-    date: string;
-    startTime: string;
-    endTime: string;
-    classes: string[];
-    rooms: string[];
-    subject: string;
-};
-
-export type DutyChart = {
-    duties: Record<string, Record<string, string[]>>; // Key: "date-startTime", Value: { room: [teacherIds] }
-    examSlots: { date: string, startTime: string, endTime: string }[];
-};
-
-
-export type AppState = {
-  teachers: Teacher[];
-  classes: string[];
-  subjects: string[];
-  timeSlots: string[];
-  rooms: string[];
-  pdfHeader: string;
-  config: SchoolConfig;
-  routineHistory: RoutineVersion[];
-  activeRoutineId: string | null;
-  teacherLoad: TeacherLoad;
-  examTimetable: ExamEntry[];
-  // Non-persistent state for daily adjustments
-  adjustments: {
-    date: string;
-    absentTeacherIds: string[]; // Changed from absentTeachers
-    substitutionPlan: SubstitutionPlan | null;
-  }
-}
+export const AppStateContext = createContext<AppStateContextType>({} as AppStateContextType);
 
 interface AppStateContextType {
   appState: AppState;
@@ -126,8 +40,6 @@ interface AppStateContextType {
   deleteRoutineVersion: (id: string) => void;
 }
 
-export const AppStateContext = createContext<AppStateContextType>({} as AppStateContextType);
-
 const DEFAULT_ADJUSTMENTS_STATE = {
     date: new Date().toISOString().split('T')[0], // Today's date
     absentTeacherIds: [],
@@ -136,17 +48,8 @@ const DEFAULT_ADJUSTMENTS_STATE = {
 
 const LOCAL_STORAGE_KEY = "schoolRoutineState";
 
-const defaultTeachers: Teacher[] = [
-    { id: uuidv4(), name: "Mr. Sharma", email: "sharma@example.com" },
-    { id: uuidv4(), name: "Mrs. Gupta", email: "gupta@example.com" },
-    { id: uuidv4(), name: "Ms. Singh", email: "singh@example.com" },
-    { id: uuidv4(), name: "Mr. Kumar", email: "kumar@example.com" },
-    { id: uuidv4(), name: "Mrs. Roy", email: "roy@example.com" },
-    { id: uuidv4(), name: "Mr. Das", email: "das@example.com" }
-];
-
 const DEFAULT_APP_STATE: AppState = {
-  teachers: defaultTeachers,
+  teachers: [],
   classes: ["Class 9A", "Class 9B", "Class 10A", "Class 10B", "Class 11 Sci", "Class 12 Sci"],
   subjects: ["Math", "Science", "English", "History", "Physics", "Chemistry", "Biology", "Computer Science", "Hindi", "Attendance", "Library", "Art"],
   timeSlots: [
@@ -163,8 +66,8 @@ const DEFAULT_APP_STATE: AppState = {
   rooms: ["Room 101", "Room 102", "Room 103", "Hall A", "Hall B"],
   pdfHeader: "My School Name\nWeekly Class Routine\n2024-25",
   config: {
-    teacherSubjects: {}, // populated dynamically
-    teacherClasses: {}, // populated dynamically
+    teacherSubjects: {},
+    teacherClasses: {},
     classRequirements: {
         "Class 9A": ["Math", "Science", "English", "History", "Hindi", "Computer Science", "Library", "Art"],
         "Class 9B": ["Math", "Science", "English", "History", "Hindi", "Art"],
@@ -173,7 +76,7 @@ const DEFAULT_APP_STATE: AppState = {
         "Class 11 Sci": ["Physics", "Chemistry", "Math", "English", "Computer Science"],
         "Class 12 Sci": ["Physics", "Biology", "Math", "English", "Computer Science"],
     },
-    classTeachers: {}, // populated dynamically
+    classTeachers: {},
     subjectCategories: {
         "Math": "main",
         "Science": "main",

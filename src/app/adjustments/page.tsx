@@ -3,7 +3,8 @@
 
 import { useContext, useState, useMemo } from "react";
 import PageHeader from "@/components/app/page-header";
-import { AppStateContext, type Teacher } from "@/context/app-state-provider";
+import { AppStateContext } from "@/context/app-state-provider";
+import type { Teacher } from '@/types';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";

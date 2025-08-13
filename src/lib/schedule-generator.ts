@@ -1,9 +1,12 @@
 
-import type { GenerateScheduleOutput, ScheduleEntry } from "@/ai/flows/generate-schedule";
-import type { SchoolConfig, Teacher } from "@/context/app-state-provider";
-
-export type SubjectPriority = "before" | "after" | "none";
-export type SubjectCategory = "main" | "additional";
+import type { 
+    GenerateScheduleOutput, 
+    ScheduleEntry,
+    SchoolConfig,
+    Teacher,
+    SubjectPriority,
+    SubjectCategory,
+} from "@/types";
 
 export type GenerateScheduleLogicInput = {
     teachers: Teacher[];

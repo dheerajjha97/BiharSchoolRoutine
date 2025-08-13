@@ -1,20 +1,6 @@
 
-import type { ScheduleEntry } from "@/ai/flows/generate-schedule";
-import type { TeacherLoad, Teacher } from "@/context/app-state-provider";
+import type { ScheduleEntry, TeacherLoad, Teacher, SubstitutionPlan } from "@/types";
 import { dateToDay, sortTimeSlots } from "./utils";
-
-type Substitution = {
-    timeSlot: string;
-    className: string;
-    subject: string;
-    absentTeacherId: string;
-    substituteTeacherId: string;
-}
-
-export type SubstitutionPlan = {
-    date: string; // YYYY-MM-DD
-    substitutions: Substitution[];
-}
 
 type SubstitutionInput = {
     schedule: ScheduleEntry[];
@@ -27,7 +13,7 @@ type SubstitutionInput = {
 export function generateSubstitutionPlan(input: SubstitutionInput): SubstitutionPlan {
     const { schedule, allTeachers, absentTeacherIds, date, teacherLoad } = input;
 
-    const substitutions: Substitution[] = [];
+    const substitutions: SubstitutionPlan['substitutions'] = [];
     const dayOfWeek = dateToDay(date);
 
     if (!dayOfWeek) {

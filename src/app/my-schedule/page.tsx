@@ -2,18 +2,18 @@
 "use client";
 
 import { useContext, useMemo } from 'react';
-import { AppStateContext, type Teacher } from '@/context/app-state-provider';
+import { AppStateContext } from '@/context/app-state-provider';
+import type { Teacher } from '@/types';
 import PageHeader from '@/components/app/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { dateToDay, sortTimeSlots } from '@/lib/utils';
-import { ScheduleEntry } from '@/ai/flows/generate-schedule';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { UserCheck } from 'lucide-react';
 
 export default function MySchedulePage() {
     const { appState, user } = useContext(AppStateContext);
-    const { routineHistory, activeRoutineId, timeSlots, teachers } = appState;
+    const { routineHistory, activeRoutineId, teachers } = appState;
 
     const activeRoutine = useMemo(() => {
         return routineHistory.find(r => r.id === activeRoutineId);
@@ -33,15 +33,17 @@ export default function MySchedulePage() {
         
         const teacherId = loggedInTeacher.id;
 
-        return activeRoutine.schedule.schedule
+        const scheduleForDay = activeRoutine.schedule.schedule
             .filter(entry => 
                 entry.day === todayDay && 
                 entry.teacher.includes(teacherId) && // Check if teacher's ID is in the teacher string
                 entry.subject !== '---' &&
                 entry.subject !== 'Prayer' &&
                 entry.subject !== 'Lunch'
-            )
-            .sort((a, b) => sortTimeSlots([a.timeSlot, b.timeSlot]).indexOf(a.timeSlot) - sortTimeSlots([a.timeSlot, b.timeSlot]).indexOf(b.timeSlot));
+            );
+        
+        return scheduleForDay.sort((a, b) => sortTimeSlots([a.timeSlot, b.timeSlot]).indexOf(a.timeSlot) - sortTimeSlots([a.timeSlot, b.timeSlot]).indexOf(b.timeSlot));
+
     }, [activeRoutine, loggedInTeacher, todayDay]);
 
     if (!user) {

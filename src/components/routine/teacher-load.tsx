@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import type { TeacherLoad as TeacherLoadType, Teacher } from '@/context/app-state-provider';
+import type { TeacherLoad as TeacherLoadType, Teacher } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Users, FileDown, Loader2 } from "lucide-react";
@@ -20,7 +20,12 @@ interface TeacherLoadProps {
 const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Total"];
 
 export default function TeacherLoad({ teacherLoad, teachers, pdfHeader = "" }: TeacherLoadProps) {
-  const teacherIds = Object.keys(teacherLoad).sort();
+  const teacherIds = Object.keys(teacherLoad).sort((a,b) => {
+    const teacherA = teachers.find(t => t.id === a)?.name || a;
+    const teacherB = teachers.find(t => t.id === b)?.name || b;
+    return teacherA.localeCompare(teacherB);
+  });
+  
   const { toast } = useToast();
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -106,7 +111,7 @@ export default function TeacherLoad({ teacherLoad, teachers, pdfHeader = "" }: T
         });
         
         const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4'); 
+        const pdf = new jsPDF('l', 'mm', 'a4'); // Changed to landscape
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
         const imgWidth = canvas.width;

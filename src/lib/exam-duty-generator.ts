@@ -1,5 +1,5 @@
 
-import type { ExamEntry, DutyChart, Teacher } from "@/context/app-state-provider";
+import type { ExamEntry, DutyChart, Teacher } from "@/types";
 
 export function generateInvigilationDuty(
     examTimetable: ExamEntry[],

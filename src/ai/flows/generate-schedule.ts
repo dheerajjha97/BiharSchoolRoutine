@@ -1,31 +1,30 @@
 
 'use server';
 
-import { z } from 'zod';
-
 // This file is now only used for its Zod schema type definitions,
 // which are shared between the frontend and the backend logic.
 // The actual scheduling is a deterministic algorithm in /lib/schedule-generator.ts
+// All core types are imported from the central /types/index.ts file.
 
-export const ScheduleEntrySchema = z.object({
-  day: z.enum(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]),
-  timeSlot: z.string(),
-  className: z.string(),
-  subject: z.string(),
-  teacher: z.string(),
-});
+import { 
+  ScheduleEntrySchema, 
+  GenerateScheduleOutputSchema, 
+  RoutineVersionSchema,
+  type ScheduleEntry,
+  type GenerateScheduleOutput,
+  type RoutineVersion
+} from '@/types';
 
-export const GenerateScheduleOutputSchema = z.object({
-  schedule: z.array(ScheduleEntrySchema).describe("A flat list of all the scheduled classes for the week."),
-});
+// Re-export Zod schemas for any legacy imports if necessary, though direct import is preferred.
+export {
+  ScheduleEntrySchema,
+  GenerateScheduleOutputSchema,
+  RoutineVersionSchema,
+};
 
-export const RoutineVersionSchema = z.object({
-  id: z.string(),
-  createdAt: z.string(), // ISO string
-  name: z.string(),
-  schedule: GenerateScheduleOutputSchema,
-});
-
-export type ScheduleEntry = z.infer<typeof ScheduleEntrySchema>;
-export type GenerateScheduleOutput = z.infer<typeof GenerateScheduleOutputSchema>;
-export type RoutineVersion = z.infer<typeof RoutineVersionSchema>;
+// Re-export TypeScript types.
+export type {
+  ScheduleEntry,
+  GenerateScheduleOutput,
+  RoutineVersion,
+};

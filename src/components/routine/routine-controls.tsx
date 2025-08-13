@@ -17,19 +17,12 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Trash2, PlusCircle, AlertTriangle } from "lucide-react";
-import type { SchoolConfig, CombinedClassRule, SplitClassRule, Teacher } from "@/context/app-state-provider";
-import type { SubjectPriority, SubjectCategory } from "@/lib/schedule-generator";
+import type { SchoolConfig, CombinedClassRule, SplitClassRule, Teacher, SubjectPriority, SubjectCategory, Unavailability } from "@/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogTrigger } from "../ui/dialog";
 import { Popover, PopoverTrigger, PopoverContent } from "../ui/popover";
 import { Command, CommandEmpty, CommandInput, CommandGroup, CommandItem, CommandList } from "../ui/command";
 import { Check as CheckIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-type Unavailability = {
-  teacherId: string;
-  day: string;
-  timeSlot: string;
-}
 
 interface RoutineControlsProps {
   teachers: Teacher[];

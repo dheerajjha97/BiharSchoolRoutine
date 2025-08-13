@@ -25,13 +25,14 @@ import {
 } from "@/components/ui/dropdown-menu"
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import type { Teacher } from '@/context/app-state-provider';
 
 interface RoutineDisplayProps {
   scheduleData: GenerateScheduleOutput | null;
   timeSlots: string[];
   classes: string[];
   subjects: string[];
-  teachers: string[];
+  teachers: Teacher[];
   teacherSubjects: Record<string, string[]>;
   onScheduleChange: (newSchedule: ScheduleEntry[]) => void;
   dailyPeriodQuota: number;
@@ -44,7 +45,7 @@ type GridSchedule = Record<string, Record<string, Record<string, ScheduleEntry[]
 type CellData = {
     subject: string;
     className: string;
-    teacher: string;
+    teacher: string; // This will store the teacher's ID
 }
 
 const daysOfWeek: ScheduleEntry['day'][] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -95,6 +96,9 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   const [isDownloading, setIsDownloading] = React.useState(false);
   
   const { secondaryClasses, seniorSecondaryClasses } = useMemo(() => categorizeClasses(classes), [classes]);
+  const teacherNameMap = useMemo(() => new Map(teachers.map(t => [t.id, t.name])), [teachers]);
+  
+  const getTeacherName = (id: string) => teacherNameMap.get(id) || id;
 
   const instructionalSlotMap = useMemo(() => {
     const map: { [timeSlot: string]: number } = {};
@@ -167,12 +171,19 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   
   const availableTeachers = useMemo(() => {
     if (!cellData.subject || cellData.subject === '---') return teachers;
-    return teachers.filter(teacher => teacherSubjects[teacher]?.includes(cellData.subject));
+    // `teacherSubjects` is Record<teacherName, subject[]>, we need to check against teacher ID
+    return teachers.filter(teacher => {
+      const teacherName = teacher.name;
+      return teacherSubjects[teacherName]?.includes(cellData.subject)
+    });
   }, [cellData.subject, teachers, teacherSubjects]);
 
   React.useEffect(() => {
-    if (cellData.subject && cellData.teacher && !availableTeachers.includes(cellData.teacher) && cellData.teacher !== 'N/A') {
-        setCellData(prev => ({ ...prev, teacher: '' }));
+    if (cellData.subject && cellData.teacher) {
+        const teacherIsAvailable = availableTeachers.some(t => t.id === cellData.teacher);
+        if (!teacherIsAvailable && cellData.teacher !== 'N/A') {
+            setCellData(prev => ({ ...prev, teacher: '' }));
+        }
     }
   }, [cellData.subject, cellData.teacher, availableTeachers]);
   
@@ -201,7 +212,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
             toast({
                 variant: "destructive",
                 title: "Teacher Workload Exceeded",
-                description: `${cellData.teacher} already has ${otherPeriodsToday} periods on ${currentCell.day}. Cannot assign more than ${dailyPeriodQuota}.`,
+                description: `${getTeacherName(cellData.teacher)} already has ${otherPeriodsToday} periods on ${currentCell.day}. Cannot assign more than ${dailyPeriodQuota}.`,
             });
             return; // Abort save
         }
@@ -405,10 +416,12 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                     const isCombined = entry.className.includes('&');
                     const isSplit = entry.subject.includes('/');
                     
+                    const teacherNames = entry.teacher.split(' & ').map(tId => getTeacherName(tId.trim())).join(' & ');
+
                     return (
                         <div key={index} className={cn("w-full text-center p-1 bg-card rounded-md border text-xs", isClashedEntry && "bg-destructive/20")}>
                             <div className="font-semibold">{entry.subject}</div>
-                            <div className="text-muted-foreground text-[10px]">{entry.teacher || <span className="italic">N/A</span>}</div>
+                            <div className="text-muted-foreground text-[10px]">{teacherNames || <span className="italic">N/A</span>}</div>
                             {isCombined && <div className="text-muted-foreground text-[9px] italic mt-1">(Combined)</div>}
                             {isSplit && <div className="text-muted-foreground text-[9px] italic mt-1">(Split)</div>}
                         </div>
@@ -564,7 +577,8 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                 <Select value={cellData.teacher} onValueChange={(value) => setCellData({ ...cellData, teacher: value })}>
                   <SelectTrigger className="col-span-3"><SelectValue placeholder="Select teacher" /></SelectTrigger>
                   <SelectContent>
-                    {availableTeachers.map((teacher) => (<SelectItem key={teacher} value={teacher}>{teacher}</SelectItem>))}
+                     <SelectItem value="N/A">N/A</SelectItem>
+                    {availableTeachers.map((teacher) => (<SelectItem key={teacher.id} value={teacher.id}>{teacher.name}</SelectItem>))}
                   </SelectContent>
                 </Select>
               </div>
@@ -584,3 +598,5 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 };
 
 export default RoutineDisplay;
+
+    

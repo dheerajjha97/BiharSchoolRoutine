@@ -456,12 +456,13 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
             await driveServiceRef.current.saveBackup(getPersistentState(stateRef.current), freshTokenForSave);
             toast({ title: "Local data synced to Google Drive." });
           }
-        } catch (error) {
-          console.error("Google Drive sync error:", error);
+        } catch (error: any) {
+          console.error("Google Drive sync error on login:", error);
+          const errorMessage = error.message || "Could not connect to Google Drive. Please try logging out and back in.";
           toast({
             variant: "destructive",
             title: "Sync Error",
-            description: "Could not connect to Google Drive. Your data is safe locally.",
+            description: errorMessage,
           });
         } finally {
           setIsSyncing(false);

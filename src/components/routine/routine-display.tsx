@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import type { Teacher } from '@/types';
+import type { Teacher } from '@/context/app-state-provider';
 
 interface RoutineDisplayProps {
   scheduleData: GenerateScheduleOutput | null;
@@ -598,3 +598,5 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 };
 
 export default RoutineDisplay;
+
+    

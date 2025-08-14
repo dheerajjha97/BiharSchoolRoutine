@@ -1,4 +1,3 @@
-
 "use client";
 
 import { createContext, useState, useEffect, useMemo, useCallback, useRef } from "react";
@@ -86,10 +85,7 @@ const removeUndefined = (obj: any): any => {
         return Object.keys(obj).reduce((acc, key) => {
             const value = obj[key];
             if (value !== undefined) {
-                const cleanedValue = removeUndefined(value);
-                if (cleanedValue !== undefined) {
-                    (acc as any)[key] = cleanedValue;
-                }
+                acc[key] = removeUndefined(value);
             }
             return acc;
         }, {});
@@ -328,7 +324,9 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
             const firestoreData = docSnap.data() as AppState;
             setFullState(firestoreData);
           } else {
-            // First time login, create document from current (likely default) state
+            // No data in Firestore, could be a new user.
+            // Save the current (or default) state to Firestore.
+            console.log("No data in Firestore for this user. Saving initial state.");
             const stateToSave = getPersistentState(stateRef.current);
             setDoc(userDocRef, removeUndefined(stateToSave));
           }
@@ -393,12 +391,8 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         }
       } else {
         // Logged out: save to Local Storage
-        try {
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
-        } catch (err) {
-            console.error("Failed to save to Local Storage:", err);
-            toast({ variant: "destructive", title: "Local Save Failed", description: "Could not save data locally." });
-        }
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
+        console.log("Data saved to local storage.");
       }
     }, 1500);
 
@@ -434,3 +428,5 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     </AppStateContext.Provider>
   );
 };
+
+    

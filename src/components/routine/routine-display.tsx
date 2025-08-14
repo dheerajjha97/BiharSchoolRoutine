@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useMemo, useState } from 'react';
-import type { GenerateScheduleOutput, ScheduleEntry } from "@/ai/flows/generate-schedule";
+import type { GenerateScheduleOutput, ScheduleEntry, Teacher } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,7 +25,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import type { Teacher } from '@/context/app-state-provider';
 
 interface RoutineDisplayProps {
   scheduleData: GenerateScheduleOutput | null;

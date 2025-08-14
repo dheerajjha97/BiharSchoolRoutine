@@ -163,22 +163,26 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
         });
     });
 
-    // 4. Book Main Subjects (Hard Requirement)
+    // 4. Book Main Subjects (Hard Requirement) - REVISED LOGIC
     daysOfWeek.forEach(day => {
-        classes.forEach(className => {
-            const requiredSubjectsForClass = shuffleArray((classRequirements[className] || []).filter(s => subjectCategories[s] === 'main' && s !== 'Attendance'));
+        const subjectsToBook = shuffleArray(subjects.filter(s => subjectCategories[s] === 'main' && s !== 'Attendance'));
 
-            requiredSubjectsForClass.forEach(subject => {
-                if (isClassSubjectBookedForDay(className, day, subject)) return;
+        subjectsToBook.forEach(subject => {
+            shuffleArray(classes).forEach(className => {
+                const requiredSubjectsForClass = classRequirements[className] || [];
+                if (!requiredSubjectsForClass.includes(subject) || isClassSubjectBookedForDay(className, day, subject)) {
+                    return;
+                }
 
                 const qualifiedTeachers = shuffleArray(teachers.filter(t =>
-                    (teacherSubjects[t.id] || []).includes(subject) && (teacherClasses[t.id] || []).includes(className)
+                    (teacherSubjects[t.id] || []).includes(subject) && 
+                    (teacherClasses[t.id] || []).includes(className)
                 ));
-                
-                let isBooked = false;
 
                 for (const teacher of qualifiedTeachers) {
-                    if (getTeacherLoadForDay(teacher.id, day) >= dailyPeriodQuota) continue;
+                    if (getTeacherLoadForDay(teacher.id, day) >= dailyPeriodQuota) {
+                        continue;
+                    }
 
                     const priority = subjectPriorities[subject] || 'none';
                     let preferredSlots = instructionalSlots;
@@ -187,27 +191,21 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
                     } else if (priority === 'after') {
                         preferredSlots = afterLunchSlots;
                     }
-                    
-                    // First try preferred slots
-                    let availableSlot = shuffleArray(preferredSlots).find(slot =>
+
+                    const findSlot = (slots: string[]) => shuffleArray(slots).find(slot =>
                         !isTeacherBooked(teacher.id, day, slot) &&
                         !isClassBooked(className, day, slot) &&
                         !isTeacherUnavailable(teacher.id, day, slot)
                     );
-                    
-                    // If no preferred slot, try any available slot
+
+                    let availableSlot = findSlot(preferredSlots);
                     if (!availableSlot) {
-                        availableSlot = shuffleArray(instructionalSlots).find(slot =>
-                            !isTeacherBooked(teacher.id, day, slot) &&
-                            !isClassBooked(className, day, slot) &&
-                            !isTeacherUnavailable(teacher.id, day, slot)
-                        );
+                        availableSlot = findSlot(instructionalSlots.filter(s => !preferredSlots.includes(s)));
                     }
-                    
+
                     if (availableSlot) {
                         bookSlot({ day, timeSlot: availableSlot, className, subject, teacher: teacher.id });
-                        isBooked = true;
-                        break; // Move to the next subject once a teacher is found
+                        break; // Teacher found for this class, move to next class
                     }
                 }
             });

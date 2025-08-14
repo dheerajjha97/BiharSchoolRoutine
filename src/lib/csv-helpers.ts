@@ -1,5 +1,4 @@
-
-import type { AppState } from "@/context/app-state-provider";
+import type { AppState } from "@/types";
 import { sortTimeSlots } from "./utils";
 
 export const exportToJSON = (data: AppState, filename: string) => {

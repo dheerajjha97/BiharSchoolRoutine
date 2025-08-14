@@ -9,8 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Loader2, Wand2, PlusSquare, Trash2, Edit, Check, X } from "lucide-react";
 import RoutineDisplay from "@/components/routine/routine-display";
 import { generateScheduleLogic } from "@/lib/schedule-generator";
-import type { GenerateScheduleLogicInput } from "@/lib/schedule-generator";
-import type { ScheduleEntry, RoutineVersion } from "@/ai/flows/generate-schedule";
+import type { GenerateScheduleLogicInput, ScheduleEntry, RoutineVersion } from "@/types";
 import PageHeader from "@/components/app/page-header";
 import TeacherLoad from "@/components/routine/teacher-load";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";

@@ -5,6 +5,7 @@ import { useContext } from "react";
 import { AppStateContext } from "@/context/app-state-provider";
 import RoutineControls from "@/components/routine/routine-controls";
 import PageHeader from "@/components/app/page-header";
+import type { SchoolConfig, Teacher } from "@/types";
 
 export default function ConfigPage() {
     const { appState, updateConfig } = useContext(AppStateContext);

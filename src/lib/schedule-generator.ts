@@ -66,7 +66,11 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
     
     const getTeacherLoadForDay = (teacherId: string, day: string) => {
       if (!bookings.teacherBookings[teacherId]) return 0;
-      return Array.from(bookings.teacherBookings[teacherId]).filter(booking => booking.startsWith(day)).length;
+      const filteredBookings = Array.from(bookings.teacherBookings[teacherId]).filter(booking => {
+          const [bookingDay, bookingTimeSlot] = booking.split('-');
+          return bookingDay === day && bookingTimeSlot !== prayerTimeSlot && bookingTimeSlot !== lunchTimeSlot;
+      });
+      return filteredBookings.length;
     }
 
     const bookSlot = (entry: ScheduleEntry) => {
@@ -85,7 +89,6 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
                 bookings.classBookings[className].add(`${entry.day}-${entry.timeSlot}`);
             }
              if (entry.subject && entry.subject !== "---" && entry.subject !== "Prayer" && entry.subject !== "Lunch" && !entry.subject.includes('/')) {
-                // For main subjects, book them to prevent daily repetition
                 if (subjectCategories[entry.subject] === 'main') {
                     bookings.classSubjectBookings[className].add(`${entry.day}-${entry.subject}`);
                 }
@@ -151,7 +154,7 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
             if (classTeacherId && firstSlot && !isClassBooked(className, day, firstSlot) && !isTeacherBooked(classTeacherId, day, firstSlot)) {
                 // Find a suitable subject for the class teacher to teach
                 const suitableSubjects = (classRequirements[className] || [])
-                    .filter(s => subjectCategories[s] === 'main' && (teacherSubjects[classTeacherId] || []).includes(s));
+                    .filter(s => (subjectCategories[s] === 'main' || subjectCategories[s] === 'additional') && (teacherSubjects[classTeacherId] || []).includes(s));
                 
                 if (suitableSubjects.length > 0) {
                      const subjectToTeach = shuffleArray(suitableSubjects)[0];
@@ -165,14 +168,11 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
 
     // 4. Book Main Subjects (Hard Requirement) - REVISED LOGIC
     daysOfWeek.forEach(day => {
-        const subjectsToBook = shuffleArray(subjects.filter(s => subjectCategories[s] === 'main' && s !== 'Attendance'));
-
-        subjectsToBook.forEach(subject => {
-            shuffleArray(classes).forEach(className => {
-                const requiredSubjectsForClass = classRequirements[className] || [];
-                if (!requiredSubjectsForClass.includes(subject) || isClassSubjectBookedForDay(className, day, subject)) {
-                    return;
-                }
+        shuffleArray(classes).forEach(className => {
+            const requiredSubjects = shuffleArray((classRequirements[className] || []).filter(s => subjectCategories[s] === 'main'));
+            
+            requiredSubjects.forEach(subject => {
+                if (isClassSubjectBookedForDay(className, day, subject)) return;
 
                 const qualifiedTeachers = shuffleArray(teachers.filter(t =>
                     (teacherSubjects[t.id] || []).includes(subject) && 
@@ -180,32 +180,30 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
                 ));
 
                 for (const teacher of qualifiedTeachers) {
-                    if (getTeacherLoadForDay(teacher.id, day) >= dailyPeriodQuota) {
-                        continue;
-                    }
+                    if (getTeacherLoadForDay(teacher.id, day) >= dailyPeriodQuota) continue;
 
                     const priority = subjectPriorities[subject] || 'none';
                     let preferredSlots = instructionalSlots;
-                    if (priority === 'before') {
-                        preferredSlots = beforeLunchSlots;
-                    } else if (priority === 'after') {
-                        preferredSlots = afterLunchSlots;
-                    }
+                    if (priority === 'before') preferredSlots = beforeLunchSlots;
+                    else if (priority === 'after') preferredSlots = afterLunchSlots;
 
-                    const findSlot = (slots: string[]) => shuffleArray(slots).find(slot =>
+                    let availableSlot = shuffleArray(preferredSlots).find(slot =>
                         !isTeacherBooked(teacher.id, day, slot) &&
                         !isClassBooked(className, day, slot) &&
                         !isTeacherUnavailable(teacher.id, day, slot)
                     );
 
-                    let availableSlot = findSlot(preferredSlots);
                     if (!availableSlot) {
-                        availableSlot = findSlot(instructionalSlots.filter(s => !preferredSlots.includes(s)));
+                        availableSlot = shuffleArray(instructionalSlots.filter(s => !preferredSlots.includes(s))).find(slot =>
+                            !isTeacherBooked(teacher.id, day, slot) &&
+                            !isClassBooked(className, day, slot) &&
+                            !isTeacherUnavailable(teacher.id, day, slot)
+                        );
                     }
 
                     if (availableSlot) {
                         bookSlot({ day, timeSlot: availableSlot, className, subject, teacher: teacher.id });
-                        break; // Teacher found for this class, move to next class
+                        return; // Found a slot for this subject, move to next subject
                     }
                 }
             });
@@ -234,7 +232,7 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
 
                     if (qualifiedTeachers.length > 0) {
                         bookSlot({ day, timeSlot, className, subject, teacher: qualifiedTeachers[0].id });
-                        break; 
+                        return; // Slot filled for this class, move to next class
                     }
                 }
             });
@@ -266,5 +264,3 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
     
     return { schedule };
 }
-
-    

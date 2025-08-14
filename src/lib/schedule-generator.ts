@@ -2,18 +2,8 @@
 import type { 
     GenerateScheduleOutput, 
     ScheduleEntry,
-    SchoolConfig,
-    Teacher,
-    SubjectPriority,
-    SubjectCategory,
+    GenerateScheduleLogicInput
 } from "@/types";
-
-export type GenerateScheduleLogicInput = {
-    teachers: Teacher[];
-    classes: string[];
-    subjects: string[];
-    timeSlots: string[];
-} & SchoolConfig;
 
 type Booking = {
     teacherBookings: Record<string, Set<string>>; // teacherId -> "day-timeSlot"

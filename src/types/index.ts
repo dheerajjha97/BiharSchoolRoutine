@@ -67,6 +67,13 @@ export const SchoolConfigSchema = z.object({
   splitClasses: z.array(SplitClassRuleSchema),
 });
 
+export const GenerateScheduleLogicInputSchema = SchoolConfigSchema.extend({
+    teachers: z.array(TeacherSchema),
+    classes: z.array(z.string()),
+    subjects: z.array(z.string()),
+    timeSlots: z.array(z.string()),
+});
+
 export const TeacherLoadDetailSchema = z.object({
     total: z.number(),
     main: z.number(),
@@ -107,6 +114,7 @@ export const SubstitutionPlanSchema = z.object({
 export type Teacher = z.infer<typeof TeacherSchema>;
 export type ScheduleEntry = z.infer<typeof ScheduleEntrySchema>;
 export type GenerateScheduleOutput = z.infer<typeof GenerateScheduleOutputSchema>;
+export type GenerateScheduleLogicInput = z.infer<typeof GenerateScheduleLogicInputSchema>;
 export type RoutineVersion = z.infer<typeof RoutineVersionSchema>;
 export type SchoolConfig = z.infer<typeof SchoolConfigSchema>;
 export type Unavailability = z.infer<typeof UnavailabilitySchema>;

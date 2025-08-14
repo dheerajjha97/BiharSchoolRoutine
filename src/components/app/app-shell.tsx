@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -69,11 +68,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     isLoading,
   } = useContext(AppStateContext);
 
-  const loggedInTeacher = user ? appState.teachers.find(t => t.email === user.email) : null;
+  const loggedInTeacher = !isLoading && user ? appState.teachers.find(t => t.email === user.email) : undefined;
   
-  // Only determine isAdmin after loading is complete to avoid race conditions
-  const isAdmin = !isLoading && user && loggedInTeacher === null;
-
   const navItems = loggedInTeacher ? teacherNavItems : adminNavItems;
   const displayName = loggedInTeacher ? loggedInTeacher.name : user?.displayName;
 

@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useMemo, useState } from 'react';
@@ -118,42 +117,44 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 
     const bookings: Record<string, { teachers: string[]; classes: string[] }> = {};
 
-    // First pass: find raw clashes (same teacher or class booked at the same time)
     scheduleData.schedule.forEach(entry => {
-        if (!entry) return; // Safety check
+        if (!entry || !entry.day || !entry.timeSlot) return; 
         const key = `${entry.day}-${entry.timeSlot}`;
         if (!bookings[key]) {
             bookings[key] = { teachers: [], classes: [] };
         }
 
-        const entryClasses = (entry.className || '').split(' & ').map(c => c.trim());
-        const entryTeachers = (entry.teacher || '').split(' & ').map(t => t.trim()).filter(t => t && t !== "N/A");
+        const entryTeachers = (typeof entry.teacher === 'string' && entry.teacher) ? entry.teacher.split(' & ').map(t => t.trim()).filter(Boolean) : [];
+        const entryClasses = (typeof entry.className === 'string' && entry.className) ? entry.className.split(' & ').map(c => c.trim()) : [];
 
         entryTeachers.forEach(teacher => {
-            if (bookings[key].teachers.includes(teacher)) clashes.add(`teacher-${key}-${teacher}`);
+            if (teacher !== "N/A" && bookings[key].teachers.includes(teacher)) clashes.add(`teacher-${key}-${teacher}`);
             bookings[key].teachers.push(teacher);
         });
 
-        if (typeof entry.className === 'string') {
-            const entryClasses = entry.className.split(' & ').map(c => c.trim());
-            entryClasses.forEach(c => {
-                if (bookings[key].classes.includes(c)) {
-                    clashes.add(`class-${key}-${c}`); // Mark the class as clashed at this slot
-                }
-                bookings[key].classes.push(c);
-            });
-        }
+        entryClasses.forEach(c => {
+            if (bookings[key].classes.includes(c)) {
+                clashes.add(`class-${key}-${c}`);
+            }
+            bookings[key].classes.push(c);
+        });
     });
 
-    // Second pass: use the raw clash data to mark specific schedule entries
     scheduleData.schedule.forEach(entry => {
-        if (!entry) return; // Safety check
+        if (!entry || !entry.day || !entry.timeSlot || !entry.className) return;
         const key = `${entry.day}-${entry.timeSlot}`;
-        (entry.teacher || '').split(' & ').map(t => t.trim()).filter(t => t && t !== "N/A").forEach(teacher => {
-            if (clashes.has(`teacher-${key}-${teacher}`)) clashes.add(`${key}-${entry.className}-${teacher}`);
+        const entryTeachers = (typeof entry.teacher === 'string' && entry.teacher) ? entry.teacher.split(' & ').map(t => t.trim()).filter(Boolean) : [];
+        const entryClasses = (typeof entry.className === 'string' && entry.className) ? entry.className.split(' & ').map(c => c.trim()) : [];
+        
+        entryTeachers.forEach(teacher => {
+            if (teacher !== "N/A" && clashes.has(`teacher-${key}-${teacher}`)) {
+                clashes.add(`${key}-${entry.className}-${teacher}`);
+            }
         });
-        (entry.className || '').split(' & ').map(c => c.trim()).forEach(c => {
-            if (clashes.has(`class-${key}-${c}`)) clashes.add(`${key}-${c}-${entry.teacher}`);
+        entryClasses.forEach(c => {
+            if (clashes.has(`class-${key}-${c}`)) {
+                clashes.add(`${key}-${c}-${entry.teacher}`);
+            }
         });
     });
 
@@ -172,7 +173,9 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 
     if (scheduleData?.schedule) {
       scheduleData.schedule.forEach(entry => {
-        (entry.className || '').split(' & ').map(c => c.trim()).forEach(className => {
+        if (!entry || !entry.day || !entry.className || !entry.timeSlot) return;
+        const entryClasses = (typeof entry.className === 'string' && entry.className) ? entry.className.split(' & ').map(c => c.trim()) : [];
+        entryClasses.forEach(className => {
             if (grid[entry.day]?.[className]?.[entry.timeSlot]) {
               grid[entry.day][className][entry.timeSlot].push(entry);
             }
@@ -184,7 +187,6 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   
   const availableTeachers = useMemo(() => {
     if (!cellData.subject || cellData.subject === '---') return teachers;
-    // `teacherSubjects` is Record<teacherName, subject[]>, we need to check against teacher ID
     return teachers.filter(teacher => {
       const teacherName = teacher.name;
       return teacherSubjects[teacherName]?.includes(cellData.subject)
@@ -204,8 +206,8 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
     if (!isEditable) return;
     setCurrentCell({ day, timeSlot, className, entry });
     setCellData(entry ? {
-        subject: entry.subject,
-        className: entry.className,
+        subject: entry.subject || "",
+        className: entry.className || className,
         teacher: entry.teacher || "",
     } : { subject: "", className: className, teacher: "" });
     setIsCellDialogOpen(true);
@@ -216,10 +218,9 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   
     const currentSchedule = scheduleData?.schedule || [];
     
-    // Check teacher load against quota
-    if (cellData.teacher && cellData.subject !== 'Prayer' && cellData.subject !== 'Lunch') {
+    if (cellData.teacher && cellData.subject && cellData.subject !== 'Prayer' && cellData.subject !== 'Lunch' && cellData.subject !== '---') {
         const otherPeriodsToday = currentSchedule.filter(
-            e => e !== currentCell.entry && e.day === currentCell.day && e.teacher === cellData.teacher && e.subject !== 'Prayer' && e.subject !== 'Lunch'
+            e => e && e !== currentCell.entry && e.day === currentCell.day && (e.teacher || '').includes(cellData.teacher) && e.subject !== 'Prayer' && e.subject !== 'Lunch'
         ).length;
         if (otherPeriodsToday >= dailyPeriodQuota) {
             toast({
@@ -227,7 +228,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                 title: "Teacher Workload Exceeded",
                 description: `${getTeacherName(cellData.teacher)} already has ${otherPeriodsToday} periods on ${currentCell.day}. Cannot assign more than ${dailyPeriodQuota}.`,
             });
-            return; // Abort save
+            return;
         }
     }
 
@@ -263,17 +264,14 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   const handleCopyDay = (sourceDay: ScheduleEntry['day'], destinationDay: ScheduleEntry['day']) => {
     if (!scheduleData?.schedule) return;
 
-    // Filter out the destination day's entries (except breaks)
     const scheduleWithoutDestination = scheduleData.schedule.filter(entry => 
       entry.day !== destinationDay || entry.subject === 'Prayer' || entry.subject === 'Lunch'
     );
     
-    // Get all source day entries (except breaks)
     const sourceEntries = scheduleData.schedule.filter(entry => 
       entry.day === sourceDay && entry.subject !== 'Prayer' && entry.subject !== 'Lunch'
     );
 
-    // Create new entries for the destination day
     const newDestinationEntries = sourceEntries.map(entry => ({
       ...entry,
       day: destinationDay as ScheduleEntry['day']
@@ -298,7 +296,6 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 
     const wrapperDiv = document.createElement('div');
     
-    // Create and style the header div
     if (pdfHeader.trim()) {
         const headerDiv = document.createElement('div');
         headerDiv.style.textAlign = 'center';
@@ -399,7 +396,6 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
         setIsDownloading(false);
     }
   }
-
 
   const renderCellContent = (day: ScheduleEntry['day'], className: string, timeSlot: string) => {
     const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
@@ -612,7 +608,3 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 };
 
 export default RoutineDisplay;
-
-    
-
-    

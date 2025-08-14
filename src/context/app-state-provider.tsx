@@ -78,22 +78,21 @@ const DEFAULT_APP_STATE: AppState = {
 
 // Recursively removes undefined values from an object or array.
 const removeUndefined = (obj: any): any => {
+    if (obj === null || obj === undefined) return undefined;
     if (Array.isArray(obj)) {
-        return obj.map(removeUndefined);
-    } else if (obj !== null && typeof obj === 'object') {
+        return obj.map(removeUndefined).filter(v => v !== undefined);
+    } else if (typeof obj === 'object' && obj.constructor === Object) {
         return Object.keys(obj).reduce((acc, key) => {
             const value = obj[key];
             if (value !== undefined) {
-                const cleanedValue = removeUndefined(value);
-                if (cleanedValue !== undefined) {
-                    acc[key] = cleanedValue;
-                }
+                acc[key] = removeUndefined(value);
             }
             return acc;
-        }, {} as Record<string, any>);
+        }, {});
     }
     return obj;
 };
+
 
 // Function to strip non-persistent state for saving
 const getPersistentState = (state: AppState): Omit<AppState, 'adjustments' | 'teacherLoad' | 'examTimetable'> => {
@@ -120,6 +119,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         ...DEFAULT_APP_STATE,
         ...prevState,
         ...newState,
+        config: { ...DEFAULT_APP_STATE.config, ...(newState.config || {}) },
         adjustments: { ...(newState.adjustments || DEFAULT_ADJUSTMENTS_STATE) },
       };
        if (newState.timeSlots && Array.isArray(newState.timeSlots)) {
@@ -186,6 +186,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   
   useEffect(() => {
     updateState('teacherLoad', calculatedTeacherLoad);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [calculatedTeacherLoad]);
   
   const updateState = useCallback(<K extends keyof AppState>(key: K, value: AppState[K]) => {
@@ -287,25 +288,25 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   
   const handleLogout = useCallback(async () => {
     setIsAuthLoading(true);
+    const auth = getFirebaseAuth();
     try {
-      await signOut(getFirebaseAuth());
-      setFullState(DEFAULT_APP_STATE); 
-      localStorage.removeItem(LOCAL_STORAGE_KEY);
-      toast({ title: "Logged out successfully." });
+      await signOut(auth);
     } catch (error) {
       const authError = error as AuthError;
       toast({ variant: "destructive", title: "Logout Failed", description: authError.message });
     } finally {
-      setIsAuthLoading(false);
+        setIsAuthLoading(false);
+        setAppState(DEFAULT_APP_STATE); // Reset state on logout
+        localStorage.removeItem(LOCAL_STORAGE_KEY);
     }
-  }, [toast, setFullState]);
+  }, [toast]);
 
-  // Auth state listener
+  // Auth state listener - THE SINGLE SOURCE OF TRUTH FOR DATA LOADING
   useEffect(() => {
     const auth = getFirebaseAuth();
-    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+      setIsAuthLoading(true);
       setUser(currentUser);
-      setIsLoading(true);
 
       // Unsubscribe from any previous Firestore listener
       if (firestoreUnsubscribeRef.current) {
@@ -314,43 +315,44 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       }
 
       if (currentUser) {
-        // User is logged in, use Firestore
-        setIsSyncing(true);
+        // LOGGED IN: Load from Firestore
         const db = getFirestoreDB();
         const userDocRef = doc(db, "userSettings", currentUser.uid);
 
         firestoreUnsubscribeRef.current = onSnapshot(userDocRef, (docSnap) => {
           if (docSnap.exists()) {
-            const firestoreData = docSnap.data() as Omit<AppState, 'adjustments' | 'teacherLoad'>;
+            const firestoreData = docSnap.data() as AppState;
             setFullState(firestoreData);
           } else {
+            // No data in Firestore, could be a new user.
+            // Save the current (or default) state to Firestore.
+            console.log("No data in Firestore for this user. Saving initial state.");
             const stateToSave = getPersistentState(stateRef.current);
             setDoc(userDocRef, removeUndefined(stateToSave));
           }
-          setIsSyncing(false);
           setIsLoading(false);
+          setIsAuthLoading(false);
         }, (error) => {
           console.error("Firestore snapshot error:", error);
           toast({ variant: "destructive", title: "Sync Error", description: "Could not sync data from the cloud." });
-          setIsSyncing(false);
           setIsLoading(false);
+          setIsAuthLoading(false);
         });
       } else {
-        // User is logged out, use Local Storage
+        // LOGGED OUT: Load from Local Storage
+        setAppState(DEFAULT_APP_STATE); // Reset to default first
         try {
           const savedStateJSON = localStorage.getItem(LOCAL_STORAGE_KEY);
           if (savedStateJSON) {
             setFullState(JSON.parse(savedStateJSON));
-          } else {
-            setFullState(DEFAULT_APP_STATE);
           }
         } catch (error) {
           console.error("Failed to load state from local storage:", error);
         } finally {
           setIsLoading(false);
+          setIsAuthLoading(false);
         }
       }
-      setIsAuthLoading(false);
     });
 
     return () => {
@@ -359,7 +361,8 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         firestoreUnsubscribeRef.current();
       }
     };
-  }, [toast, setFullState]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Debounced save effect
   useEffect(() => {
@@ -389,6 +392,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       } else {
         // Logged out: save to Local Storage
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
+        console.log("Data saved to local storage.");
       }
     }, 1500);
 
@@ -424,3 +428,5 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     </AppStateContext.Provider>
   );
 };
+
+    

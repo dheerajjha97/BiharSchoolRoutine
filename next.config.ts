@@ -10,7 +10,7 @@ const withPWA = require('@ducanh2912/next-pwa').default({
   disable: process.env.NODE_ENV === 'development',
   workboxOptions: {
     disableDevLogs: true,
-    babelPresetEnvTargets: 'defaults',
+    babel_preset_env_targets: 'defaults',
   },
 });
 

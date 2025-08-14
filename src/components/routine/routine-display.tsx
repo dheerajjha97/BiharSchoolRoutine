@@ -112,13 +112,19 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 
   const clashSet = useMemo(() => {
     const clashes = new Set<string>();
-    if (!scheduleData?.schedule) return clashes;
+    if (!scheduleData?.schedule) {
+        return clashes;
+    }
 
     const bookings: Record<string, { teachers: string[]; classes: string[] }> = {};
 
+    // First pass: find raw clashes (same teacher or class booked at the same time)
     scheduleData.schedule.forEach(entry => {
+        if (!entry) return; // Safety check
         const key = `${entry.day}-${entry.timeSlot}`;
-        if (!bookings[key]) bookings[key] = { teachers: [], classes: [] };
+        if (!bookings[key]) {
+            bookings[key] = { teachers: [], classes: [] };
+        }
 
         const entryClasses = (entry.className || '').split(' & ').map(c => c.trim());
         const entryTeachers = (entry.teacher || '').split(' & ').map(t => t.trim()).filter(t => t && t !== "N/A");
@@ -128,13 +134,20 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
             bookings[key].teachers.push(teacher);
         });
 
-        entryClasses.forEach(c => {
-             if (bookings[key].classes.includes(c)) clashes.add(`class-${key}-${c}`);
-             bookings[key].classes.push(c);
-        });
+        if (typeof entry.className === 'string') {
+            const entryClasses = entry.className.split(' & ').map(c => c.trim());
+            entryClasses.forEach(c => {
+                if (bookings[key].classes.includes(c)) {
+                    clashes.add(`class-${key}-${c}`); // Mark the class as clashed at this slot
+                }
+                bookings[key].classes.push(c);
+            });
+        }
     });
 
+    // Second pass: use the raw clash data to mark specific schedule entries
     scheduleData.schedule.forEach(entry => {
+        if (!entry) return; // Safety check
         const key = `${entry.day}-${entry.timeSlot}`;
         (entry.teacher || '').split(' & ').map(t => t.trim()).filter(t => t && t !== "N/A").forEach(teacher => {
             if (clashes.has(`teacher-${key}-${teacher}`)) clashes.add(`${key}-${entry.className}-${teacher}`);
@@ -143,6 +156,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
             if (clashes.has(`class-${key}-${c}`)) clashes.add(`${key}-${c}-${entry.teacher}`);
         });
     });
+
     return clashes;
   }, [scheduleData]);
 
@@ -407,7 +421,8 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                  isEditable && <span className="text-muted-foreground text-xs hover:text-primary opacity-0 hover:opacity-100 transition-opacity">+</span>
             ) : (
                 entries.map((entry, index) => {
-                    if (entry.subject === '---') return null;
+                    if (!entry || entry.subject === '---') return null;
+                    
                     const isClashedEntry = isClashed && (
                         (entry.teacher || '').split(' & ').some(t => clashSet.has(`teacher-${day}-${entry.timeSlot}-${t}`)) ||
                         clashSet.has(`class-${day}-${entry.timeSlot}-${className}`)

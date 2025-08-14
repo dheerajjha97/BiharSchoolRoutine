@@ -66,10 +66,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     handleLogout,
     isAuthLoading,
     isSyncing,
+    isLoading,
   } = useContext(AppStateContext);
 
   const loggedInTeacher = user ? appState.teachers.find(t => t.email === user.email) : null;
-  const isAdmin = user && !loggedInTeacher;
+  
+  // Only determine isAdmin after loading is complete to avoid race conditions
+  const isAdmin = !isLoading && user && loggedInTeacher === null;
 
   const navItems = loggedInTeacher ? teacherNavItems : adminNavItems;
   const displayName = loggedInTeacher ? loggedInTeacher.name : user?.displayName;
@@ -135,10 +138,18 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </div>
   );
 
-  const sidebarContent = (
-    <div className="flex h-full flex-col">
-      <div className="flex-1 overflow-y-auto p-4 pt-0">
-        <nav className="grid items-start text-sm font-medium">
+  const renderNavItems = () => {
+    // Don't render nav items until we know the user's role
+    if (isLoading) {
+        return (
+            <div className="flex justify-center items-center h-full">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+        )
+    }
+
+    return (
+         <nav className="grid items-start text-sm font-medium">
           {navItems.map((item) => (
             <Link
               key={item.href}
@@ -154,6 +165,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
           ))}
         </nav>
+    );
+  }
+
+  const sidebarContent = (
+    <div className="flex h-full flex-col">
+      <div className="flex-1 overflow-y-auto p-4 pt-0">
+       {renderNavItems()}
       </div>
       <div className="mt-auto">
         {creditSection}
@@ -172,23 +190,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </Link>
         </SheetTitle>
       </SheetHeader>
-      <div className="flex-1 overflow-y-auto py-2">
-        <nav className="grid items-start px-4 text-sm font-medium">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setIsSheetOpen(false)}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-3 text-muted-foreground transition-all hover:text-primary",
-                pathname === item.href && "bg-primary/10 text-primary font-semibold"
-              )}
-            >
-              <item.icon className="h-5 w-5" />
-              {item.label}
-            </Link>
-          ))}
-        </nav>
+      <div className="flex-1 overflow-y-auto py-2 px-4">
+        {renderNavItems()}
       </div>
        <div className="mt-auto">
          {creditSection}
@@ -230,7 +233,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             {sidebarContent}
           </div>
           <main className="flex-1 bg-background p-4 md:p-6 lg:p-8 overflow-y-auto">
-            {children}
+            {isLoading ? (
+                 <div className="flex justify-center items-center h-full">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+            ) : children}
           </main>
         </div>
       </div>

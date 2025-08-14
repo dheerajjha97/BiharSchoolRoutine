@@ -27,10 +27,10 @@ export default function Home() {
   const [routineToRename, setRoutineToRename] = useState<RoutineVersion | null>(null);
 
   const activeRoutine = useMemo(() => {
-    if (!routineHistory || !activeRoutineId) return null;
-    return routineHistory.find(r => r.id === activeRoutineId) || (routineHistory.length > 0 ? routineHistory[0] : null);
+    if (!routineHistory || routineHistory.length === 0) return null;
+    return routineHistory.find(r => r.id === activeRoutineId) || routineHistory[0];
   }, [routineHistory, activeRoutineId]);
-
+  
   const handleGenerateRoutine = () => {
     setIsLoading(true);
     try {
@@ -38,8 +38,8 @@ export default function Home() {
         teachers, classes, subjects, timeSlots, config 
       } = appState;
 
-      if (teachers.length === 0 || classes.length === 0 || subjects.length === 0 || timeSlots.length === 0) {
-        throw new Error("Please define teachers, classes, subjects, and time slots in Data Management before generating a routine.");
+      if (classes.length === 0 || subjects.length === 0 || timeSlots.length === 0) {
+        throw new Error("Please define classes, subjects, and time slots in Data Management before generating a routine.");
       }
       
       const input: GenerateScheduleLogicInput = {
@@ -251,7 +251,7 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        {isLoggedIn && routineHistory && routineHistory.length > 0 && activeRoutine && (
+        {isLoggedIn && hasHistory && activeRoutine && (
             <Card>
                 <CardHeader>
                     <CardTitle>Manage Active Routine</CardTitle>
@@ -267,7 +267,7 @@ export default function Home() {
                                     <Button size="icon" variant="ghost" onClick={cancelRename}><X className="h-4 w-4" /></Button>
                                 </div>
                              ) : (
-                                <Select value={activeRoutineId || ""} onValueChange={setActiveRoutineId}>
+                                <Select value={activeRoutine.id || ""} onValueChange={setActiveRoutineId}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select a routine version..." />
                                     </SelectTrigger>
@@ -338,4 +338,3 @@ export default function Home() {
   );
 }
 
-    

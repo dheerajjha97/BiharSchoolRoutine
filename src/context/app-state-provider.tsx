@@ -132,11 +132,11 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 
   const setFullState = useCallback((newState: Partial<AppState>) => {
     setAppState(prevState => {
-      const mergedState = {
+      const mergedState: AppState = {
         ...DEFAULT_APP_STATE,
         ...prevState,
         ...newState,
-        adjustments: DEFAULT_ADJUSTMENTS_STATE,
+        adjustments: { ...(newState.adjustments || DEFAULT_ADJUSTMENTS_STATE) },
       };
        if (newState.timeSlots && Array.isArray(newState.timeSlots)) {
           mergedState.timeSlots = sortTimeSlots(newState.timeSlots);

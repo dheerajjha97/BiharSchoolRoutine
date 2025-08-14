@@ -38,8 +38,8 @@ export default function Home() {
         teachers, classes, subjects, timeSlots, config 
       } = appState;
 
-      if (teachers.length === 0 || classes.length === 0 || subjects.length === 0 || timeSlots.length === 0) {
-        throw new Error("Please define teachers, classes, subjects, and time slots in Data Management before generating a routine.");
+      if (classes.length === 0 || subjects.length === 0 || timeSlots.length === 0) {
+        throw new Error("Please define classes, subjects, and time slots in Data Management before generating a routine.");
       }
       
       const input: GenerateScheduleLogicInput = {
@@ -337,5 +337,3 @@ export default function Home() {
     </div>
   );
 }
-
-    

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useContext, useMemo, useState } from "react";
@@ -166,7 +165,7 @@ export default function Home() {
             <AlertDialogTrigger asChild>
               <Button size="lg" disabled={isLoading}>
                 {isLoading ? (<Loader2 className="mr-2 h-5 w-5 animate-spin" />) : (<Wand2 className="mr-2 h-5 w-5" />)}
-                Generate Routine
+                Generate New Routine
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
@@ -186,7 +185,7 @@ export default function Home() {
             <AlertDialogTrigger asChild>
               <Button size="lg" variant="outline" disabled={isLoading}>
                 <PlusSquare className="mr-2 h-5 w-5" />
-                Create Blank Routine
+                Create New Blank Routine
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
@@ -337,4 +336,3 @@ export default function Home() {
     </div>
   );
 }
-

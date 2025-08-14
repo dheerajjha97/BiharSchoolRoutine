@@ -1,4 +1,3 @@
-
 import type {NextConfig} from 'next';
 import 'dotenv/config';
 
@@ -11,7 +10,7 @@ const withPWA = require('@ducanh2912/next-pwa').default({
   disable: process.env.NODE_ENV === 'development',
   workboxOptions: {
     disableDevLogs: true,
-    babel_preset_env_targets: 'defaults',
+    babelPresetEnvTargets: 'defaults',
   },
 });
 

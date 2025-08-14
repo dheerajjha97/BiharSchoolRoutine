@@ -1,4 +1,3 @@
-
 "use client";
 
 import { createContext, useState, useEffect, useMemo, useCallback, useRef } from "react";
@@ -6,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { sortTimeSlots } from "@/lib/utils";
 import { getFirebaseAuth, getFirestoreDB } from "@/lib/firebase";
 import { onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, type User, type AuthError } from "firebase/auth";
-import { doc, setDoc, getDoc, onSnapshot, type Unsubscribe } from "firebase/firestore";
+import { doc, setDoc, onSnapshot, type Unsubscribe } from "firebase/firestore";
 import type { 
     Teacher, 
     SchoolConfig, 
@@ -50,55 +49,21 @@ const LOCAL_STORAGE_KEY = "schoolRoutineState";
 
 const DEFAULT_APP_STATE: AppState = {
   teachers: [],
-  classes: ["Class 9A", "Class 9B", "Class 10A", "Class 10B", "Class 11 Sci", "Class 12 Sci"],
-  subjects: ["Math", "Science", "English", "History", "Physics", "Chemistry", "Biology", "Computer Science", "Hindi", "Attendance", "Library", "Art"],
-  timeSlots: [
-    "09:00 - 09:45",
-    "09:45 - 10:30",
-    "10:30 - 11:15",
-    "11:15 - 11:30", // Prayer
-    "11:30 - 12:15",
-    "12:15 - 01:00",
-    "01:00 - 01:45", // Lunch
-    "01:45 - 02:30",
-    "02:30 - 03:15"
-  ],
-  rooms: ["Room 101", "Room 102", "Room 103", "Hall A", "Hall B"],
+  classes: [],
+  subjects: [],
+  timeSlots: [],
+  rooms: [],
   pdfHeader: "My School Name\nWeekly Class Routine\n2024-25",
   config: {
     teacherSubjects: {},
     teacherClasses: {},
-    classRequirements: {
-        "Class 9A": ["Math", "Science", "English", "History", "Hindi", "Computer Science", "Library", "Art"],
-        "Class 9B": ["Math", "Science", "English", "History", "Hindi", "Art"],
-        "Class 10A": ["Math", "Science", "English", "History", "Hindi"],
-        "Class 10B": ["Math", "Science", "English", "History", "Hindi"],
-        "Class 11 Sci": ["Physics", "Chemistry", "Math", "English", "Computer Science"],
-        "Class 12 Sci": ["Physics", "Biology", "Math", "English", "Computer Science"],
-    },
+    classRequirements: {},
     classTeachers: {},
-    subjectCategories: {
-        "Math": "main",
-        "Science": "main",
-        "English": "main",
-        "History": "additional",
-        "Physics": "main",
-        "Chemistry": "main",
-        "Biology": "main",
-        "Computer Science": "additional",
-        "Hindi": "additional",
-        "Attendance": "main",
-        "Library": "additional",
-        "Art": "additional"
-    },
-    subjectPriorities: {
-        "Math": "before",
-        "Physics": "before",
-        "Science": "before"
-    },
+    subjectCategories: {},
+    subjectPriorities: {},
     unavailability: [],
-    prayerTimeSlot: "11:15 - 11:30",
-    lunchTimeSlot: "01:00 - 01:45",
+    prayerTimeSlot: "",
+    lunchTimeSlot: "",
     preventConsecutiveClasses: true,
     dailyPeriodQuota: 5,
     combinedClasses: [],
@@ -111,6 +76,7 @@ const DEFAULT_APP_STATE: AppState = {
   adjustments: DEFAULT_ADJUSTMENTS_STATE,
 };
 
+// Recursively removes undefined values from an object or array.
 const removeUndefined = (obj: any): any => {
     if (Array.isArray(obj)) {
         return obj.map(removeUndefined);
@@ -118,7 +84,10 @@ const removeUndefined = (obj: any): any => {
         return Object.keys(obj).reduce((acc, key) => {
             const value = obj[key];
             if (value !== undefined) {
-                acc[key] = removeUndefined(value);
+                const cleanedValue = removeUndefined(value);
+                if (cleanedValue !== undefined) {
+                    acc[key] = cleanedValue;
+                }
             }
             return acc;
         }, {} as Record<string, any>);
@@ -354,11 +323,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
           if (docSnap.exists()) {
             const firestoreData = docSnap.data() as Omit<AppState, 'adjustments' | 'teacherLoad'>;
             setFullState(firestoreData);
-            console.log("Data loaded from Firestore.");
           } else {
-            // No data in Firestore, could be a new user.
-            // Save the current (or default) state to Firestore.
-            console.log("No data in Firestore for this user. Saving initial state.");
             const stateToSave = getPersistentState(stateRef.current);
             setDoc(userDocRef, removeUndefined(stateToSave));
           }
@@ -415,7 +380,6 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
           const db = getFirestoreDB();
           const userDocRef = doc(db, "userSettings", user.uid);
           await setDoc(userDocRef, stateToSave, { merge: true });
-          console.log("Data saved to Firestore.");
         } catch (err) {
           console.error("Failed to save to Firestore:", err);
           toast({ variant: "destructive", title: "Firestore Save Failed", description: (err as Error).message });
@@ -425,7 +389,6 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       } else {
         // Logged out: save to Local Storage
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
-        console.log("Data saved to local storage.");
       }
     }, 1500);
 
@@ -461,5 +424,3 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     </AppStateContext.Provider>
   );
 };
-
-    

@@ -112,37 +112,65 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 
   const clashSet = useMemo(() => {
     const clashes = new Set<string>();
-    if (!scheduleData?.schedule) return clashes;
+    if (!scheduleData?.schedule) {
+        return clashes;
+    }
 
     const bookings: Record<string, { teachers: string[]; classes: string[] }> = {};
 
+    // First pass: find raw clashes (same teacher or class booked at the same time)
     scheduleData.schedule.forEach(entry => {
+        if (!entry) return; // Safety check
         const key = `${entry.day}-${entry.timeSlot}`;
-        if (!bookings[key]) bookings[key] = { teachers: [], classes: [] };
+        if (!bookings[key]) {
+            bookings[key] = { teachers: [], classes: [] };
+        }
 
-        const entryClasses = (entry.className || '').split(' & ').map(c => c.trim());
-        const entryTeachers = (entry.teacher || '').split(' & ').map(t => t.trim()).filter(t => t && t !== "N/A");
+        if (typeof entry.teacher === 'string') {
+            const entryTeachers = entry.teacher.split(' & ').map(t => t.trim()).filter(t => t && t !== "N/A");
+            entryTeachers.forEach(teacher => {
+                if (bookings[key].teachers.includes(teacher)) {
+                    clashes.add(`teacher-${key}-${teacher}`); // Mark the teacher as clashed at this slot
+                }
+                bookings[key].teachers.push(teacher);
+            });
+        }
 
-        entryTeachers.forEach(teacher => {
-            if (bookings[key].teachers.includes(teacher)) clashes.add(`teacher-${key}-${teacher}`);
-            bookings[key].teachers.push(teacher);
-        });
-
-        entryClasses.forEach(c => {
-             if (bookings[key].classes.includes(c)) clashes.add(`class-${key}-${c}`);
-             bookings[key].classes.push(c);
-        });
+        if (typeof entry.className === 'string') {
+            const entryClasses = entry.className.split(' & ').map(c => c.trim());
+            entryClasses.forEach(c => {
+                if (bookings[key].classes.includes(c)) {
+                    clashes.add(`class-${key}-${c}`); // Mark the class as clashed at this slot
+                }
+                bookings[key].classes.push(c);
+            });
+        }
     });
 
+    // Second pass: use the raw clash data to mark specific schedule entries
     scheduleData.schedule.forEach(entry => {
+        if (!entry) return; // Safety check
         const key = `${entry.day}-${entry.timeSlot}`;
-        (entry.teacher || '').split(' & ').map(t => t.trim()).filter(t => t && t !== "N/A").forEach(teacher => {
-            if (clashes.has(`teacher-${key}-${teacher}`)) clashes.add(`${key}-${entry.className}-${teacher}`);
-        });
-        (entry.className || '').split(' & ').map(c => c.trim()).forEach(c => {
-            if (clashes.has(`class-${key}-${c}`)) clashes.add(`${key}-${c}-${entry.teacher}`);
-        });
+        
+        if (typeof entry.teacher === 'string') {
+            const entryTeachers = entry.teacher.split(' & ').map(t => t.trim()).filter(t => t && t !== "N/A");
+            entryTeachers.forEach(teacher => {
+                if (clashes.has(`teacher-${key}-${teacher}`)) {
+                    clashes.add(`${key}-${entry.className}-${teacher}`);
+                }
+            });
+        }
+
+        if (typeof entry.className === 'string') {
+            const entryClasses = entry.className.split(' & ').map(c => c.trim());
+            entryClasses.forEach(c => {
+                if (clashes.has(`class-${key}-${c}`)) {
+                    clashes.add(`${key}-${c}-${entry.teacher}`);
+                }
+            });
+        }
     });
+
     return clashes;
   }, [scheduleData]);
 
@@ -158,11 +186,13 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 
     if (scheduleData?.schedule) {
       scheduleData.schedule.forEach(entry => {
-        (entry.className || '').split(' & ').map(c => c.trim()).forEach(className => {
-            if (grid[entry.day]?.[className]?.[entry.timeSlot]) {
-              grid[entry.day][className][entry.timeSlot].push(entry);
-            }
-        });
+        if (entry && typeof entry.className === 'string') {
+            entry.className.split(' & ').map(c => c.trim()).forEach(className => {
+                if (grid[entry.day]?.[className]?.[entry.timeSlot]) {
+                  grid[entry.day][className][entry.timeSlot].push(entry);
+                }
+            });
+        }
       });
     }
     return grid;
@@ -389,10 +419,13 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 
   const renderCellContent = (day: ScheduleEntry['day'], className: string, timeSlot: string) => {
     const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
-    const isClashed = entries.some(entry => 
-        (entry.teacher || '').split(' & ').some(t => clashSet.has(`teacher-${day}-${entry.timeSlot}-${t}`)) ||
-        clashSet.has(`class-${day}-${entry.timeSlot}-${className}`)
-    );
+    const isClashed = entries.some(entry => {
+        if (!entry) return false;
+        const teachers = typeof entry.teacher === 'string' ? entry.teacher.split(' & ') : [];
+        return teachers.some(t => clashSet.has(`teacher-${day}-${entry.timeSlot}-${t}`)) ||
+               clashSet.has(`class-${day}-${entry.timeSlot}-${className}`);
+    });
+
 
     return (
         <div
@@ -407,15 +440,19 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                  isEditable && <span className="text-muted-foreground text-xs hover:text-primary opacity-0 hover:opacity-100 transition-opacity">+</span>
             ) : (
                 entries.map((entry, index) => {
-                    if (entry.subject === '---') return null;
+                    if (!entry || entry.subject === '---') return null;
+                    
                     const isClashedEntry = isClashed && (
-                        (entry.teacher || '').split(' & ').some(t => clashSet.has(`teacher-${day}-${entry.timeSlot}-${t}`)) ||
+                        (typeof entry.teacher === 'string' && entry.teacher.split(' & ').some(t => clashSet.has(`teacher-${day}-${entry.timeSlot}-${t}`))) ||
                         clashSet.has(`class-${day}-${entry.timeSlot}-${className}`)
                     );
-                    const isCombined = (entry.className || '').includes('&');
-                    const isSplit = (entry.subject || '').includes('/');
                     
-                    const teacherNames = (entry.teacher || '').split(' & ').map(tId => getTeacherName(tId.trim())).join(' & ');
+                    const isCombined = typeof entry.className === 'string' && entry.className.includes('&');
+                    const isSplit = typeof entry.subject === 'string' && entry.subject.includes('/');
+                    
+                    const teacherNames = typeof entry.teacher === 'string' 
+                        ? entry.teacher.split(' & ').map(tId => getTeacherName(tId.trim())).join(' & ') 
+                        : '';
 
                     return (
                         <div key={index} className={cn("w-full text-center p-1 bg-card rounded-md border text-xs", isClashedEntry && "bg-destructive/20")}>
@@ -597,7 +634,3 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 };
 
 export default RoutineDisplay;
-
-    
-
-    

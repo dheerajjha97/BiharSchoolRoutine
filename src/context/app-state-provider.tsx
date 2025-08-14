@@ -111,9 +111,24 @@ const DEFAULT_APP_STATE: AppState = {
   adjustments: DEFAULT_ADJUSTMENTS_STATE,
 };
 
+const removeUndefined = (obj: any): any => {
+    if (Array.isArray(obj)) {
+        return obj.map(removeUndefined);
+    } else if (obj !== null && typeof obj === 'object') {
+        return Object.keys(obj).reduce((acc, key) => {
+            const value = obj[key];
+            if (value !== undefined) {
+                acc[key] = removeUndefined(value);
+            }
+            return acc;
+        }, {} as Record<string, any>);
+    }
+    return obj;
+};
+
 // Function to strip non-persistent state for saving
-const getPersistentState = (state: AppState): Omit<AppState, 'adjustments' | 'teacherLoad'> => {
-  const { adjustments, teacherLoad, ...persistentState } = state;
+const getPersistentState = (state: AppState): Omit<AppState, 'adjustments' | 'teacherLoad' | 'examTimetable'> => {
+  const { adjustments, teacherLoad, examTimetable, ...persistentState } = state;
   return persistentState;
 };
 
@@ -168,7 +183,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     });
 
     activeRoutine.schedule.schedule.forEach(entry => {
-        if(entry.subject === "Prayer" || entry.subject === "Lunch" || entry.subject === "---") return;
+        if (!entry || entry.subject === "Prayer" || entry.subject === "Lunch" || entry.subject === "---") return;
         
         const teacherIdsInEntry = (entry.teacher || '').split(' & ').map(tId => tId.trim());
         const subjectsInEntry = (entry.subject || '').split(' / ').map(s => s.trim());
@@ -345,7 +360,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
             // Save the current (or default) state to Firestore.
             console.log("No data in Firestore for this user. Saving initial state.");
             const stateToSave = getPersistentState(stateRef.current);
-            setDoc(userDocRef, stateToSave);
+            setDoc(userDocRef, removeUndefined(stateToSave));
           }
           setIsSyncing(false);
           setIsLoading(false);
@@ -390,7 +405,9 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     }
 
     saveTimeoutRef.current = setTimeout(async () => {
-      const stateToSave = getPersistentState(stateRef.current);
+      const persistentState = getPersistentState(stateRef.current);
+      const stateToSave = removeUndefined(persistentState);
+      
       if (user) {
         // Logged in: save to Firestore
         setIsSyncing(true);
@@ -401,7 +418,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
           console.log("Data saved to Firestore.");
         } catch (err) {
           console.error("Failed to save to Firestore:", err);
-          toast({ variant: "destructive", title: "Firestore Save Failed", description: "Could not save latest changes." });
+          toast({ variant: "destructive", title: "Firestore Save Failed", description: (err as Error).message });
         } finally {
           setIsSyncing(false);
         }

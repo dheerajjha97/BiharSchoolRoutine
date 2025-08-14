@@ -120,8 +120,8 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
         const key = `${entry.day}-${entry.timeSlot}`;
         if (!bookings[key]) bookings[key] = { teachers: [], classes: [] };
 
-        const entryClasses = entry.className.split(' & ').map(c => c.trim());
-        const entryTeachers = entry.teacher.split(' & ').map(t => t.trim()).filter(t => t && t !== "N/A");
+        const entryClasses = (entry.className || '').split(' & ').map(c => c.trim());
+        const entryTeachers = (entry.teacher || '').split(' & ').map(t => t.trim()).filter(t => t && t !== "N/A");
 
         entryTeachers.forEach(teacher => {
             if (bookings[key].teachers.includes(teacher)) clashes.add(`teacher-${key}-${teacher}`);
@@ -136,10 +136,10 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 
     scheduleData.schedule.forEach(entry => {
         const key = `${entry.day}-${entry.timeSlot}`;
-        entry.teacher.split(' & ').map(t => t.trim()).filter(t => t && t !== "N/A").forEach(teacher => {
+        (entry.teacher || '').split(' & ').map(t => t.trim()).filter(t => t && t !== "N/A").forEach(teacher => {
             if (clashes.has(`teacher-${key}-${teacher}`)) clashes.add(`${key}-${entry.className}-${teacher}`);
         });
-        entry.className.split(' & ').map(c => c.trim()).forEach(c => {
+        (entry.className || '').split(' & ').map(c => c.trim()).forEach(c => {
             if (clashes.has(`class-${key}-${c}`)) clashes.add(`${key}-${c}-${entry.teacher}`);
         });
     });
@@ -158,7 +158,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 
     if (scheduleData?.schedule) {
       scheduleData.schedule.forEach(entry => {
-        entry.className.split(' & ').map(c => c.trim()).forEach(className => {
+        (entry.className || '').split(' & ').map(c => c.trim()).forEach(className => {
             if (grid[entry.day]?.[className]?.[entry.timeSlot]) {
               grid[entry.day][className][entry.timeSlot].push(entry);
             }
@@ -390,7 +390,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   const renderCellContent = (day: ScheduleEntry['day'], className: string, timeSlot: string) => {
     const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
     const isClashed = entries.some(entry => 
-        entry.teacher.split(' & ').some(t => clashSet.has(`teacher-${day}-${entry.timeSlot}-${t}`)) ||
+        (entry.teacher || '').split(' & ').some(t => clashSet.has(`teacher-${day}-${entry.timeSlot}-${t}`)) ||
         clashSet.has(`class-${day}-${entry.timeSlot}-${className}`)
     );
 
@@ -409,13 +409,13 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                 entries.map((entry, index) => {
                     if (entry.subject === '---') return null;
                     const isClashedEntry = isClashed && (
-                        entry.teacher.split(' & ').some(t => clashSet.has(`teacher-${day}-${entry.timeSlot}-${t}`)) ||
+                        (entry.teacher || '').split(' & ').some(t => clashSet.has(`teacher-${day}-${entry.timeSlot}-${t}`)) ||
                         clashSet.has(`class-${day}-${entry.timeSlot}-${className}`)
                     );
-                    const isCombined = entry.className.includes('&');
-                    const isSplit = entry.subject.includes('/');
+                    const isCombined = (entry.className || '').includes('&');
+                    const isSplit = (entry.subject || '').includes('/');
                     
-                    const teacherNames = entry.teacher.split(' & ').map(tId => getTeacherName(tId.trim())).join(' & ');
+                    const teacherNames = (entry.teacher || '').split(' & ').map(tId => getTeacherName(tId.trim())).join(' & ');
 
                     return (
                         <div key={index} className={cn("w-full text-center p-1 bg-card rounded-md border text-xs", isClashedEntry && "bg-destructive/20")}>
@@ -597,5 +597,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 };
 
 export default RoutineDisplay;
+
+    
 
     

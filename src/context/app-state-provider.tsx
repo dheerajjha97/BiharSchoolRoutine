@@ -170,8 +170,8 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     activeRoutine.schedule.schedule.forEach(entry => {
         if(entry.subject === "Prayer" || entry.subject === "Lunch" || entry.subject === "---") return;
         
-        const teacherIdsInEntry = entry.teacher.split(' & ').map(tId => tId.trim());
-        const subjectsInEntry = entry.subject.split(' / ').map(s => s.trim());
+        const teacherIdsInEntry = (entry.teacher || '').split(' & ').map(tId => tId.trim());
+        const subjectsInEntry = (entry.subject || '').split(' / ').map(s => s.trim());
 
         teacherIdsInEntry.forEach((teacherId, index) => {
             if (teacherId && teacherId !== "N/A" && load[teacherId]) {
@@ -444,3 +444,5 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     </AppStateContext.Provider>
   );
 };
+
+    

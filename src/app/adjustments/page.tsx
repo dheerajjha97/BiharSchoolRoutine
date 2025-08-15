@@ -74,15 +74,22 @@ function MultiSelectPopover({ options, selected, onSelectedChange, placeholder }
 
 export default function AdjustmentsPage() {
     const { appState, updateAdjustments } = useContext(AppStateContext);
-    const { teachers, routineHistory, activeRoutineId, teacherLoad, schoolInfo, holidays } = appState;
+    const { teachers, routineHistory, activeRoutineId, teacherLoad, schoolInfo, holidays, config } = appState;
     const { date, absentTeacherIds, substitutionPlan } = appState.adjustments;
     const { toast } = useToast();
 
     const activeRoutine = routineHistory.find(r => r.id === activeRoutineId);
 
+    const selectedDay = useMemo(() => dateToDay(date), [date]);
+    
     const holidayOnSelectedDate = useMemo(() => {
         return holidays.find(h => h.date === date);
     }, [holidays, date]);
+    
+    const isNonWorkingDay = useMemo(() => {
+        if (!selectedDay) return true; // Sundays or invalid dates
+        return !config.workingDays.includes(selectedDay);
+    }, [selectedDay, config.workingDays]);
 
 
     const handleGeneratePlan = () => {
@@ -90,17 +97,18 @@ export default function AdjustmentsPage() {
              toast({ variant: "destructive", title: "Cannot Generate on Holiday", description: `The selected date (${holidayOnSelectedDate.description}) is a holiday.` });
             return;
         }
+
+        if (isNonWorkingDay) {
+            toast({ variant: "destructive", title: "Cannot Generate on Non-Working Day", description: "The selected date is not a working day according to your configuration." });
+            return;
+        }
+
         if (!activeRoutine?.schedule?.schedule) {
             toast({ variant: "destructive", title: "No Active Routine Found", description: "Please generate or select a master routine on the dashboard first." });
             return;
         }
         if (absentTeacherIds.length === 0) {
             toast({ variant: "destructive", title: "No Absent Teachers", description: "Please select at least one absent teacher." });
-            return;
-        }
-
-        if (dateToDay(date) === null) {
-            toast({ variant: "destructive", title: "Cannot Generate for Sunday", description: "Sunday is a holiday. Please check your working days configuration." });
             return;
         }
 
@@ -161,7 +169,7 @@ export default function AdjustmentsPage() {
                             />
                         </div>
                     </div>
-                    {holidayOnSelectedDate && (
+                    {holidayOnSelectedDate ? (
                          <Alert variant="destructive">
                             <CalendarX2 className="h-4 w-4" />
                             <AlertTitle>Holiday Alert!</AlertTitle>
@@ -170,8 +178,17 @@ export default function AdjustmentsPage() {
                                 You cannot generate a substitution plan for this day.
                             </AlertDescription>
                         </Alert>
+                    ) : isNonWorkingDay && (
+                        <Alert variant="destructive">
+                            <CalendarX2 className="h-4 w-4" />
+                            <AlertTitle>Non-Working Day!</AlertTitle>
+                            <AlertDescription>
+                                The selected day (<strong>{selectedDay || 'Sunday'}</strong>) is not a working day in your configuration.
+                                You cannot generate a substitution plan for this day.
+                            </AlertDescription>
+                        </Alert>
                     )}
-                     <Button onClick={handleGeneratePlan} disabled={!activeRoutine || !!holidayOnSelectedDate}>
+                     <Button onClick={handleGeneratePlan} disabled={!activeRoutine || !!holidayOnSelectedDate || isNonWorkingDay}>
                         Generate Substitution Plan
                     </Button>
                 </CardContent>

@@ -1,7 +1,7 @@
 
 import { initializeApp, getApp, getApps, type FirebaseApp, type FirebaseOptions } from "firebase/app";
 import { getAuth, initializeAuth, browserLocalPersistence, type Auth } from "firebase/auth";
-import { initializeFirestore, getFirestore, enableIndexedDbPersistence, type Firestore } from "firebase/firestore";
+import { getFirestore, enableIndexedDbPersistence, type Firestore } from "firebase/firestore";
 
 const getConfig = (): FirebaseOptions => {
     const config = {
@@ -13,8 +13,6 @@ const getConfig = (): FirebaseOptions => {
         appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
     };
 
-    // This ensures all environment variables are present.
-    // If any are missing, it will throw an error, making it easy to debug.
     for (const [key, value] of Object.entries(config)) {
         if (!value) {
             throw new Error(`Firebase config missing: ${key}. Check your environment variables.`);
@@ -23,7 +21,7 @@ const getConfig = (): FirebaseOptions => {
     return config;
 };
 
-// This singleton pattern ensures that Firebase is initialized only once.
+// Singleton pattern to ensure only one instance of Firebase services
 let app: FirebaseApp;
 let auth: Auth;
 let db: Firestore;
@@ -33,9 +31,7 @@ function initializeFirebase() {
     if (!getApps().length) {
         const firebaseConfig = getConfig();
         app = initializeApp(firebaseConfig);
-        auth = initializeAuth(app, {
-            persistence: browserLocalPersistence,
-        });
+        auth = getAuth(app);
         db = getFirestore(app);
     } else {
         app = getApp();
@@ -44,37 +40,44 @@ function initializeFirebase() {
     }
 }
 
-// Call initialization right away
-initializeFirebase();
-
 export function getFirebaseApp(): FirebaseApp {
-    if (!app) initializeFirebase();
+    if (!app) {
+        initializeFirebase();
+    }
     return app;
 }
 
 export function getFirebaseAuth(): Auth {
-    if (!auth) initializeFirebase();
+    if (!auth) {
+        initializeFirebase();
+    }
     return auth;
 }
 
 export function getFirestoreDB(): Firestore {
-    if (!db) initializeFirebase();
+    if (!db) {
+        initializeFirebase();
+    }
     
     // Enable persistence only on the client side and only once
     if (typeof window !== 'undefined' && !persistenceEnabled) {
-         enableIndexedDbPersistence(db).then(() => {
-            persistenceEnabled = true;
-         }).catch((err) => {
-            if (err.code === 'failed-precondition') {
-                console.warn(
-                    "Firestore persistence failed: Multiple tabs open, persistence can only be enabled in one tab at a time."
-                );
-            } else if (err.code === 'unimplemented') {
-                console.warn(
-                    "Firestore persistence failed: The current browser does not support all of the features required to enable persistence."
-                );
-            }
-        });
+         try {
+            enableIndexedDbPersistence(db).then(() => {
+                persistenceEnabled = true;
+            }).catch((err) => {
+                if (err.code === 'failed-precondition') {
+                    console.warn(
+                        "Firestore persistence failed: Multiple tabs open, persistence can only be enabled in one tab at a time."
+                    );
+                } else if (err.code === 'unimplemented') {
+                    console.warn(
+                        "Firestore persistence failed: The current browser does not support all of the features required to enable persistence."
+                    );
+                }
+            });
+         } catch (e) {
+            console.error("Error enabling firestore persistence", e);
+         }
     }
 
     return db;

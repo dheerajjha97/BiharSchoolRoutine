@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -11,6 +12,12 @@ import { Separator } from "@/components/ui/separator";
 import { Logo } from "@/components/icons";
 import { useTheme } from "next-themes";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Menu,
   LayoutDashboard,
   Database,
@@ -23,7 +30,8 @@ import {
   Mail,
   ClipboardCheck,
   Replace,
-  UserCheck,
+  User,
+  UserCog,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -102,14 +110,28 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </Button>
           </>
         ) : (
-          <Button onClick={handleGoogleSignIn} disabled={isAuthLoading}>
-            {isAuthLoading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <LogIn className="mr-2 h-4 w-4" />
-            )}
-            Login with Google
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button disabled={isAuthLoading}>
+                {isAuthLoading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <LogIn className="mr-2 h-4 w-4" />
+                )}
+                Login
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleGoogleSignIn}>
+                <UserCog className="mr-2 h-4 w-4" />
+                <span>Admin Login</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleGoogleSignIn}>
+                <User className="mr-2 h-4 w-4" />
+                <span>Teacher Login</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
       </div>
     </div>

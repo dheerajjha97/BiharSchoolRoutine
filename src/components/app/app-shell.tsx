@@ -1,8 +1,9 @@
+
 "use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useContext, useState } from "react";
+import { useContext, useState, useEffect } from "react";
 import { AppStateContext } from "@/context/app-state-provider";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -58,6 +59,7 @@ function ThemeToggle() {
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [hostname, setHostname] = useState("");
   const {
     appState,
     user,
@@ -68,40 +70,52 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     isLoading,
   } = useContext(AppStateContext);
 
+  useEffect(() => {
+    // This runs only on the client, after hydration
+    setHostname(window.location.hostname);
+  }, []);
+
   const loggedInTeacher = !isLoading && user ? appState.teachers.find(t => t.email === user.email) : undefined;
   
   const navItems = loggedInTeacher ? teacherNavItems : adminNavItems;
   const displayName = loggedInTeacher ? loggedInTeacher.name : user?.displayName;
 
   const authControls = (
-    <div className="flex items-center gap-2">
-      {isSyncing && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span>Syncing...</span>
-        </div>
-      )}
-       <ThemeToggle />
-      {user ? (
-        <>
-          <Avatar className="h-8 w-8">
-            <AvatarImage src={user.photoURL || undefined} alt={displayName || user.email || 'User'} />
-            <AvatarFallback>{displayName?.charAt(0) || user.email?.charAt(0)}</AvatarFallback>
-          </Avatar>
-          <Button variant="outline" size="sm" onClick={handleLogout} disabled={isAuthLoading}>
-            <LogOut className="mr-2 h-4 w-4" />
-            Logout
+    <div className="flex flex-col items-end gap-1">
+      <div className="flex items-center gap-2">
+        {isSyncing && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Syncing...</span>
+          </div>
+        )}
+        <ThemeToggle />
+        {user ? (
+          <>
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={user.photoURL || undefined} alt={displayName || user.email || 'User'} />
+              <AvatarFallback>{displayName?.charAt(0) || user.email?.charAt(0)}</AvatarFallback>
+            </Avatar>
+            <Button variant="outline" size="sm" onClick={handleLogout} disabled={isAuthLoading}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Logout
+            </Button>
+          </>
+        ) : (
+          <Button onClick={handleGoogleSignIn} disabled={isAuthLoading}>
+            {isAuthLoading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <LogIn className="mr-2 h-4 w-4" />
+            )}
+            Login with Google
           </Button>
-        </>
-      ) : (
-        <Button onClick={handleGoogleSignIn} disabled={isAuthLoading}>
-          {isAuthLoading ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <LogIn className="mr-2 h-4 w-4" />
-          )}
-          Login with Google
-        </Button>
+        )}
+      </div>
+      {!user && hostname && (
+        <p className="text-xs text-muted-foreground pr-1">
+          Current domain: <code className="bg-muted px-1 py-0.5 rounded">{hostname}</code>
+        </p>
       )}
     </div>
   );

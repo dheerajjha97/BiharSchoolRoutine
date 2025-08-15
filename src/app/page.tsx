@@ -204,8 +204,8 @@ export default function Home() {
               )}
           </CardContent>
         </Card>
-    )
-  }
+    );
+  };
   
   const renderAdminView = () => {
      const formattedTeacherSubjects = Object.fromEntries(
@@ -304,8 +304,8 @@ export default function Home() {
               pdfHeader={appState.pdfHeader}
           />
       </>
-    )
-  }
+    );
+  };
   
   const renderTeacherView = () => {
     if (!loggedInTeacher) {
@@ -315,11 +315,11 @@ export default function Home() {
             <AlertTitle>Teacher Not Found</AlertTitle>
             <AlertDescription>Your email ({user?.email}) is not registered as a teacher in the system. Please contact the administrator.</AlertDescription>
         </Alert>
-      )
+      );
     }
     
     return <TeacherScheduleView teacher={loggedInTeacher} />;
-  }
+  };
 
   if (isLoading) {
     return (

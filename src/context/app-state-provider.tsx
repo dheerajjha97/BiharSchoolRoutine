@@ -289,22 +289,6 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       };
     });
   }, []);
-
-  const handleGoogleSignIn = useCallback(async () => {
-    setIsAuthLoading(true);
-    const auth = getFirebaseAuth();
-    const provider = new GoogleAuthProvider();
-    try {
-      await signInWithPopup(auth, provider);
-      // onAuthStateChanged will handle the redirect and data loading
-    } catch (error) {
-      const authError = error as AuthError;
-      if (authError.code !== 'auth/popup-closed-by-user') {
-          toast({ variant: "destructive", title: "Login Failed", description: authError.message });
-      }
-      setIsAuthLoading(false);
-    }
-  }, [toast]);
   
   const handleLogout = useCallback(async () => {
     setIsAuthLoading(true);
@@ -325,6 +309,22 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         setIsAuthLoading(false);
     }
   }, [toast, router]);
+
+  const handleGoogleSignIn = useCallback(async () => {
+    setIsAuthLoading(true);
+    const auth = getFirebaseAuth();
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+      // onAuthStateChanged will handle the redirect and data loading
+    } catch (error) {
+      const authError = error as AuthError;
+      if (authError.code !== 'auth/popup-closed-by-user') {
+          toast({ variant: "destructive", title: "Login Failed", description: authError.message });
+      }
+      setIsAuthLoading(false);
+    }
+  }, [toast]);
 
   // Auth state listener
   useEffect(() => {
@@ -350,11 +350,18 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         if (userDocSnap.exists() && userDocSnap.data()?.udise) {
             udiseCode = userDocSnap.data()?.udise;
         } else {
-            // Check if user is a teacher in any school
-            const teachersQuery = query(collection(db, "schoolData"), where("teachers", "array-contains", { email: currentUser.email }));
-            const querySnapshot = await getDocs(teachersQuery);
-            if (!querySnapshot.empty) {
-                udiseCode = querySnapshot.docs[0].id; // UDISE code is the document ID
+            // Check if user is a teacher in any school, by looking for their email.
+            const schoolDataCollectionRef = collection(db, "schoolData");
+            const teachersQuery = query(schoolDataCollectionRef, where("teachers", "array-contains", { email: currentUser.email }));
+            
+            try {
+                const querySnapshot = await getDocs(teachersQuery);
+                if (!querySnapshot.empty) {
+                    // Assuming a teacher's email is unique across all schools
+                    udiseCode = querySnapshot.docs[0].id; // The document ID is the UDISE code
+                }
+            } catch (error) {
+                console.error("Error querying for teacher's school:", error);
             }
         }
 
@@ -377,13 +384,14 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
                 setIsAuthLoading(false);
             });
         } else {
-            // New user, probably an admin setting up a school for the first time.
-            setAppState(DEFAULT_APP_STATE);
-            setIsLoading(false);
-            setIsAuthLoading(false);
-             if (pathname === '/login') {
-                router.replace('/');
-            }
+            // No associated school data found for this user.
+            toast({
+                variant: "destructive",
+                title: "No School Data Found",
+                description: "No school data found for your account. Please contact an administrator.",
+                duration: 5000,
+            });
+            await handleLogout(); // Log out the user and redirect to login.
         }
 
       } else {
@@ -401,7 +409,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [handleLogout]);
 
   // Debounced save effect
   useEffect(() => {
@@ -481,3 +489,4 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     </AppStateContext.Provider>
   );
 };
+

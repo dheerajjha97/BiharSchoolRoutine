@@ -225,12 +225,13 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     }));
   }, []);
   
-  const addRoutineVersion = useCallback((schedule: GenerateScheduleOutput, name?: string) => {
+  const addRoutineVersion = useCallback((scheduleOutput: GenerateScheduleOutput, name?: string) => {
     const newVersion: RoutineVersion = {
       id: `routine_${Date.now()}`,
       createdAt: new Date().toISOString(),
       name: name || `School Routine - ${new Date().toLocaleString()}`,
-      schedule,
+      schedule: scheduleOutput,
+      teacherLoad: {}, // Initialize with an empty object to avoid undefined
     };
 
     setAppState(prevState => {
@@ -282,7 +283,9 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       await signInWithPopup(auth, provider);
     } catch (error) {
       const authError = error as AuthError;
-      toast({ variant: "destructive", title: "Login Failed", description: authError.message });
+      if (authError.code !== 'auth/popup-closed-by-user') {
+          toast({ variant: "destructive", title: "Login Failed", description: authError.message });
+      }
     } finally {
       setIsAuthLoading(false);
     }
@@ -395,7 +398,6 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         // Logged out: save to Local Storage
         try {
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
-            console.log("Data saved to local storage.");
         } catch (err) {
             console.error("Failed to save to local storage:", err);
             toast({ variant: "destructive", title: "Local Save Failed", description: "Could not save data to your browser." });
@@ -435,3 +437,5 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     </AppStateContext.Provider>
   );
 };
+
+    

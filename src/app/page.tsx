@@ -32,14 +32,14 @@ export default function Home() {
     return routineHistory.find(r => r.id === activeRoutineId) || routineHistory[0];
   }, [routineHistory, activeRoutineId]);
 
-  const loggedInTeacher = useMemo(() => {
-    return user ? teachers.find(t => t.email === user.email) : undefined;
-  }, [user, teachers]);
-
-  const isUserAdmin = useMemo(() => {
-    // A user is an admin if they are logged in and NOT found in the teachers list.
-    return user && !loggedInTeacher;
-  }, [user, loggedInTeacher]);
+  const { loggedInTeacher, isUserAdmin } = useMemo(() => {
+    if (!user || isLoading) {
+        return { loggedInTeacher: undefined, isUserAdmin: false };
+    }
+    const teacher = teachers.find(t => t.email === user.email);
+    const isAdmin = !!user && !teacher;
+    return { loggedInTeacher: teacher, isUserAdmin: isAdmin };
+  }, [user, teachers, isLoading]);
   
   const handleGenerateRoutine = () => {
     setIsLoading(true);
@@ -151,7 +151,7 @@ export default function Home() {
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button size="lg" disabled={isLoading}>
-                        {isLoading ? (<Loader2 className="mr-2 h-5 w-5 animate-spin" />) : (<Wand2 className="mr-2 h-5 w-5" />)}
+                        {isLoading ? (<Loader2 className="mr-2 h-5 w-5 animate-spin" />) : (<Wand2 className="mr-2 h-5 w-5" />}
                         Generate New Routine
                       </Button>
                     </AlertDialogTrigger>
@@ -192,7 +192,7 @@ export default function Home() {
               ) : (
                  <div className="flex flex-wrap gap-4">
                     <Button size="lg" disabled={isLoading} onClick={handleGenerateRoutine}>
-                      {isLoading ? (<Loader2 className="mr-2 h-5 w-5 animate-spin" />) : (<Wand2 className="mr-2 h-5 w-5" />)}
+                      {isLoading ? (<Loader2 className="mr-2 h-5 w-5 animate-spin" />) : (<Wand2 className="mr-2 h-5 w-5" />}
                       Generate Routine
                     </Button>
                     <Button size="lg" variant="outline" disabled={isLoading} onClick={handleCreateBlankRoutine}>
@@ -318,6 +318,14 @@ export default function Home() {
     }
     
     return <TeacherScheduleView teacher={loggedInTeacher} />;
+  }
+
+  if (isLoading) {
+    return (
+        <div className="flex justify-center items-center h-full">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+    );
   }
 
   return (

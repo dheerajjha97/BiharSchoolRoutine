@@ -91,7 +91,7 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
             }
              if (entry.subject && entry.subject !== "---" && entry.subject !== "Prayer" && entry.subject !== "Lunch" && !(entry.subject || '').includes('/')) {
                 if (subjectCategories[entry.subject] === 'main') {
-                    bookings.classSubjectBookings[className].add(`${day}-${entry.subject}`);
+                    bookings.classSubjectBookings[className].add(`${entry.day}-${entry.subject}`);
                 }
             }
         });

@@ -3,13 +3,15 @@
 
 import { useContext, useMemo } from 'react';
 import { AppStateContext } from '@/context/app-state-provider';
-import type { Teacher } from '@/types';
+import type { Teacher, ScheduleEntry } from '@/types';
 import PageHeader from '@/components/app/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { dateToDay, sortTimeSlots } from '@/lib/utils';
+import { sortTimeSlots } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { UserCheck } from 'lucide-react';
+
+const daysOfWeek: ScheduleEntry['day'][] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export default function MySchedulePage() {
     const { appState, user } = useContext(AppStateContext);
@@ -19,32 +21,39 @@ export default function MySchedulePage() {
         return routineHistory.find(r => r.id === activeRoutineId);
     }, [routineHistory, activeRoutineId]);
 
-    const todayDay = useMemo(() => {
-        return dateToDay(new Date().toISOString().split('T')[0]);
-    }, []);
-
     const loggedInTeacher: Teacher | undefined = useMemo(() => {
         if (!user || !user.email) return undefined;
         return teachers.find(t => t.email === user.email);
     }, [user, teachers]);
 
-    const teacherSchedule = useMemo(() => {
-        if (!activeRoutine || !loggedInTeacher || !todayDay) return [];
+    const teacherWeeklySchedule = useMemo(() => {
+        if (!activeRoutine?.schedule?.schedule || !loggedInTeacher) return {};
         
         const teacherId = loggedInTeacher.id;
+        const weeklySchedule: Record<string, ScheduleEntry[]> = {};
 
-        const scheduleForDay = activeRoutine.schedule.schedule
-            .filter(entry => 
-                entry.day === todayDay && 
-                entry.teacher && entry.teacher.includes(teacherId) && // Check if teacher's ID is in the teacher string
-                entry.subject !== '---' &&
-                entry.subject !== 'Prayer' &&
-                entry.subject !== 'Lunch'
-            );
+        daysOfWeek.forEach(day => {
+            const scheduleForDay = activeRoutine.schedule.schedule
+                .filter(entry => 
+                    entry &&
+                    entry.day === day && 
+                    entry.teacher && entry.teacher.includes(teacherId) &&
+                    entry.subject !== '---' &&
+                    entry.subject !== 'Prayer' &&
+                    entry.subject !== 'Lunch'
+                )
+                .sort((a, b) => sortTimeSlots([a.timeSlot, b.timeSlot]).indexOf(a.timeSlot) - sortTimeSlots([a.timeSlot, b.timeSlot]).indexOf(b.timeSlot));
+            
+            if (scheduleForDay.length > 0) {
+                weeklySchedule[day] = scheduleForDay;
+            }
+        });
         
-        return scheduleForDay.sort((a, b) => sortTimeSlots([a.timeSlot, b.timeSlot]).indexOf(a.timeSlot) - sortTimeSlots([a.timeSlot, b.timeSlot]).indexOf(b.timeSlot));
+        return weeklySchedule;
 
-    }, [activeRoutine, loggedInTeacher, todayDay]);
+    }, [activeRoutine, loggedInTeacher]);
+
+    const weekHasClasses = Object.keys(teacherWeeklySchedule).length > 0;
 
     if (!user) {
         return (
@@ -79,46 +88,56 @@ export default function MySchedulePage() {
     return (
         <div className="space-y-6">
             <PageHeader 
-                title={`My Schedule for ${todayDay || 'Today'}`}
-                description={`Welcome, ${loggedInTeacher.name}. Here are your classes for today, ${new Date().toLocaleDateString('en-GB')}.`}
+                title={`My Weekly Schedule`}
+                description={`Welcome, ${loggedInTeacher.name}. Here are your classes for the week.`}
             />
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Today's Classes</CardTitle>
+                    <CardTitle>Your Classes</CardTitle>
                     <CardDescription>
-                        A summary of your scheduled classes and periods for today. This is based on your registered email: {user.email}.
+                        A summary of your scheduled classes for the entire week. This is based on your registered email: {user.email}.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="border rounded-lg overflow-hidden">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead className="font-semibold">Time Slot</TableHead>
-                                    <TableHead className="font-semibold">Class</TableHead>
-                                    <TableHead className="font-semibold">Subject</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {teacherSchedule.length > 0 ? (
-                                    teacherSchedule.map((entry, index) => (
-                                        <TableRow key={index}>
-                                            <TableCell>{entry.timeSlot}</TableCell>
-                                            <TableCell>{entry.className}</TableCell>
-                                            <TableCell>{entry.subject}</TableCell>
-                                        </TableRow>
-                                    ))
-                                ) : (
-                                    <TableRow>
-                                        <TableCell colSpan={3} className="text-center h-24 text-muted-foreground">
-                                            You have no classes scheduled for today.
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    </div>
+                    {weekHasClasses ? (
+                        <div className="space-y-6">
+                            {daysOfWeek.map(day => {
+                                const daySchedule = teacherWeeklySchedule[day];
+                                if (!daySchedule || daySchedule.length === 0) return null;
+
+                                return (
+                                    <div key={day}>
+                                        <h3 className="text-lg font-semibold mb-2 border-b pb-2">{day}</h3>
+                                        <div className="border rounded-lg overflow-hidden">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead className="font-semibold">Time Slot</TableHead>
+                                                        <TableHead className="font-semibold">Class</TableHead>
+                                                        <TableHead className="font-semibold">Subject</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {daySchedule.map((entry, index) => (
+                                                        <TableRow key={index}>
+                                                            <TableCell>{entry.timeSlot}</TableCell>
+                                                            <TableCell>{entry.className}</TableCell>
+                                                            <TableCell>{entry.subject}</TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                         <div className="text-center py-12 text-muted-foreground">
+                            <p>You have no classes scheduled for the week.</p>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         </div>

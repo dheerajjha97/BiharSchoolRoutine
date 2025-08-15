@@ -46,8 +46,6 @@ const DEFAULT_ADJUSTMENTS_STATE = {
     substitutionPlan: null
 };
 
-const LOCAL_STORAGE_KEY = "schoolRoutineState";
-
 const DEFAULT_APP_STATE: AppState = {
   teachers: [],
   classes: [],
@@ -85,24 +83,28 @@ const getPersistentState = (state: AppState): Omit<AppState, 'adjustments' | 'te
 
 // Recursively removes undefined values from an object. Firestore cannot store them.
 const removeUndefined = (obj: any): any => {
-    if (typeof obj !== 'object' || obj === null) {
-        return obj;
+    if (obj === null || obj === undefined) {
+        return undefined;
     }
 
     if (Array.isArray(obj)) {
         return obj.map(item => removeUndefined(item));
     }
 
-    const newObj: { [key: string]: any } = {};
-    for (const key in obj) {
-        if (Object.prototype.hasOwnProperty.call(obj, key)) {
-            const value = obj[key];
-            if (value !== undefined) {
-                newObj[key] = removeUndefined(value);
+    if (typeof obj === 'object') {
+        const newObj: { [key: string]: any } = {};
+        for (const key in obj) {
+            if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                const value = removeUndefined(obj[key]);
+                if (value !== undefined) {
+                    newObj[key] = value;
+                }
             }
         }
+        return newObj;
     }
-    return newObj;
+    
+    return obj;
 };
 
 
@@ -117,6 +119,8 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   const stateRef = useRef(appState);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const firestoreUnsubscribeRef = useRef<Unsubscribe | null>(null);
+  
+  const SCHOOL_DATA_DOC_ID = "main"; // Use a fixed ID for the school data document
 
   const setFullState = useCallback((newState: Partial<AppState>) => {
     setAppState(prevState => {
@@ -235,7 +239,6 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       createdAt: new Date().toISOString(),
       name: name || `School Routine - ${new Date().toLocaleString()}`,
       schedule: scheduleOutput,
-      teacherLoad: {}, // Always initialize with an empty object
     };
 
     setAppState(prevState => {
@@ -304,37 +307,36 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       const authError = error as AuthError;
       toast({ variant: "destructive", title: "Logout Failed", description: authError.message });
     } finally {
-        // State changes will be handled by the onAuthStateChanged listener
+        // State changes are handled by the onAuthStateChanged listener
     }
   }, [toast]);
 
-  // Auth state listener - THE SINGLE SOURCE OF TRUTH FOR DATA LOADING
+  // Auth state listener
   useEffect(() => {
     const auth = getFirebaseAuth();
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
-      setIsLoading(true); // Start loading on any auth change
+      setIsLoading(true);
       setUser(currentUser);
 
-      // Unsubscribe from any previous Firestore listener
       if (firestoreUnsubscribeRef.current) {
         firestoreUnsubscribeRef.current();
         firestoreUnsubscribeRef.current = null;
       }
 
       if (currentUser) {
-        // LOGGED IN: Load from Firestore
+        // LOGGED IN: Load from the single shared Firestore document
         const db = getFirestoreDB();
-        const userDocRef = doc(db, "userSettings", currentUser.uid);
+        const schoolDocRef = doc(db, "schoolData", SCHOOL_DATA_DOC_ID);
 
-        firestoreUnsubscribeRef.current = onSnapshot(userDocRef, (docSnap) => {
+        firestoreUnsubscribeRef.current = onSnapshot(schoolDocRef, (docSnap) => {
           if (docSnap.exists()) {
             const firestoreData = docSnap.data();
             setFullState(firestoreData as Partial<AppState>);
           } else {
-            // No data in Firestore for this new user.
-            // Save the current (or default) state to Firestore to initialize it.
+            // Document doesn't exist, likely first run for the school.
+            // Save the default state to initialize it.
             const stateToSave = getPersistentState(stateRef.current);
-            setDoc(userDocRef, removeUndefined(stateToSave));
+            setDoc(schoolDocRef, removeUndefined(stateToSave));
           }
           setIsLoading(false);
           setIsAuthLoading(false);
@@ -345,19 +347,10 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
           setIsAuthLoading(false);
         });
       } else {
-        // LOGGED OUT: Load from Local Storage
-        setAppState(DEFAULT_APP_STATE); // Reset to default first
-        try {
-          const savedStateJSON = localStorage.getItem(LOCAL_STORAGE_KEY);
-          if (savedStateJSON) {
-            setFullState(JSON.parse(savedStateJSON));
-          }
-        } catch (error) {
-          console.error("Failed to load state from local storage:", error);
-        } finally {
-          setIsLoading(false);
-          setIsAuthLoading(false);
-        }
+        // LOGGED OUT: Reset to default state. No local storage persistence.
+        setAppState(DEFAULT_APP_STATE);
+        setIsLoading(false);
+        setIsAuthLoading(false);
       }
     });
 
@@ -372,7 +365,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 
   // Debounced save effect
   useEffect(() => {
-    if (isLoading) return; // Don't save while initially loading state
+    if (isLoading || isAuthLoading || !user) return; // Don't save while loading or if logged out
 
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
@@ -382,28 +375,17 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       const persistentState = getPersistentState(stateRef.current);
       const stateToSave = removeUndefined(persistentState);
       
-      if (user) {
-        // Logged in: save to Firestore
-        if (isSyncing) return; // Prevent concurrent saves
-        setIsSyncing(true);
-        try {
-          const db = getFirestoreDB();
-          const userDocRef = doc(db, "userSettings", user.uid);
-          await setDoc(userDocRef, stateToSave, { merge: true });
-        } catch (err) {
-          console.error("Failed to save to Firestore:", err);
-          toast({ variant: "destructive", title: "Firestore Save Failed", description: (err as Error).message });
-        } finally {
-          setIsSyncing(false);
-        }
-      } else {
-        // Logged out: save to Local Storage
-        try {
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
-        } catch (err) {
-            console.error("Failed to save to local storage:", err);
-            toast({ variant: "destructive", title: "Local Save Failed", description: "Could not save data to your browser." });
-        }
+      if (isSyncing) return; // Prevent concurrent saves
+      setIsSyncing(true);
+      try {
+        const db = getFirestoreDB();
+        const schoolDocRef = doc(db, "schoolData", SCHOOL_DATA_DOC_ID);
+        await setDoc(schoolDocRef, stateToSave, { merge: true });
+      } catch (err) {
+        console.error("Failed to save to Firestore:", err);
+        toast({ variant: "destructive", title: "Firestore Save Failed", description: (err as Error).message });
+      } finally {
+        setIsSyncing(false);
       }
     }, 1500);
 
@@ -412,7 +394,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [appState, user, isLoading, toast, isSyncing]);
+  }, [appState, user, isLoading, isAuthLoading, toast, isSyncing]);
 
   return (
     <AppStateContext.Provider value={{ 

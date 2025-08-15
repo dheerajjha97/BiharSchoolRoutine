@@ -212,16 +212,22 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   
   const updateState = useCallback(<K extends keyof AppState>(key: K, value: AppState[K]) => {
     setAppState(prevState => {
-      const newState = { ...prevState, [key]: value };
+      let newState = { ...prevState, [key]: value };
+      
       if (key === 'timeSlots' && Array.isArray(value)) {
         newState.timeSlots = sortTimeSlots(value as string[]);
       }
-      if (['teachers', 'classes', 'subjects', 'timeSlots', 'rooms', 'holidays'].includes(key as string)) {
-          newState.routineHistory = [];
-          newState.activeRoutineId = null;
-          newState.teacherLoad = {};
-          newState.adjustments = DEFAULT_ADJUSTMENTS_STATE;
-          newState.examTimetable = [];
+      
+      // Reset history only when core data that invalidates a routine is changed
+      if (['teachers', 'classes', 'subjects', 'timeSlots', 'rooms'].includes(key as string)) {
+          newState = {
+            ...newState,
+            routineHistory: [],
+            activeRoutineId: null,
+            teacherLoad: {},
+            adjustments: DEFAULT_ADJUSTMENTS_STATE,
+            examTimetable: [],
+          };
       }
       return newState;
     });
@@ -231,10 +237,6 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
      setAppState(prevState => ({
         ...prevState,
         config: { ...prevState.config, [key]: value },
-        routineHistory: [], 
-        activeRoutineId: null,
-        teacherLoad: {},
-        adjustments: DEFAULT_ADJUSTMENTS_STATE,
     }));
   }, []);
 
@@ -390,8 +392,8 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
             setFullState(DEFAULT_APP_STATE);
             setIsLoading(false);
             setIsAuthLoading(false);
-            if (pathname === '/login') {
-                router.replace('/');
+             if (pathname !== '/data' && pathname !== '/login') {
+                router.replace('/data');
             }
         }
       } else {

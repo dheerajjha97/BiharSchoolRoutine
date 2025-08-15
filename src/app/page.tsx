@@ -6,7 +6,7 @@ import { AppStateContext } from "@/context/app-state-provider";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Wand2, PlusSquare, Trash2, Edit, Check, X, UserCheck, UserX } from "lucide-react";
+import { Loader2, Wand2, PlusSquare, Trash2, Edit, Check, X, UserX } from "lucide-react";
 import RoutineDisplay from "@/components/routine/routine-display";
 import { generateScheduleLogic } from "@/lib/schedule-generator";
 import type { GenerateScheduleLogicInput, ScheduleEntry, RoutineVersion, Teacher } from "@/types";
@@ -157,23 +157,27 @@ export default function Home() {
       title: !isSchoolInfoSet ? "Please set School Name and UDISE code first" : ""
     };
     
+    // NOTE: The onClick handler is removed from the <Button> itself when it's wrapped in a confirmation dialog.
+    // The action is handled by the AlertDialogAction component.
     const generateButton = (
-      <Button size="lg" {...commonButtonProps} onClick={handleGenerateRoutine}>
+      <Button size="lg" {...commonButtonProps} onClick={hasHistory ? undefined : handleGenerateRoutine}>
         {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Wand2 className="mr-2 h-5 w-5" />}
         Generate New Routine
       </Button>
     );
 
     const blankButton = (
-      <Button size="lg" variant="outline" {...commonButtonProps} onClick={handleCreateBlankRoutine}>
+      <Button size="lg" variant="outline" {...commonButtonProps} onClick={hasHistory ? undefined : handleCreateBlankRoutine}>
         <PlusSquare className="mr-2 h-5 w-5" />
         Create New Blank Routine
       </Button>
     );
 
-    const withConfirmation = (trigger: React.ReactNode) => (
+    const withConfirmation = (trigger: 'generate' | 'blank') => (
       <AlertDialog>
-        <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
+        <AlertDialogTrigger asChild>
+          {trigger === 'generate' ? generateButton : blankButton}
+        </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
@@ -183,7 +187,7 @@ export default function Home() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={trigger === generateButton ? handleGenerateRoutine : handleCreateBlankRoutine}>Continue</AlertDialogAction>
+            <AlertDialogAction onClick={trigger === 'generate' ? handleGenerateRoutine : handleCreateBlankRoutine}>Continue</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -199,8 +203,8 @@ export default function Home() {
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-4">
-              {hasHistory ? withConfirmation(generateButton) : generateButton}
-              {hasHistory ? withConfirmation(blankButton) : blankButton}
+              {hasHistory ? withConfirmation('generate') : generateButton}
+              {hasHistory ? withConfirmation('blank') : blankButton}
             </div>
           </CardContent>
         </Card>

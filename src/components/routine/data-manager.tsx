@@ -12,6 +12,7 @@ import { X, User, School, Book, Clock, DoorOpen } from "lucide-react";
 import { sortTimeSlots } from "@/lib/utils";
 import type { Teacher } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
+import { useToast } from "@/hooks/use-toast";
 
 interface DataManagerProps {
   title: "Teachers" | "Classes" | "Subjects" | "Time Slots" | "Rooms / Halls";
@@ -25,19 +26,27 @@ interface DataManagerProps {
 const TeacherManager = ({ items, setItems }: { items: Teacher[], setItems: (items: Teacher[]) => void }) => {
     const [newName, setNewName] = useState("");
     const [newEmail, setNewEmail] = useState("");
+    const { toast } = useToast();
 
     const handleAddItem = () => {
         const name = newName.trim();
         const email = newEmail.trim().toLowerCase();
         if (!name || !email) return;
 
-        if (!items.some(t => t.email === email)) {
-            const newTeacher: Teacher = { id: uuidv4(), name, email };
-            const newItemsList = [newTeacher, ...items].sort((a, b) => a.name.localeCompare(b.name));
-            setItems(newItemsList);
-            setNewName("");
-            setNewEmail("");
+        if (items.some(t => t.email === email)) {
+            toast({
+                variant: "destructive",
+                title: "Teacher Already Exists",
+                description: "A teacher with this email is already registered."
+            });
+            return;
         }
+
+        const newTeacher: Teacher = { id: uuidv4(), name, email };
+        const newItemsList = [newTeacher, ...items].sort((a, b) => a.name.localeCompare(b.name));
+        setItems(newItemsList);
+        setNewName("");
+        setNewEmail("");
     };
     
     const handleRemoveItem = (idToRemove: string) => {

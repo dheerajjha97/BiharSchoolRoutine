@@ -1,6 +1,7 @@
+
 import { initializeApp, getApp, getApps, type FirebaseApp, type FirebaseOptions } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, enableIndexedDbPersistence, CACHE_SIZE_UNLIMITED } from "firebase/firestore";
 
 const firebaseConfig: FirebaseOptions = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -11,14 +12,18 @@ const firebaseConfig: FirebaseOptions = {
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
+let app: FirebaseApp | null = null;
 let db: any = null;
 
 // Singleton pattern to initialize Firebase only once
 function getFirebaseApp(): FirebaseApp {
+    if (app) return app;
     if (!getApps().length) {
-        return initializeApp(firebaseConfig);
+        app = initializeApp(firebaseConfig);
+    } else {
+        app = getApp();
     }
-    return getApp();
+    return app;
 }
 
 function getFirebaseAuth() {
@@ -31,22 +36,23 @@ function getFirestoreDB() {
         return db;
     }
     const app = getFirebaseApp();
-    try {
-        db = initializeFirestore(app, {
-            localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
-        });
-    } catch (e: any) {
-         if (e.code === 'failed-precondition') {
-            console.warn('Firestore persistence failed: Multiple tabs open. Falling back to memory-only persistence.');
-             db = initializeFirestore(app, {});
-         } else if (e.code === 'unimplemented') {
-            console.warn('Firestore persistence not available in this browser. Falling back to memory-only persistence.');
-             db = initializeFirestore(app, {});
-         } else {
-            console.error("Firestore initialization failed", e);
-            db = initializeFirestore(app, {});
-         }
-    }
+    db = initializeFirestore(app, {
+        localCache: persistentLocalCache({
+            tabManager: persistentMultipleTabManager(),
+            cacheSizeBytes: CACHE_SIZE_UNLIMITED,
+        })
+    });
+    enableIndexedDbPersistence(db).catch((err) => {
+        if (err.code == 'failed-precondition') {
+            console.warn(
+                "Firestore persistence failed: Multiple tabs open, persistence can only be enabled in one tab at a a time."
+            );
+        } else if (err.code == 'unimplemented') {
+            console.warn(
+                "Firestore persistence failed: The current browser does not support all of the features required to enable persistence."
+            );
+        }
+    });
     return db;
 }
 

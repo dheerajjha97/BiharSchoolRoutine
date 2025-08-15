@@ -38,7 +38,7 @@ export default function Home() {
         return { loggedInTeacher: undefined, isUserAdmin: false };
     }
     const teacher = teachers.find(t => t.email === user.email);
-    const isAdmin = !!user && !teacher;
+    const isAdmin = !teacher;
     return { loggedInTeacher: teacher, isUserAdmin: isAdmin };
   }, [user, teachers, isLoading]);
   
@@ -46,8 +46,12 @@ export default function Home() {
     setIsLoading(true);
     try {
       const { 
-        teachers, classes, subjects, timeSlots, config 
+        teachers, classes, subjects, timeSlots, config, schoolInfo
       } = appState;
+
+      if (!schoolInfo.name || !schoolInfo.udise) {
+          throw new Error("Please set the School Name and UDISE code in Data Management first.");
+      }
 
       if (classes.length === 0 || subjects.length === 0 || timeSlots.length === 0) {
         throw new Error("Please define classes, subjects, and time slots in Data Management before generating a routine.");
@@ -82,7 +86,10 @@ export default function Home() {
   const handleCreateBlankRoutine = () => {
     setIsLoading(true);
     try {
-      const { classes, timeSlots, config } = appState;
+      const { classes, timeSlots, config, schoolInfo } = appState;
+       if (!schoolInfo.name || !schoolInfo.udise) {
+          throw new Error("Please set the School Name and UDISE code in Data Management first.");
+      }
       if (classes.length === 0 || timeSlots.length === 0) {
         throw new Error("Please define classes and time slots in Data Management first.");
       }
@@ -136,6 +143,7 @@ export default function Home() {
   };
 
   const hasHistory = routineHistory && routineHistory.length > 0;
+  const isSchoolInfoSet = appState.schoolInfo && appState.schoolInfo.name && appState.schoolInfo.udise;
 
   const renderAdminControls = () => {
     return (
@@ -151,7 +159,7 @@ export default function Home() {
                 <div className="flex flex-wrap gap-4">
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button size="lg" disabled={isLoading}>
+                      <Button size="lg" disabled={isLoading || !isSchoolInfoSet} title={!isSchoolInfoSet ? "Please set School Name and UDISE code first" : ""}>
                         {isLoading ? (<Loader2 className="mr-2 h-5 w-5 animate-spin" />) : (<Wand2 className="mr-2 h-5 w-5" />}
                         Generate New Routine
                       </Button>
@@ -171,7 +179,7 @@ export default function Home() {
                   </AlertDialog>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button size="lg" variant="outline" disabled={isLoading}>
+                      <Button size="lg" variant="outline" disabled={isLoading || !isSchoolInfoSet} title={!isSchoolInfoSet ? "Please set School Name and UDISE code first" : ""}>
                         <PlusSquare className="mr-2 h-5 w-5" />
                         Create New Blank Routine
                       </Button>
@@ -192,11 +200,11 @@ export default function Home() {
                 </div>
               ) : (
                  <div className="flex flex-wrap gap-4">
-                    <Button size="lg" disabled={isLoading} onClick={handleGenerateRoutine}>
+                    <Button size="lg" disabled={isLoading || !isSchoolInfoSet} onClick={handleGenerateRoutine} title={!isSchoolInfoSet ? "Please set School Name and UDISE code first" : ""}>
                       {isLoading ? (<Loader2 className="mr-2 h-5 w-5 animate-spin" />) : (<Wand2 className="mr-2 h-5 w-5" />}
                       Generate Routine
                     </Button>
-                    <Button size="lg" variant="outline" disabled={isLoading} onClick={handleCreateBlankRoutine}>
+                    <Button size="lg" variant="outline" disabled={isLoading || !isSchoolInfoSet} onClick={handleCreateBlankRoutine} title={!isSchoolInfoSet ? "Please set School Name and UDISE code first" : ""}>
                       <PlusSquare className="mr-2 h-5 w-5" />
                       Create Blank Routine
                     </Button>

@@ -12,17 +12,10 @@ import { Separator } from "@/components/ui/separator";
 import { Logo } from "@/components/icons";
 import { useTheme } from "next-themes";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Menu,
   LayoutDashboard,
   Database,
   SlidersHorizontal,
-  LogIn,
   LogOut,
   Loader2,
   Moon,
@@ -30,8 +23,6 @@ import {
   Mail,
   ClipboardCheck,
   Replace,
-  User,
-  UserCog,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -69,7 +60,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const {
     appState,
     user,
-    handleGoogleSignIn,
     handleLogout,
     isAuthLoading,
     isSyncing,
@@ -81,7 +71,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         return { loggedInTeacher: undefined, isUserAdmin: false };
     }
     const teacher = appState.teachers.find(t => t.email === user.email);
-    const isAdmin = user && !teacher;
+    const isAdmin = !teacher;
     return { loggedInTeacher: teacher, isUserAdmin: isAdmin };
   }, [isLoading, user, appState.teachers]);
 
@@ -98,7 +88,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         )}
         <ThemeToggle />
-        {user ? (
+        {user && (
           <>
             <Avatar className="h-8 w-8">
               <AvatarImage src={user.photoURL || undefined} alt={displayName || user.email || 'User'} />
@@ -109,29 +99,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               Logout
             </Button>
           </>
-        ) : (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button disabled={isAuthLoading}>
-                {isAuthLoading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <LogIn className="mr-2 h-4 w-4" />
-                )}
-                Login
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleGoogleSignIn}>
-                <UserCog className="mr-2 h-4 w-4" />
-                <span>Admin Login</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleGoogleSignIn}>
-                <User className="mr-2 h-4 w-4" />
-                <span>Teacher Login</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         )}
       </div>
     </div>
@@ -166,7 +133,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   );
 
   const renderNavItems = () => {
-    // Don't render nav items until we know the user's role
     if (isLoading || (user && isAuthLoading)) {
         return (
             <div className="flex justify-center items-center h-full p-4">
@@ -175,7 +141,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         )
     }
     
-    // If logged out, don't show any nav items.
     if (!user) {
         return null;
     }
@@ -265,7 +230,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             {sidebarContent}
           </div>
           <main className="flex-1 bg-background p-4 md:p-6 lg:p-8 overflow-y-auto">
-            {isLoading || isAuthLoading ? (
+            {isLoading || (isAuthLoading && !user) ? (
                  <div className="flex justify-center items-center h-full">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>

@@ -2,6 +2,7 @@
 "use client";
 
 import { createContext, useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { sortTimeSlots } from "@/lib/utils";
 import { getFirebaseAuth, getFirestoreDB } from "@/lib/firebase";
@@ -16,6 +17,7 @@ import type {
     AppState,
     SchoolInfo,
 } from '@/types';
+import AppShell from "@/components/app/app-shell";
 
 export const AppStateContext = createContext<AppStateContextType>({} as AppStateContextType);
 
@@ -54,9 +56,9 @@ const DEFAULT_APP_STATE: AppState = {
   timeSlots: [],
   rooms: [],
   schoolInfo: {
-    name: "My School Name",
+    name: "",
     udise: "",
-    details: "Weekly Class Routine\n2024-25"
+    details: ""
   },
   config: {
     teacherSubjects: {},
@@ -120,6 +122,8 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   const [isSyncing, setIsSyncing] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const { toast } = useToast();
+  const router = useRouter();
+  const pathname = usePathname();
 
   const stateRef = useRef(appState);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -292,13 +296,13 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
+      // onAuthStateChanged will handle the redirect and data loading
     } catch (error) {
       const authError = error as AuthError;
       if (authError.code !== 'auth/popup-closed-by-user') {
           toast({ variant: "destructive", title: "Login Failed", description: authError.message });
       }
-    } finally {
-      // isAuthLoading will be set to false by the onAuthStateChanged listener
+      setIsAuthLoading(false);
     }
   }, [toast]);
   
@@ -307,13 +311,19 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     const auth = getFirebaseAuth();
     try {
       await signOut(auth);
+      setAppState(DEFAULT_APP_STATE);
+      if(firestoreUnsubscribeRef.current) {
+        firestoreUnsubscribeRef.current();
+        firestoreUnsubscribeRef.current = null;
+      }
+      router.push('/login');
     } catch (error) {
       const authError = error as AuthError;
       toast({ variant: "destructive", title: "Logout Failed", description: authError.message });
     } finally {
-        // State changes are handled by the onAuthStateChanged listener
+        setIsAuthLoading(false);
     }
-  }, [toast]);
+  }, [toast, router]);
 
   // Auth state listener
   useEffect(() => {
@@ -321,7 +331,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     const db = getFirestoreDB();
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
-      setIsLoading(true);
+      setIsAuthLoading(true);
       setUser(currentUser);
 
       if (firestoreUnsubscribeRef.current) {
@@ -336,12 +346,18 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         const userDocSnap = await getDoc(userDocRef);
 
         let udiseCode: string | null = null;
-        if (userDocSnap.exists()) {
+        if (userDocSnap.exists() && userDocSnap.data()?.udise) {
             udiseCode = userDocSnap.data()?.udise;
+        } else {
+            // Check if user is a teacher in any school
+            const teachersQuery = query(collection(db, "schoolData"), where("teachers", "array-contains", { email: currentUser.email }));
+            const querySnapshot = await getDocs(teachersQuery);
+            if (!querySnapshot.empty) {
+                udiseCode = querySnapshot.docs[0].id; // UDISE code is the document ID
+            }
         }
 
         if (udiseCode) {
-            // Teacher or existing admin, load their school's data
             const schoolDocRef = doc(db, "schoolData", udiseCode);
             firestoreUnsubscribeRef.current = onSnapshot(schoolDocRef, (docSnap) => {
                 if (docSnap.exists()) {
@@ -349,6 +365,9 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
                 }
                 setIsLoading(false);
                 setIsAuthLoading(false);
+                if (pathname === '/login') {
+                    router.replace('/');
+                }
             }, (error) => {
                 console.error("Firestore snapshot error:", error);
                 toast({ variant: "destructive", title: "Sync Error", description: "Could not sync data from the cloud." });
@@ -357,14 +376,16 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
             });
         } else {
             // New user, probably an admin setting up a school for the first time.
-            // They will need to enter a UDISE code on the data page.
-            setAppState(DEFAULT_APP_STATE); // Start with a clean slate
+            setAppState(DEFAULT_APP_STATE);
             setIsLoading(false);
             setIsAuthLoading(false);
+             if (pathname === '/login') {
+                router.replace('/');
+            }
         }
 
       } else {
-        // LOGGED OUT: Reset to default state.
+        // LOGGED OUT
         setAppState(DEFAULT_APP_STATE);
         setIsLoading(false);
         setIsAuthLoading(false);
@@ -383,7 +404,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   // Debounced save effect
   useEffect(() => {
     const udise = stateRef.current.schoolInfo.udise;
-    if (isLoading || isAuthLoading || !user || !udise) return; // Don't save while loading, logged out, or no UDISE
+    if (isLoading || isAuthLoading || !user || !udise) return;
 
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
@@ -393,28 +414,19 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       const persistentState = getPersistentState(stateRef.current);
       const stateToSave = removeUndefined(persistentState);
       
-      if (isSyncing) return; // Prevent concurrent saves
+      if (isSyncing) return;
       setIsSyncing(true);
       try {
         const db = getFirestoreDB();
-        
-        // Save the main school data document
         const schoolDocRef = doc(db, "schoolData", udise);
         await setDoc(schoolDocRef, stateToSave, { merge: true });
 
-        // Update the user document with the UDISE code if they are an admin
         const isUserAdmin = stateRef.current.teachers.every(t => t.email !== user.email);
         if (isUserAdmin) {
             const userDocRef = doc(db, "users", user.uid);
             await setDoc(userDocRef, { udise: udise }, { merge: true });
         }
         
-        // Update all teachers in the list with the school's UDISE code
-        const teachersWithUdise = stateRef.current.teachers.map(t => ({...t, udise}));
-        if(JSON.stringify(teachersWithUdise) !== JSON.stringify(stateRef.current.teachers)) {
-            updateState('teachers', teachersWithUdise);
-        }
-
       } catch (err) {
         console.error("Failed to save to Firestore:", err);
         toast({ variant: "destructive", title: "Firestore Save Failed", description: (err as Error).message });
@@ -428,16 +440,15 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [appState, user, isLoading, isAuthLoading, toast, isSyncing, updateState]);
+  }, [appState, user, isLoading, isAuthLoading, toast, isSyncing]);
 
-  return (
-    <AppStateContext.Provider value={{ 
+  const providerValue = {
         appState, 
         updateState, 
         setFullState,
         updateConfig,
         updateAdjustments,
-        isLoading: isLoading || isAuthLoading, 
+        isLoading: isLoading || (isAuthLoading && !user), 
         setIsLoading,
         isAuthLoading,
         isSyncing,
@@ -450,8 +461,21 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         addRoutineVersion,
         updateRoutineVersion,
         deleteRoutineVersion
-    }}>
-      {children}
+  };
+
+  if (pathname === '/login') {
+      return (
+        <AppStateContext.Provider value={providerValue}>
+            {children}
+        </AppStateContext.Provider>
+      );
+  }
+
+  return (
+    <AppStateContext.Provider value={providerValue}>
+      <AppShell>
+        {children}
+      </AppShell>
     </AppStateContext.Provider>
   );
 };

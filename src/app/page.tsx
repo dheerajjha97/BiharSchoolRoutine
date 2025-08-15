@@ -36,6 +36,7 @@ export default function Home() {
   }, [user, teachers]);
 
   const isUserAdmin = useMemo(() => {
+    // A user is an admin if they are logged in and NOT found in the teachers list.
     return user && !loggedInTeacher;
   }, [user, loggedInTeacher]);
   
@@ -133,100 +134,78 @@ export default function Home() {
   };
 
   const hasHistory = routineHistory && routineHistory.length > 0;
-  const isLoggedIn = !!user;
 
-  const renderGenerateButtons = () => {
-    if (!isUserAdmin) {
-        return (
-            <TooltipProvider>
-                <div className="flex flex-wrap gap-4">
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button size="lg" disabled>
-                                <Wand2 className="mr-2 h-5 w-5" />
-                                Generate Routine
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>You must be an admin to generate a routine.</p>
-                        </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                             <Button size="lg" variant="outline" disabled>
-                                <PlusSquare className="mr-2 h-5 w-5" />
-                                Create Blank Routine
-                            </Button>
-                        </TooltipTrigger>
-                         <TooltipContent>
-                            <p>You must be an admin to create a routine.</p>
-                        </TooltipContent>
-                    </Tooltip>
-                </div>
-            </TooltipProvider>
-        );
-    }
-
-    if (hasHistory) {
-      return (
-        <div className="flex flex-wrap gap-4">
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button size="lg" disabled={isLoading}>
-                {isLoading ? (<Loader2 className="mr-2 h-5 w-5 animate-spin" />) : (<Wand2 className="mr-2 h-5 w-5" />)}
-                Generate New Routine
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will create a new version of the routine, leaving your current active routine untouched in the history. Do you want to continue?
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleGenerateRoutine}>Continue</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button size="lg" variant="outline" disabled={isLoading}>
-                <PlusSquare className="mr-2 h-5 w-5" />
-                Create New Blank Routine
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will create a new version of the routine, leaving your current active routine untouched in the history. Do you want to continue?
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleCreateBlankRoutine}>Continue</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
-      );
-    }
+  const renderAdminControls = () => {
+    if (!isUserAdmin) return null;
 
     return (
-      <div className="flex flex-wrap gap-4">
-        <Button size="lg" disabled={isLoading} onClick={handleGenerateRoutine}>
-          {isLoading ? (<Loader2 className="mr-2 h-5 w-5 animate-spin" />) : (<Wand2 className="mr-2 h-5 w-5" />)}
-          Generate Routine
-        </Button>
-        <Button size="lg" variant="outline" disabled={isLoading} onClick={handleCreateBlankRoutine}>
-          <PlusSquare className="mr-2 h-5 w-5" />
-          Create Blank Routine
-        </Button>
-      </div>
-    );
-  };
+       <Card>
+          <CardHeader>
+            <CardTitle>Generate New Routine</CardTitle>
+            <CardDescription>
+              Use the generator to create a routine automatically, or create a blank template to fill in manually. This will create a new version in your history.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {hasHistory ? (
+                <div className="flex flex-wrap gap-4">
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button size="lg" disabled={isLoading}>
+                        {isLoading ? (<Loader2 className="mr-2 h-5 w-5 animate-spin" />) : (<Wand2 className="mr-2 h-5 w-5" />)}
+                        Generate New Routine
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will create a new version of the routine, leaving your current active routine untouched in the history. Do you want to continue?
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleGenerateRoutine}>Continue</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button size="lg" variant="outline" disabled={isLoading}>
+                        <PlusSquare className="mr-2 h-5 w-5" />
+                        Create New Blank Routine
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will create a new version of the routine, leaving your current active routine untouched in the history. Do you want to continue?
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleCreateBlankRoutine}>Continue</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              ) : (
+                 <div className="flex flex-wrap gap-4">
+                    <Button size="lg" disabled={isLoading} onClick={handleGenerateRoutine}>
+                      {isLoading ? (<Loader2 className="mr-2 h-5 w-5 animate-spin" />) : (<Wand2 className="mr-2 h-5 w-5" />)}
+                      Generate Routine
+                    </Button>
+                    <Button size="lg" variant="outline" disabled={isLoading} onClick={handleCreateBlankRoutine}>
+                      <PlusSquare className="mr-2 h-5 w-5" />
+                      Create Blank Routine
+                    </Button>
+                  </div>
+              )}
+          </CardContent>
+        </Card>
+    )
+  }
 
   const formattedTeacherSubjects = useMemo(() => {
     return Object.fromEntries(
@@ -247,21 +226,9 @@ export default function Home() {
           description="Generate, view, and manage your school's class routine."
         />
 
-      {isUserAdmin && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Generate New Routine</CardTitle>
-            <CardDescription>
-              Use the generator to create a routine automatically, or create a blank template to fill in manually. This will create a new version in your history.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-              {renderGenerateButtons()}
-          </CardContent>
-        </Card>
-      )}
+      {renderAdminControls()}
 
-        {isUserAdmin && hasHistory && activeRoutine && (
+        {hasHistory && activeRoutine && isUserAdmin && (
             <Card>
                 <CardHeader>
                     <CardTitle>Manage Active Routine</CardTitle>
@@ -329,7 +296,7 @@ export default function Home() {
               updateRoutineVersion(activeRoutine.id, { schedule: { schedule: newSchedule } });
             }
           }}
-          isEditable={isUserAdmin || false}
+          isEditable={isUserAdmin}
           timeSlots={appState.timeSlots} 
           classes={appState.classes}
           subjects={appState.subjects}
@@ -349,3 +316,5 @@ export default function Home() {
     </div>
   );
 }
+
+    

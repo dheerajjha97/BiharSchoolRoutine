@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useContext, useState, useEffect } from "react";
+import { useContext, useState } from "react";
 import { AppStateContext } from "@/context/app-state-provider";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -37,6 +37,7 @@ const adminNavItems = [
 ];
 
 const teacherNavItems = [
+    { href: "/", label: "Dashboard", icon: LayoutDashboard },
     { href: "/my-schedule", label: "My Schedule", icon: UserCheck },
 ];
 
@@ -140,9 +141,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   const renderNavItems = () => {
     // Don't render nav items until we know the user's role
-    if (isLoading) {
+    if (isLoading || isAuthLoading) {
         return (
-            <div className="flex justify-center items-center h-full">
+            <div className="flex justify-center items-center h-full p-4">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
         )
@@ -233,7 +234,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             {sidebarContent}
           </div>
           <main className="flex-1 bg-background p-4 md:p-6 lg:p-8 overflow-y-auto">
-            {isLoading ? (
+            {isLoading || isAuthLoading ? (
                  <div className="flex justify-center items-center h-full">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
@@ -244,3 +245,5 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+
+    

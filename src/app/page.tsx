@@ -157,8 +157,6 @@ export default function Home() {
       title: !isSchoolInfoSet ? "Please set School Name and UDISE code first" : ""
     };
     
-    // NOTE: The onClick handler is removed from the <Button> itself when it's wrapped in a confirmation dialog.
-    // The action is handled by the AlertDialogAction component.
     const generateButton = (
       <Button size="lg" {...commonButtonProps} onClick={hasHistory ? undefined : handleGenerateRoutine}>
         {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Wand2 className="mr-2 h-5 w-5" />}
@@ -338,11 +336,16 @@ export default function Home() {
     );
   }
 
+  const pageTitle = isUserAdmin ? "Admin Dashboard" : "Teacher Routine";
+  const pageDescription = isUserAdmin 
+    ? "Generate, view, and manage your school's class routine." 
+    : (loggedInTeacher ? `Welcome, ${loggedInTeacher.name}. View your weekly schedule below.` : 'Welcome. Loading your schedule.');
+
   return (
     <div className="space-y-6">
        <PageHeader 
-          title="Dashboard"
-          description={isUserAdmin ? "Generate, view, and manage your school's class routine." : (loggedInTeacher ? `Welcome, ${loggedInTeacher.name}. View your weekly schedule below.` : 'Welcome. View your weekly schedule below.')}
+          title={pageTitle}
+          description={pageDescription}
         />
 
       {isUserAdmin ? renderAdminView() : renderTeacherView()}

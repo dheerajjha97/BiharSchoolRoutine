@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { AppStateContext } from '@/context/app-state-provider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, LogIn, User, UserCog } from 'lucide-react';
+import { Loader2, UserCog, ClipboardList } from 'lucide-react';
 import { Logo } from '@/components/icons';
 
 export default function LoginPage() {
@@ -71,7 +71,7 @@ export default function LoginPage() {
                          {isAuthLoading ? (
                             <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                         ) : (
-                            <User className="mr-2 h-5 w-5" />
+                            <ClipboardList className="mr-2 h-5 w-5" />
                         )}
                         Teacher Login
                     </Button>

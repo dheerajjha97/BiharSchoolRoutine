@@ -23,6 +23,8 @@ import {
   Mail,
   ClipboardCheck,
   Replace,
+  CalendarDays,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -35,7 +37,8 @@ const adminNavItems = [
 ];
 
 const teacherNavItems = [
-    { href: "/", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/", label: "Teacher Routine", icon: ClipboardList },
+    { href: "/school-routine", label: "Final School Routine", icon: CalendarDays },
 ];
 
 function ThemeToggle() {

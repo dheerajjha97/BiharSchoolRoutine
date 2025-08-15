@@ -1,14 +1,15 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useContext } from "react";
+import { AppStateContext } from "@/context/app-state-provider";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { X, User, School, Book, Clock, DoorOpen } from "lucide-react";
+import { X } from "lucide-react";
 import { sortTimeSlots } from "@/lib/utils";
 import type { Teacher } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
@@ -24,6 +25,8 @@ interface DataManagerProps {
 }
 
 const TeacherManager = ({ items, setItems }: { items: Teacher[], setItems: (items: Teacher[]) => void }) => {
+    const { appState } = useContext(AppStateContext);
+    const { schoolInfo } = appState;
     const [newName, setNewName] = useState("");
     const [newEmail, setNewEmail] = useState("");
     const { toast } = useToast();
@@ -33,16 +36,18 @@ const TeacherManager = ({ items, setItems }: { items: Teacher[], setItems: (item
         const email = newEmail.trim().toLowerCase();
         if (!name || !email) return;
 
+        // This check is now more of a UI guard, as Firestore rules would be the source of truth for email uniqueness across schools.
+        // For now, we check within the current school's teacher list.
         if (items.some(t => t.email === email)) {
             toast({
                 variant: "destructive",
                 title: "Teacher Already Exists",
-                description: "A teacher with this email is already registered."
+                description: "A teacher with this email is already registered in this school."
             });
             return;
         }
 
-        const newTeacher: Teacher = { id: uuidv4(), name, email };
+        const newTeacher: Teacher = { id: uuidv4(), name, email, udise: schoolInfo.udise };
         const newItemsList = [newTeacher, ...items].sort((a, b) => a.name.localeCompare(b.name));
         setItems(newItemsList);
         setNewName("");
@@ -57,7 +62,7 @@ const TeacherManager = ({ items, setItems }: { items: Teacher[], setItems: (item
         <>
             <div className="flex w-full items-center space-x-2">
                 <Input placeholder="Teacher name..." value={newName} onChange={e => setNewName(e.target.value)} />
-                <Input placeholder="Teacher email..." value={newEmail} onChange={e => setNewEmail(e.target.value)} />
+                <Input placeholder="Teacher email..." value={newEmail} onChange={e => setNewEmail(e.target.value)} type="email"/>
                 <Button onClick={handleAddItem}>Add</Button>
             </div>
             <ScrollArea className="flex-grow h-64 border rounded-md p-2">

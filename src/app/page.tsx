@@ -295,13 +295,13 @@ export default function Home() {
           teachers={appState.teachers}
           teacherSubjects={formattedTeacherSubjects}
           dailyPeriodQuota={appState.config.dailyPeriodQuota}
-          pdfHeader={appState.pdfHeader}
+          schoolInfo={appState.schoolInfo}
         />
         
           <TeacherLoad 
               teacherLoad={appState.teacherLoad}
               teachers={teachers}
-              pdfHeader={appState.pdfHeader}
+              schoolInfo={appState.schoolInfo}
           />
       </>
     );

@@ -1,7 +1,8 @@
+
 "use client";
 
 import React, { useMemo, useState } from 'react';
-import type { GenerateScheduleOutput, ScheduleEntry, Teacher } from "@/types";
+import type { GenerateScheduleOutput, ScheduleEntry, Teacher, SchoolInfo } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,7 +35,7 @@ interface RoutineDisplayProps {
   teacherSubjects: Record<string, string[]>;
   onScheduleChange: (newSchedule: ScheduleEntry[]) => void;
   dailyPeriodQuota: number;
-  pdfHeader?: string;
+  schoolInfo: SchoolInfo;
   isEditable: boolean;
 }
 
@@ -85,7 +86,7 @@ const toRoman = (num: number): string => {
     return result;
 };
 
-const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, teacherSubjects, onScheduleChange, dailyPeriodQuota, pdfHeader = "", isEditable }: RoutineDisplayProps) => {
+const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, teacherSubjects, onScheduleChange, dailyPeriodQuota, schoolInfo, isEditable }: RoutineDisplayProps) => {
   const { toast } = useToast();
   
   const [isCellDialogOpen, setIsCellDialogOpen] = React.useState(false);
@@ -296,12 +297,13 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 
     const wrapperDiv = document.createElement('div');
     
-    if (pdfHeader.trim()) {
+    const headerContent = `${schoolInfo.name || ''}\n${schoolInfo.details || ''}`.trim();
+    if (headerContent) {
         const headerDiv = document.createElement('div');
         headerDiv.style.textAlign = 'center';
         headerDiv.style.marginBottom = '20px';
         headerDiv.style.width = '100%';
-        pdfHeader.trim().split('\n').forEach((line, index) => {
+        headerContent.split('\n').forEach((line, index) => {
             const p = document.createElement('p');
             p.textContent = line;
             p.style.margin = '0';

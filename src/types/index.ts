@@ -7,6 +7,13 @@ export const TeacherSchema = z.object({
   id: z.string(),
   name: z.string(),
   email: z.string().email(),
+  udise: z.string().optional(), // The UDISE code of the school the teacher belongs to
+});
+
+export const SchoolInfoSchema = z.object({
+    name: z.string().default("My School Name"),
+    udise: z.string().default(""),
+    details: z.string().default("Weekly Class Routine\n2024-25"), // For things like academic year, etc.
 });
 
 export const ScheduleEntrySchema = z.object({
@@ -112,6 +119,7 @@ export const SubstitutionPlanSchema = z.object({
 
 // Inferred Types
 export type Teacher = z.infer<typeof TeacherSchema>;
+export type SchoolInfo = z.infer<typeof SchoolInfoSchema>;
 export type ScheduleEntry = z.infer<typeof ScheduleEntrySchema>;
 export type GenerateScheduleOutput = z.infer<typeof GenerateScheduleOutputSchema>;
 export type GenerateScheduleLogicInput = z.infer<typeof GenerateScheduleLogicInputSchema>;
@@ -136,7 +144,7 @@ export type AppState = {
   subjects: string[];
   timeSlots: string[];
   rooms: string[];
-  pdfHeader: string;
+  schoolInfo: SchoolInfo;
   config: SchoolConfig;
   routineHistory: RoutineVersion[];
   activeRoutineId: string | null;

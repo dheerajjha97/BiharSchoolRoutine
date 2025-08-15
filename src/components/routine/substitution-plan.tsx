@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from 'react';
-import type { SubstitutionPlan, Teacher } from '@/types';
+import type { SubstitutionPlan, Teacher, SchoolInfo } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
@@ -10,16 +10,14 @@ import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { FileDown, Loader2 } from 'lucide-react';
-import { Label } from '../ui/label';
-import { Textarea } from '../ui/textarea';
 
 interface SubstitutionPlanProps {
   plan: SubstitutionPlan;
   teachers: Teacher[];
-  pdfHeader?: string;
+  schoolInfo: SchoolInfo;
 }
 
-export default function SubstitutionPlanDisplay({ plan, teachers, pdfHeader = "" }: SubstitutionPlanProps) {
+export default function SubstitutionPlanDisplay({ plan, teachers, schoolInfo }: SubstitutionPlanProps) {
   const { toast } = useToast();
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -44,12 +42,13 @@ export default function SubstitutionPlanDisplay({ plan, teachers, pdfHeader = ""
     
     const wrapperDiv = document.createElement('div');
     
-    if (pdfHeader.trim()) {
+    const headerContent = `${schoolInfo.name || ''}\n${schoolInfo.details || ''}`.trim();
+    if (headerContent) {
         const headerDiv = document.createElement('div');
         headerDiv.style.textAlign = 'center';
         headerDiv.style.marginBottom = '20px';
         headerDiv.style.width = '100%';
-        pdfHeader.trim().split('\n').forEach((line, index) => {
+        headerContent.split('\n').forEach((line, index) => {
             const p = document.createElement('p');
             p.textContent = line;
             p.style.margin = '0';

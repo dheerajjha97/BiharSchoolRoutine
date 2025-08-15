@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import type { TeacherLoad as TeacherLoadType, Teacher } from '@/types';
+import type { TeacherLoad as TeacherLoadType, Teacher, SchoolInfo } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Users, FileDown, Loader2 } from "lucide-react";
@@ -14,12 +14,12 @@ import html2canvas from 'html2canvas';
 interface TeacherLoadProps {
   teacherLoad: TeacherLoadType;
   teachers: Teacher[];
-  pdfHeader?: string;
+  schoolInfo: SchoolInfo;
 }
 
 const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Total"];
 
-export default function TeacherLoad({ teacherLoad, teachers, pdfHeader = "" }: TeacherLoadProps) {
+export default function TeacherLoad({ teacherLoad, teachers, schoolInfo }: TeacherLoadProps) {
   const teacherIds = Object.keys(teacherLoad).sort((a,b) => {
     const teacherA = teachers.find(t => t.id === a)?.name || a;
     const teacherB = teachers.find(t => t.id === b)?.name || b;
@@ -66,12 +66,13 @@ export default function TeacherLoad({ teacherLoad, teachers, pdfHeader = "" }: T
     
     const wrapperDiv = document.createElement('div');
     
-    if (pdfHeader.trim()) {
+    const headerContent = `${schoolInfo.name || ''}\n${schoolInfo.details || ''}`.trim();
+    if (headerContent) {
         const headerDiv = document.createElement('div');
         headerDiv.style.textAlign = 'center';
         headerDiv.style.marginBottom = '20px';
         headerDiv.style.width = '100%';
-        pdfHeader.trim().split('\n').forEach((line, index) => {
+        headerContent.split('\n').forEach((line, index) => {
             const p = document.createElement('p');
             p.textContent = line;
             p.style.margin = '0';

@@ -73,7 +73,7 @@ function MultiSelectPopover({ options, selected, onSelectedChange, placeholder }
 
 export default function AdjustmentsPage() {
     const { appState, updateAdjustments } = useContext(AppStateContext);
-    const { teachers, routineHistory, activeRoutineId, teacherLoad, pdfHeader } = appState;
+    const { teachers, routineHistory, activeRoutineId, teacherLoad, schoolInfo } = appState;
     const { date, absentTeacherIds, substitutionPlan } = appState.adjustments;
     const { toast } = useToast();
 
@@ -158,7 +158,7 @@ export default function AdjustmentsPage() {
             </Card>
 
             {substitutionPlan && (
-                <SubstitutionPlanDisplay plan={substitutionPlan} teachers={teachers} pdfHeader={pdfHeader} />
+                <SubstitutionPlanDisplay plan={substitutionPlan} teachers={teachers} schoolInfo={schoolInfo} />
             )}
         </div>
     );

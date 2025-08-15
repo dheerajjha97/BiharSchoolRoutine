@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { sortTimeSlots } from "@/lib/utils";
 import { getFirebaseAuth, getFirestoreDB } from "@/lib/firebase";
 import { onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, type User, type AuthError } from "firebase/auth";
-import { doc, setDoc, onSnapshot, type Unsubscribe } from "firebase/firestore";
+import { doc, setDoc, onSnapshot, getDoc, collection, query, where, getDocs, type Unsubscribe } from "firebase/firestore";
 import type { 
     Teacher, 
     SchoolConfig, 
@@ -14,6 +14,7 @@ import type {
     TeacherLoad,
     GenerateScheduleOutput, 
     AppState,
+    SchoolInfo,
 } from '@/types';
 
 export const AppStateContext = createContext<AppStateContextType>({} as AppStateContextType);
@@ -52,7 +53,11 @@ const DEFAULT_APP_STATE: AppState = {
   subjects: [],
   timeSlots: [],
   rooms: [],
-  pdfHeader: "My School Name\nWeekly Class Routine\n2024-25",
+  schoolInfo: {
+    name: "My School Name",
+    udise: "",
+    details: "Weekly Class Routine\n2024-25"
+  },
   config: {
     teacherSubjects: {},
     teacherClasses: {},
@@ -120,8 +125,6 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const firestoreUnsubscribeRef = useRef<Unsubscribe | null>(null);
   
-  const SCHOOL_DATA_DOC_ID = "main"; // Use a fixed ID for the school data document
-
   const setFullState = useCallback((newState: Partial<AppState>) => {
     setAppState(prevState => {
       const mergedState: AppState = {
@@ -130,6 +133,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         ...newState,
         config: { ...DEFAULT_APP_STATE.config, ...(newState.config || {}) },
         adjustments: { ...(newState.adjustments || DEFAULT_ADJUSTMENTS_STATE) },
+        schoolInfo: { ...DEFAULT_APP_STATE.schoolInfo, ...(newState.schoolInfo || {}) }
       };
        if (newState.timeSlots && Array.isArray(newState.timeSlots)) {
           mergedState.timeSlots = sortTimeSlots(newState.timeSlots);
@@ -314,7 +318,9 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   // Auth state listener
   useEffect(() => {
     const auth = getFirebaseAuth();
-    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+    const db = getFirestoreDB();
+
+    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       setIsLoading(true);
       setUser(currentUser);
 
@@ -324,30 +330,41 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       }
 
       if (currentUser) {
-        // LOGGED IN: Load from the single shared Firestore document
-        const db = getFirestoreDB();
-        const schoolDocRef = doc(db, "schoolData", SCHOOL_DATA_DOC_ID);
+        // User is logged in. Figure out which school they belong to.
+        const usersCollectionRef = collection(db, 'users');
+        const userDocRef = doc(usersCollectionRef, currentUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
 
-        firestoreUnsubscribeRef.current = onSnapshot(schoolDocRef, (docSnap) => {
-          if (docSnap.exists()) {
-            const firestoreData = docSnap.data();
-            setFullState(firestoreData as Partial<AppState>);
-          } else {
-            // Document doesn't exist, likely first run for the school.
-            // Save the default state to initialize it.
-            const stateToSave = getPersistentState(stateRef.current);
-            setDoc(schoolDocRef, removeUndefined(stateToSave));
-          }
-          setIsLoading(false);
-          setIsAuthLoading(false);
-        }, (error) => {
-          console.error("Firestore snapshot error:", error);
-          toast({ variant: "destructive", title: "Sync Error", description: "Could not sync data from the cloud." });
-          setIsLoading(false);
-          setIsAuthLoading(false);
-        });
+        let udiseCode: string | null = null;
+        if (userDocSnap.exists()) {
+            udiseCode = userDocSnap.data()?.udise;
+        }
+
+        if (udiseCode) {
+            // Teacher or existing admin, load their school's data
+            const schoolDocRef = doc(db, "schoolData", udiseCode);
+            firestoreUnsubscribeRef.current = onSnapshot(schoolDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    setFullState(docSnap.data() as Partial<AppState>);
+                }
+                setIsLoading(false);
+                setIsAuthLoading(false);
+            }, (error) => {
+                console.error("Firestore snapshot error:", error);
+                toast({ variant: "destructive", title: "Sync Error", description: "Could not sync data from the cloud." });
+                setIsLoading(false);
+                setIsAuthLoading(false);
+            });
+        } else {
+            // New user, probably an admin setting up a school for the first time.
+            // They will need to enter a UDISE code on the data page.
+            setAppState(DEFAULT_APP_STATE); // Start with a clean slate
+            setIsLoading(false);
+            setIsAuthLoading(false);
+        }
+
       } else {
-        // LOGGED OUT: Reset to default state. No local storage persistence.
+        // LOGGED OUT: Reset to default state.
         setAppState(DEFAULT_APP_STATE);
         setIsLoading(false);
         setIsAuthLoading(false);
@@ -365,7 +382,8 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 
   // Debounced save effect
   useEffect(() => {
-    if (isLoading || isAuthLoading || !user) return; // Don't save while loading or if logged out
+    const udise = stateRef.current.schoolInfo.udise;
+    if (isLoading || isAuthLoading || !user || !udise) return; // Don't save while loading, logged out, or no UDISE
 
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
@@ -379,22 +397,38 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       setIsSyncing(true);
       try {
         const db = getFirestoreDB();
-        const schoolDocRef = doc(db, "schoolData", SCHOOL_DATA_DOC_ID);
+        
+        // Save the main school data document
+        const schoolDocRef = doc(db, "schoolData", udise);
         await setDoc(schoolDocRef, stateToSave, { merge: true });
+
+        // Update the user document with the UDISE code if they are an admin
+        const isUserAdmin = stateRef.current.teachers.every(t => t.email !== user.email);
+        if (isUserAdmin) {
+            const userDocRef = doc(db, "users", user.uid);
+            await setDoc(userDocRef, { udise: udise }, { merge: true });
+        }
+        
+        // Update all teachers in the list with the school's UDISE code
+        const teachersWithUdise = stateRef.current.teachers.map(t => ({...t, udise}));
+        if(JSON.stringify(teachersWithUdise) !== JSON.stringify(stateRef.current.teachers)) {
+            updateState('teachers', teachersWithUdise);
+        }
+
       } catch (err) {
         console.error("Failed to save to Firestore:", err);
         toast({ variant: "destructive", title: "Firestore Save Failed", description: (err as Error).message });
       } finally {
         setIsSyncing(false);
       }
-    }, 1500);
+    }, 2000);
 
     return () => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [appState, user, isLoading, isAuthLoading, toast, isSyncing]);
+  }, [appState, user, isLoading, isAuthLoading, toast, isSyncing, updateState]);
 
   return (
     <AppStateContext.Provider value={{ 

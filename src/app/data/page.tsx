@@ -13,14 +13,16 @@ import PageHeader from "@/components/app/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import type { SchoolInfo } from "@/types";
 
 export default function DataManagementPage() {
     const { appState, updateState, setFullState } = useContext(AppStateContext);
-    const { teachers, classes, subjects, timeSlots, rooms, pdfHeader } = appState;
+    const { teachers, classes, subjects, timeSlots, rooms, schoolInfo } = appState;
     const { toast } = useToast();
     const jsonInputRef = useRef<HTMLInputElement>(null);
     const backupExtension = ".bsr"; // Bihar School Routine
-    const backupFileName = `school-data-backup${backupExtension}`;
+    const backupFileName = `school-data-backup-${schoolInfo.udise || 'no-udise'}${backupExtension}`;
 
     const handleExportJson = () => {
         try {
@@ -50,29 +52,56 @@ export default function DataManagementPage() {
         if(jsonInputRef.current) jsonInputRef.current.value = "";
     };
 
+    const handleSchoolInfoChange = (field: keyof SchoolInfo, value: string) => {
+        updateState('schoolInfo', { ...schoolInfo, [field]: value });
+    };
+
     return (
         <div className="space-y-6">
             <PageHeader 
                 title="Data Management"
-                description={`Manage core data and global settings. You can also export your entire configuration as a secure ${backupExtension} file.`}
+                description={`Manage core data, school information, and global settings.`}
             />
             
             <Card>
                 <CardHeader>
-                    <CardTitle>Global Settings</CardTitle>
-                    <CardDescription>These settings will be applied across the entire application.</CardDescription>
+                    <CardTitle>School Information</CardTitle>
+                    <CardDescription>
+                        Enter your school's details. The UDISE code is used to uniquely identify your school's data.
+                    </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <Label htmlFor="school-name">School Name</Label>
+                            <Input
+                                id="school-name"
+                                placeholder="e.g. Govt. High School, Patna"
+                                value={schoolInfo.name}
+                                onChange={(e) => handleSchoolInfoChange('name', e.target.value)}
+                            />
+                        </div>
+                        <div>
+                            <Label htmlFor="udise-code">UDISE Code</Label>
+                            <Input
+                                id="udise-code"
+                                placeholder="Enter your school's UDISE code"
+                                value={schoolInfo.udise}
+                                onChange={(e) => handleSchoolInfoChange('udise', e.target.value)}
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">This code is crucial for saving and finding your data.</p>
+                        </div>
+                    </div>
                     <div>
-                        <Label htmlFor="pdf-header-global">Global PDF Header</Label>
+                        <Label htmlFor="school-details">Other Details (for PDF Header)</Label>
                         <Textarea 
-                            id="pdf-header-global"
-                            placeholder="e.g. My School Name&#10;Academic Year: 2024-25&#10;Weekly Class Routine"
-                            value={pdfHeader}
-                            onChange={(e) => updateState('pdfHeader', e.target.value)}
+                            id="school-details"
+                            placeholder="e.g. Academic Year: 2024-25&#10;Weekly Class Routine"
+                            value={schoolInfo.details}
+                            onChange={(e) => handleSchoolInfoChange('details', e.target.value)}
                             className="mt-1"
                         />
-                        <p className="text-xs text-muted-foreground mt-1">This header will be used on all PDF downloads.</p>
+                        <p className="text-xs text-muted-foreground mt-1">This information will appear below the school name on PDF downloads.</p>
                     </div>
 
                     <div className="flex items-center gap-2 pt-4">
@@ -84,10 +113,10 @@ export default function DataManagementPage() {
                             accept={backupExtension}
                         />
                         <Button variant="outline" onClick={handleImportJsonClick}>
-                            <Upload className="mr-2 h-4 w-4" /> Import from {backupExtension} File
+                            <Upload className="mr-2 h-4 w-4" /> Import Backup File
                         </Button>
                         <Button variant="outline" onClick={handleExportJson}>
-                            <Download className="mr-2 h-4 w-4" /> Export to {backupExtension} File
+                            <Download className="mr-2 h-4 w-4" /> Export Backup File
                         </Button>
                     </div>
                 </CardContent>

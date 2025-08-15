@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useContext, useState } from "react";
+import { useContext, useState, useMemo } from "react";
 import { AppStateContext } from "@/context/app-state-provider";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -70,8 +70,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     isLoading,
   } = useContext(AppStateContext);
 
-  const loggedInTeacher = !isLoading && user ? appState.teachers.find(t => t.email === user.email) : undefined;
-  const isUserAdmin = user && !loggedInTeacher;
+  const { loggedInTeacher, isUserAdmin } = useMemo(() => {
+    if (isLoading || !user) {
+        return { loggedInTeacher: undefined, isUserAdmin: false };
+    }
+    const teacher = appState.teachers.find(t => t.email === user.email);
+    const isAdmin = user && !teacher;
+    return { loggedInTeacher: teacher, isUserAdmin: isAdmin };
+  }, [isLoading, user, appState.teachers]);
 
   const navItems = isUserAdmin ? adminNavItems : teacherNavItems;
   const displayName = loggedInTeacher ? loggedInTeacher.name : user?.displayName;
@@ -141,12 +147,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   const renderNavItems = () => {
     // Don't render nav items until we know the user's role
-    if (isLoading || isAuthLoading) {
+    if (isLoading || (user && isAuthLoading)) {
         return (
             <div className="flex justify-center items-center h-full p-4">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
         )
+    }
+    
+    // If logged out, don't show any nav items.
+    if (!user) {
+        return null;
     }
 
     return (
@@ -245,5 +256,3 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
-
-    

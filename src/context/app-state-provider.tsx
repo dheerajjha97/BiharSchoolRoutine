@@ -298,8 +298,6 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         firestoreUnsubscribeRef.current = null;
       }
       await signOut(auth);
-      // No need to set user to null or app state to default here, 
-      // onAuthStateChanged will handle it cleanly.
     } catch (error) {
       const authError = error as AuthError;
       toast({ variant: "destructive", title: "Logout Failed", description: authError.message });
@@ -312,7 +310,6 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-      // onAuthStateChanged will handle the redirect and data loading
     } catch (error) {
       const authError = error as AuthError;
       if (authError.code !== 'auth/popup-closed-by-user') {
@@ -348,8 +345,6 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         } else {
             // Check if user is a teacher in any school, by looking for their email.
             const schoolDataCollectionRef = collection(db, "schoolData");
-            const q = query(schoolDataCollectionRef, where("teachers", "array-contains", { email: currentUser.email }));
-
             try {
                 const schoolDocs = await getDocs(schoolDataCollectionRef);
                 for (const schoolDoc of schoolDocs.docs) {
@@ -368,13 +363,14 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         }
 
         if (udiseCode) {
+            // Found existing school data for user
             const schoolDocRef = doc(db, "schoolData", udiseCode);
             firestoreUnsubscribeRef.current = onSnapshot(schoolDocRef, (docSnap) => {
                 if (docSnap.exists()) {
                     setFullState(docSnap.data() as Partial<AppState>);
                 }
                 setIsLoading(false);
-                setIsAuthLoading(false); // Auth is complete and successful
+                setIsAuthLoading(false);
                 if (pathname === '/login') {
                     router.replace('/');
                 }
@@ -385,16 +381,15 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
                 setIsAuthLoading(false);
             });
         } else {
-            toast({
-                variant: "destructive",
-                title: "No School Data Found",
-                description: "No school data found for your account. Please contact an administrator.",
-                duration: 5000,
-            });
-            await handleLogout();
-            // onAuthStateChanged will be triggered again with null user.
+            // This is a new user (likely an admin) with no associated school data.
+            // Load a default state and let AppShell redirect them to /data to set up.
+            setFullState(DEFAULT_APP_STATE);
+            setIsLoading(false);
+            setIsAuthLoading(false);
+            if (pathname === '/login') {
+                router.replace('/');
+            }
         }
-
       } else {
         // LOGGED OUT
         setUser(null);

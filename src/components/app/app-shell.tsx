@@ -2,8 +2,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useContext, useState, useMemo } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useContext, useState, useMemo, useEffect } from "react";
 import { AppStateContext } from "@/context/app-state-provider";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -56,6 +56,7 @@ function ThemeToggle() {
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const {
     appState,
@@ -67,13 +68,24 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   } = useContext(AppStateContext);
 
   const { loggedInTeacher, isUserAdmin } = useMemo(() => {
-    if (isLoading || isAuthLoading || !user || appState.teachers.length === 0) {
+    if (isLoading || isAuthLoading || !user || !appState.teachers) {
         return { loggedInTeacher: undefined, isUserAdmin: false };
     }
     const teacher = appState.teachers.find(t => t.email === user.email);
-    const isAdmin = !teacher;
+    // An admin is a user who is NOT found in the teachers list
+    const isAdmin = !teacher; 
     return { loggedInTeacher: teacher, isUserAdmin: isAdmin };
   }, [isLoading, isAuthLoading, user, appState.teachers]);
+
+  useEffect(() => {
+    // If the user is an admin but there's no school UDISE code set,
+    // redirect them to the data management page to set it up.
+    // Don't redirect if they are already on the data page.
+    if (!isAuthLoading && !isLoading && isUserAdmin && !appState.schoolInfo.udise && pathname !== '/data') {
+        router.replace('/data');
+    }
+  }, [isAuthLoading, isLoading, isUserAdmin, appState.schoolInfo.udise, pathname, router]);
+
 
   const navItems = isUserAdmin ? adminNavItems : teacherNavItems;
   const displayName = loggedInTeacher ? loggedInTeacher.name : user?.displayName;

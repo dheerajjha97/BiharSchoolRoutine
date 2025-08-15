@@ -1,7 +1,7 @@
 
 import { initializeApp, getApp, getApps, type FirebaseApp, type FirebaseOptions } from "firebase/app";
-import { getAuth, initializeAuth, browserLocalPersistence } from "firebase/auth";
-import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager, enableIndexedDbPersistence, CACHE_SIZE_UNLIMITED, Firestore } from "firebase/firestore";
+import { getAuth, initializeAuth, browserLocalPersistence, type Auth } from "firebase/auth";
+import { initializeFirestore, getFirestore, enableIndexedDbPersistence, type Firestore } from "firebase/firestore";
 
 const firebaseConfig: FirebaseOptions = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -12,44 +12,44 @@ const firebaseConfig: FirebaseOptions = {
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
+// This singleton pattern ensures that Firebase is initialized only once.
 let app: FirebaseApp;
-let auth: ReturnType<typeof getAuth>;
+let auth: Auth;
 let db: Firestore;
 let persistenceEnabled = false;
 
-// Singleton pattern to initialize Firebase only once
-function getFirebaseApp(): FirebaseApp {
-    if (getApps().length) {
-        return getApp();
+function initializeFirebase() {
+    if (!getApps().length) {
+        app = initializeApp(firebaseConfig);
+        auth = initializeAuth(app, {
+            persistence: browserLocalPersistence,
+        });
+        db = getFirestore(app);
+    } else {
+        app = getApp();
+        auth = getAuth(app);
+        db = getFirestore(app);
     }
-    return initializeApp(firebaseConfig);
 }
 
-function getFirebaseAuth() {
-    if (auth) {
-        return auth;
-    }
-    
-    app = getFirebaseApp();
+// Call initialization right away
+initializeFirebase();
 
-    // Use initializeAuth for persistence control
-    auth = initializeAuth(app, {
-        persistence: browserLocalPersistence,
-    });
-    
+export function getFirebaseApp(): FirebaseApp {
+    if (!app) initializeFirebase();
+    return app;
+}
+
+export function getFirebaseAuth(): Auth {
+    if (!auth) initializeFirebase();
     return auth;
 }
 
-function getFirestoreDB() {
-    if (db) {
-        return db;
-    }
-
-    app = getFirebaseApp();
-    db = getFirestore(app);
-
-    // Ensure persistence is only enabled once
-    if (!persistenceEnabled) {
+export function getFirestoreDB(): Firestore {
+    if (!db) initializeFirebase();
+    
+    // Enable persistence only on the client side and only once
+    if (typeof window !== 'undefined' && !persistenceEnabled) {
          enableIndexedDbPersistence(db).then(() => {
             persistenceEnabled = true;
          }).catch((err) => {
@@ -67,6 +67,3 @@ function getFirestoreDB() {
 
     return db;
 }
-
-
-export { getFirebaseApp, getFirebaseAuth, getFirestoreDB };

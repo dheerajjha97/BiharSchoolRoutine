@@ -298,14 +298,13 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         firestoreUnsubscribeRef.current = null;
       }
       await signOut(auth);
-      setAppState(DEFAULT_APP_STATE);
-      setUser(null);
-      router.push('/login');
+      // No need to set user to null or app state to default here, 
+      // onAuthStateChanged will handle it cleanly.
     } catch (error) {
       const authError = error as AuthError;
       toast({ variant: "destructive", title: "Logout Failed", description: authError.message });
     }
-  }, [toast, router]);
+  }, [toast]);
 
   const handleGoogleSignIn = useCallback(async () => {
     setIsAuthLoading(true);
@@ -393,7 +392,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
                 duration: 5000,
             });
             await handleLogout();
-            setIsAuthLoading(false); // Auth is complete, but failed validation
+            // onAuthStateChanged will be triggered again with null user.
         }
 
       } else {

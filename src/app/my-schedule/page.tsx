@@ -34,14 +34,16 @@ export default function MySchedulePage() {
 
         daysOfWeek.forEach(day => {
             const scheduleForDay = activeRoutine.schedule.schedule
-                .filter(entry => 
-                    entry &&
-                    entry.day === day && 
-                    entry.teacher && entry.teacher.includes(teacherId) &&
-                    entry.subject !== '---' &&
-                    entry.subject !== 'Prayer' &&
-                    entry.subject !== 'Lunch'
-                )
+                .filter(entry => {
+                    if (!entry || entry.day !== day || !entry.teacher) return false;
+                    
+                    const teacherIdsInSlot = entry.teacher.split(' & ').map(id => id.trim());
+                    
+                    return teacherIdsInSlot.includes(teacherId) &&
+                           entry.subject !== '---' &&
+                           entry.subject !== 'Prayer' &&
+                           entry.subject !== 'Lunch';
+                })
                 .sort((a, b) => sortTimeSlots([a.timeSlot, b.timeSlot]).indexOf(a.timeSlot) - sortTimeSlots([a.timeSlot, b.timeSlot]).indexOf(b.timeSlot));
             
             if (scheduleForDay.length > 0) {

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useContext, useMemo, useState } from "react";
@@ -6,22 +5,24 @@ import { AppStateContext } from "@/context/app-state-provider";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Wand2, PlusSquare, Trash2, Edit, Check, X } from "lucide-react";
+import { Loader2, Wand2, PlusSquare, Trash2, Edit, Check, X, UserCheck } from "lucide-react";
 import RoutineDisplay from "@/components/routine/routine-display";
 import { generateScheduleLogic } from "@/lib/schedule-generator";
-import type { GenerateScheduleLogicInput, ScheduleEntry, RoutineVersion } from "@/types";
+import type { GenerateScheduleLogicInput, ScheduleEntry, RoutineVersion, Teacher } from "@/types";
 import PageHeader from "@/components/app/page-header";
 import TeacherLoad from "@/components/routine/teacher-load";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import TeacherScheduleView from "@/components/routine/teacher-schedule-view";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
 
 const daysOfWeek: ScheduleEntry['day'][] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export default function Home() {
   const { appState, isLoading, setIsLoading, addRoutineVersion, deleteRoutineVersion, updateRoutineVersion, setActiveRoutineId, user } = useContext(AppStateContext);
-  const { routineHistory, activeRoutineId, teachers } = appState;
+  const { routineHistory, activeRoutineId, teachers, adjustments } = appState;
   const { toast } = useToast();
   const [renameValue, setRenameValue] = useState("");
   const [routineToRename, setRoutineToRename] = useState<RoutineVersion | null>(null);
@@ -136,8 +137,6 @@ export default function Home() {
   const hasHistory = routineHistory && routineHistory.length > 0;
 
   const renderAdminControls = () => {
-    if (!isUserAdmin) return null;
-
     return (
        <Card>
           <CardHeader>
@@ -206,9 +205,9 @@ export default function Home() {
         </Card>
     )
   }
-
-  const formattedTeacherSubjects = useMemo(() => {
-    return Object.fromEntries(
+  
+  const renderAdminView = () => {
+     const formattedTeacherSubjects = Object.fromEntries(
         Object.entries(appState.config.teacherSubjects)
             .map(([teacherId, subjects]) => {
                 const teacherName = appState.teachers.find(t => t.id === teacherId)?.name;
@@ -216,19 +215,11 @@ export default function Home() {
             })
             .filter((entry): entry is [string, string[]] => entry !== null)
     );
-  }, [appState.config.teacherSubjects, appState.teachers]);
 
-
-  return (
-    <div className="space-y-6">
-       <PageHeader 
-          title="Dashboard"
-          description="Generate, view, and manage your school's class routine."
-        />
-
-      {renderAdminControls()}
-
-        {hasHistory && activeRoutine && isUserAdmin && (
+    return (
+       <>
+        {renderAdminControls()}
+        {hasHistory && activeRoutine && (
             <Card>
                 <CardHeader>
                     <CardTitle>Manage Active Routine</CardTitle>
@@ -296,7 +287,7 @@ export default function Home() {
               updateRoutineVersion(activeRoutine.id, { schedule: { schedule: newSchedule } });
             }
           }}
-          isEditable={isUserAdmin}
+          isEditable={true}
           timeSlots={appState.timeSlots} 
           classes={appState.classes}
           subjects={appState.subjects}
@@ -306,15 +297,37 @@ export default function Home() {
           pdfHeader={appState.pdfHeader}
         />
         
-      {isUserAdmin && (
           <TeacherLoad 
               teacherLoad={appState.teacherLoad}
               teachers={teachers}
               pdfHeader={appState.pdfHeader}
           />
-      )}
+      </>
+    )
+  }
+  
+  const renderTeacherView = () => {
+    if (!loggedInTeacher) {
+      return (
+         <Alert>
+            <UserCheck className="h-4 w-4" />
+            <AlertTitle>Teacher Not Found</AlertTitle>
+            <AlertDescription>Your email ({user?.email}) is not registered as a teacher in the system. Please contact the administrator.</AlertDescription>
+        </Alert>
+      )
+    }
+    
+    return <TeacherScheduleView teacher={loggedInTeacher} />;
+  }
+
+  return (
+    <div className="space-y-6">
+       <PageHeader 
+          title="Dashboard"
+          description={isUserAdmin ? "Generate, view, and manage your school's class routine." : `Welcome, ${loggedInTeacher?.name || user?.displayName}. View your weekly schedule below.`}
+        />
+
+      {isUserAdmin ? renderAdminView() : renderTeacherView()}
     </div>
   );
 }
-
-    

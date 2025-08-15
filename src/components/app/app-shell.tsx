@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -38,7 +37,6 @@ const adminNavItems = [
 
 const teacherNavItems = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/my-schedule", label: "My Schedule", icon: UserCheck },
 ];
 
 function ThemeToggle() {

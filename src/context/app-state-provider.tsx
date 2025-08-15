@@ -349,20 +349,16 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         } else {
             // Check if user is a teacher in any school, by looking for their email.
             const schoolDataCollectionRef = collection(db, "schoolData");
-            const q = query(collection(db, "schoolData"), where("teachers", "array-contains", { email: currentUser.email, id: '', name: '', udise: '' }));
-            const teacherQuery = query(schoolDataCollectionRef, where("teachers", "array-contains-any", [{email: currentUser.email}]));
-
+            const q = query(schoolDataCollectionRef, where("teachers", "array-contains", { email: currentUser.email }));
 
             try {
-                const schoolDocs = await getDocs(collection(db, "schoolData"));
-                let foundSchool = false;
+                const schoolDocs = await getDocs(schoolDataCollectionRef);
                 for (const schoolDoc of schoolDocs.docs) {
                     const schoolData = schoolDoc.data();
                     if (schoolData.teachers && Array.isArray(schoolData.teachers)) {
                        const teacherExists = schoolData.teachers.some((teacher: any) => teacher.email === currentUser.email);
                        if (teacherExists) {
                            udiseCode = schoolDoc.id;
-                           foundSchool = true;
                            break;
                        }
                     }

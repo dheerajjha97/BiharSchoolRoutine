@@ -163,7 +163,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 
   const gridSchedule = useMemo<GridSchedule>(() => {
     const grid: GridSchedule = {};
-    workingDays.forEach(day => {
+    (workingDays || []).forEach(day => {
         grid[day] = {};
         classes.forEach(c => {
             grid[day][c] = {};
@@ -464,7 +464,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
               </TableRow>
             </TableHeader>
             <TableBody>
-              {workingDays.map((day) => (
+              {(workingDays || []).map((day) => (
                 <React.Fragment key={day}>
                   {displayClasses.map((className, classIndex) => (
                     <TableRow key={`${day}-${className}`}>
@@ -484,7 +484,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                                         <DropdownMenuSubTrigger>Paste to...</DropdownMenuSubTrigger>
                                         <DropdownMenuPortal>
                                           <DropdownMenuSubContent>
-                                            {workingDays.filter(d => d !== day).map(destinationDay => (
+                                            {(workingDays || []).filter(d => d !== day).map(destinationDay => (
                                               <DropdownMenuItem key={destinationDay} onClick={() => handleCopyDay(day, destinationDay)}>
                                                 {destinationDay}
                                               </DropdownMenuItem>
@@ -504,7 +504,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                       ))}
                     </TableRow>
                   ))}
-                  {day !== workingDays[workingDays.length - 1] && <TableRow className="bg-background hover:bg-background"><TableCell colSpan={timeSlots.length + 2} className="p-1"></TableCell></TableRow>}
+                  {day !== (workingDays || [])[(workingDays || []).length - 1] && <TableRow className="bg-background hover:bg-background"><TableCell colSpan={timeSlots.length + 2} className="p-1"></TableCell></TableRow>}
                 </React.Fragment>
               ))}
             </TableBody>
@@ -609,3 +609,5 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 };
 
 export default RoutineDisplay;
+
+    

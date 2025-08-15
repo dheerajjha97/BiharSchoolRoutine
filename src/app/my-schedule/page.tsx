@@ -36,7 +36,7 @@ export default function MySchedulePage() {
         const scheduleForDay = activeRoutine.schedule.schedule
             .filter(entry => 
                 entry.day === todayDay && 
-                entry.teacher.includes(teacherId) && // Check if teacher's ID is in the teacher string
+                entry.teacher && entry.teacher.includes(teacherId) && // Check if teacher's ID is in the teacher string
                 entry.subject !== '---' &&
                 entry.subject !== 'Prayer' &&
                 entry.subject !== 'Lunch'

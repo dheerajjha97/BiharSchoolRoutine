@@ -23,7 +23,7 @@ const daysOfWeek: ScheduleEntry['day'][] = ["Monday", "Tuesday", "Wednesday", "T
 
 export default function Home() {
   const { appState, isLoading, setIsLoading, addRoutineVersion, deleteRoutineVersion, updateRoutineVersion, setActiveRoutineId, user } = useContext(AppStateContext);
-  const { routineHistory, activeRoutineId, teachers, adjustments } = appState;
+  const { routineHistory, activeRoutineId, teachers } = appState;
   const { toast } = useToast();
   const [renameValue, setRenameValue] = useState("");
   const [routineToRename, setRoutineToRename] = useState<RoutineVersion | null>(null);

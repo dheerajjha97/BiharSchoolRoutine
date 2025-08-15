@@ -44,14 +44,13 @@ export default function Home() {
   }, [routineHistory, activeRoutineId]);
 
   const { loggedInTeacher, isUserAdmin } = useMemo(() => {
-    if (!user || isLoading || isAuthLoading || teachers.length === 0) {
+    if (!user || isLoading || isAuthLoading || !appState.teachers) {
         return { loggedInTeacher: undefined, isUserAdmin: false };
     }
-    const teacher = teachers.find(t => t.email === user.email);
-    // An admin is a user who is NOT found in the teachers list
+    const teacher = appState.teachers.find(t => t.email === user.email);
     const isAdmin = !teacher; 
     return { loggedInTeacher: teacher, isUserAdmin: isAdmin };
-  }, [user, teachers, isLoading, isAuthLoading]);
+  }, [user, appState.teachers, isLoading, isAuthLoading]);
 
   const handleGenerateRoutine = () => {
     setIsLoading(true);
@@ -310,7 +309,6 @@ export default function Home() {
   };
   
   const renderTeacherView = () => {
-    // Only show the "Not Found" alert if we are done loading and the teacher is still not found.
     if (!isLoading && !isAuthLoading && !loggedInTeacher) {
       return (
          <Alert variant="destructive">
@@ -325,7 +323,7 @@ export default function Home() {
         return <TeacherScheduleView teacher={loggedInTeacher} />;
     }
 
-    return null; // Don't render anything while loading
+    return null;
   };
 
   if (isLoading || isAuthLoading) {
@@ -352,3 +350,5 @@ export default function Home() {
     </div>
   );
 }
+
+    

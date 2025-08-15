@@ -75,16 +75,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         return { loggedInTeacher: undefined, isUserAdmin: false };
     }
     const teacher = appState.teachers.find(t => t.email === user.email);
-    // An admin is a user who is NOT found in the teachers list
     const isAdmin = !teacher; 
     return { loggedInTeacher: teacher, isUserAdmin: isAdmin };
   }, [isLoading, isAuthLoading, user, appState.teachers]);
 
   useEffect(() => {
-    // If the user is an admin but there's no school UDISE code set,
-    // redirect them to the data management page to set it up.
-    // Don't redirect if they are already on the data page.
-    if (!isAuthLoading && !isLoading && isUserAdmin && !appState.schoolInfo.udise && pathname !== '/data') {
+    if (isAuthLoading || isLoading) return;
+    
+    if (isUserAdmin && !appState.schoolInfo.udise && pathname !== '/data') {
         router.replace('/data');
     }
   }, [isAuthLoading, isLoading, isUserAdmin, appState.schoolInfo.udise, pathname, router]);
@@ -144,7 +142,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   );
 
   const renderNavItems = () => {
-    // Show loader while auth state is resolving or initial data is loading
     if (isLoading || isAuthLoading) {
         return (
             <div className="flex justify-center items-center h-full p-4">
@@ -153,7 +150,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         )
     }
     
-    // Don't render nav items if user is not logged in.
     if (!user) {
         return null;
     }
@@ -209,6 +205,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
        </div>
     </div>
   );
+  
+  if (isAuthLoading) {
+     return (
+        <div className="flex justify-center items-center h-screen">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+     );
+  }
 
   return (
     <div className="flex flex-col h-screen bg-secondary">
@@ -243,14 +247,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             {sidebarContent}
           </div>
           <main className="flex-1 bg-background p-4 md:p-6 lg:p-8 overflow-y-auto">
-            {isAuthLoading ? (
-                 <div className="flex justify-center items-center h-full">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
-            ) : children}
+            {children}
           </main>
         </div>
       </div>
     </div>
   );
 }
+
+    

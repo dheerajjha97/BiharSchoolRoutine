@@ -291,7 +291,6 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   }, []);
   
   const handleLogout = useCallback(async () => {
-    setIsAuthLoading(true);
     const auth = getFirebaseAuth();
     try {
       if(firestoreUnsubscribeRef.current) {
@@ -305,8 +304,6 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     } catch (error) {
       const authError = error as AuthError;
       toast({ variant: "destructive", title: "Logout Failed", description: authError.message });
-    } finally {
-        setIsAuthLoading(false);
     }
   }, [toast, router]);
 
@@ -333,14 +330,14 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       setIsAuthLoading(true);
-      setUser(currentUser);
-
+      
       if (firestoreUnsubscribeRef.current) {
         firestoreUnsubscribeRef.current();
         firestoreUnsubscribeRef.current = null;
       }
 
       if (currentUser) {
+        setUser(currentUser);
         // User is logged in. Figure out which school they belong to.
         const usersCollectionRef = collection(db, 'users');
         const userDocRef = doc(usersCollectionRef, currentUser.uid);
@@ -352,13 +349,23 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         } else {
             // Check if user is a teacher in any school, by looking for their email.
             const schoolDataCollectionRef = collection(db, "schoolData");
-            const teachersQuery = query(schoolDataCollectionRef, where("teachers", "array-contains", { email: currentUser.email }));
-            
+            const q = query(collection(db, "schoolData"), where("teachers", "array-contains", { email: currentUser.email, id: '', name: '', udise: '' }));
+            const teacherQuery = query(schoolDataCollectionRef, where("teachers", "array-contains-any", [{email: currentUser.email}]));
+
+
             try {
-                const querySnapshot = await getDocs(teachersQuery);
-                if (!querySnapshot.empty) {
-                    // Assuming a teacher's email is unique across all schools
-                    udiseCode = querySnapshot.docs[0].id; // The document ID is the UDISE code
+                const schoolDocs = await getDocs(collection(db, "schoolData"));
+                let foundSchool = false;
+                for (const schoolDoc of schoolDocs.docs) {
+                    const schoolData = schoolDoc.data();
+                    if (schoolData.teachers && Array.isArray(schoolData.teachers)) {
+                       const teacherExists = schoolData.teachers.some((teacher: any) => teacher.email === currentUser.email);
+                       if (teacherExists) {
+                           udiseCode = schoolDoc.id;
+                           foundSchool = true;
+                           break;
+                       }
+                    }
                 }
             } catch (error) {
                 console.error("Error querying for teacher's school:", error);
@@ -368,12 +375,11 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         if (udiseCode) {
             const schoolDocRef = doc(db, "schoolData", udiseCode);
             firestoreUnsubscribeRef.current = onSnapshot(schoolDocRef, (docSnap) => {
-                setIsLoading(true); // Start loading when new snapshot arrives
                 if (docSnap.exists()) {
                     setFullState(docSnap.data() as Partial<AppState>);
                 }
-                setIsLoading(false); // Finish loading after state is set
-                setIsAuthLoading(false);
+                setIsLoading(false);
+                setIsAuthLoading(false); // Auth is complete and successful
                 if (pathname === '/login') {
                     router.replace('/');
                 }
@@ -384,21 +390,25 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
                 setIsAuthLoading(false);
             });
         } else {
-            // No associated school data found for this user.
             toast({
                 variant: "destructive",
                 title: "No School Data Found",
                 description: "No school data found for your account. Please contact an administrator.",
                 duration: 5000,
             });
-            await handleLogout(); // Log out the user and redirect to login.
+            await handleLogout();
+            setIsAuthLoading(false); // Auth is complete, but failed validation
         }
 
       } else {
         // LOGGED OUT
+        setUser(null);
         setAppState(DEFAULT_APP_STATE);
         setIsLoading(false);
         setIsAuthLoading(false);
+        if (pathname !== '/login') {
+            router.replace('/login');
+        }
       }
     });
 
@@ -409,7 +419,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [handleLogout]);
+  }, []);
 
   // Debounced save effect
   useEffect(() => {
@@ -489,4 +499,3 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     </AppStateContext.Provider>
   );
 };
-

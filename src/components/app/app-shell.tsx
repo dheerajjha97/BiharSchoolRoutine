@@ -130,7 +130,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   const renderNavItems = () => {
     // Show loader while auth state is resolving or initial data is loading
-    if (isLoading || (user && isAuthLoading)) {
+    if (isLoading || isAuthLoading) {
         return (
             <div className="flex justify-center items-center h-full p-4">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -228,7 +228,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             {sidebarContent}
           </div>
           <main className="flex-1 bg-background p-4 md:p-6 lg:p-8 overflow-y-auto">
-            {isLoading || (isAuthLoading && !user) ? (
+            {isAuthLoading ? (
                  <div className="flex justify-center items-center h-full">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>

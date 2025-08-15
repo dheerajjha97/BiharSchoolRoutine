@@ -59,7 +59,6 @@ function ThemeToggle() {
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [hostname, setHostname] = useState("");
   const {
     appState,
     user,
@@ -69,11 +68,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     isSyncing,
     isLoading,
   } = useContext(AppStateContext);
-
-  useEffect(() => {
-    // This runs only on the client, after hydration
-    setHostname(window.location.hostname);
-  }, []);
 
   const loggedInTeacher = !isLoading && user ? appState.teachers.find(t => t.email === user.email) : undefined;
   
@@ -112,11 +106,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </Button>
         )}
       </div>
-      {!user && hostname && (
-        <p className="text-xs text-muted-foreground pr-1">
-          Current domain: <code className="bg-muted px-1 py-0.5 rounded">{hostname}</code>
-        </p>
-      )}
     </div>
   );
 

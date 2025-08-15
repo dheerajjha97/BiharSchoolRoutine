@@ -1,10 +1,11 @@
+
 "use client";
 
 import { createContext, useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { sortTimeSlots } from "@/lib/utils";
 import { getFirebaseAuth, getFirestoreDB } from "@/lib/firebase";
-import { onAuthStateChanged, GoogleAuthProvider, signInWithRedirect, signOut, type User, type AuthError } from "firebase/auth";
+import { onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, type User, type AuthError } from "firebase/auth";
 import { doc, setDoc, onSnapshot, type Unsubscribe } from "firebase/firestore";
 import type { 
     Teacher, 
@@ -76,6 +77,12 @@ const DEFAULT_APP_STATE: AppState = {
   adjustments: DEFAULT_ADJUSTMENTS_STATE,
 };
 
+// Function to strip non-persistent state for saving
+const getPersistentState = (state: AppState): Omit<AppState, 'adjustments' | 'teacherLoad' | 'examTimetable'> => {
+  const { adjustments, teacherLoad, examTimetable, ...persistentState } = state;
+  return persistentState;
+};
+
 // Recursively removes undefined values from an object or array.
 const removeUndefined = (obj: any): any => {
     if (obj === null || obj === undefined) return undefined;
@@ -92,13 +99,6 @@ const removeUndefined = (obj: any): any => {
         }, {} as { [key: string]: any });
     }
     return obj;
-};
-
-
-// Function to strip non-persistent state for saving
-const getPersistentState = (state: AppState): Omit<AppState, 'adjustments' | 'teacherLoad' | 'examTimetable'> => {
-  const { adjustments, teacherLoad, examTimetable, ...persistentState } = state;
-  return persistentState;
 };
 
 
@@ -279,10 +279,11 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     const auth = getFirebaseAuth();
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithRedirect(auth, provider);
+      await signInWithPopup(auth, provider);
     } catch (error) {
       const authError = error as AuthError;
       toast({ variant: "destructive", title: "Login Failed", description: authError.message });
+    } finally {
       setIsAuthLoading(false);
     }
   }, [toast]);
@@ -392,8 +393,13 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         }
       } else {
         // Logged out: save to Local Storage
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
-        console.log("Data saved to local storage.");
+        try {
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
+            console.log("Data saved to local storage.");
+        } catch (err) {
+            console.error("Failed to save to local storage:", err);
+            toast({ variant: "destructive", title: "Local Save Failed", description: "Could not save data to your browser." });
+        }
       }
     }, 1500);
 

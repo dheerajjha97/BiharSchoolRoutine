@@ -1,20 +1,123 @@
 
 "use client";
 
-import { useContext, useRef } from "react";
+import { useContext, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { AppStateContext } from "@/context/app-state-provider";
 import DataManager from "@/components/routine/data-manager";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Upload, Download, User, School, Book, Clock, DoorOpen } from "lucide-react";
+import { Upload, Download, User, School, Book, Clock, DoorOpen, Calendar, Trash2 } from "lucide-react";
 import { importFromJSON, exportToJSON } from "@/lib/csv-helpers";
 import PageHeader from "@/components/app/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import type { SchoolInfo } from "@/types";
+import type { SchoolInfo, Holiday } from "@/types";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format, parseISO } from 'date-fns';
+import { ScrollArea } from "@/components/ui/scroll-area";
+
+
+const HolidayManager = () => {
+    const { appState, updateState } = useContext(AppStateContext);
+    const { holidays } = appState;
+    const [date, setDate] = useState<Date | undefined>(undefined);
+    const [description, setDescription] = useState("");
+    const { toast } = useToast();
+
+    const handleAddHoliday = () => {
+        if (!date || !description.trim()) {
+            toast({ variant: "destructive", title: "Missing Information", description: "Please select a date and enter a description." });
+            return;
+        }
+
+        const dateString = format(date, "yyyy-MM-dd");
+
+        if (holidays.some(h => h.date === dateString)) {
+            toast({ variant: "destructive", title: "Duplicate Date", description: "This date is already marked as a holiday." });
+            return;
+        }
+
+        const newHoliday: Holiday = { date: dateString, description };
+        const newHolidays = [...holidays, newHoliday].sort((a, b) => a.date.localeCompare(b.date));
+        updateState('holidays', newHolidays);
+        
+        setDate(undefined);
+        setDescription("");
+    };
+    
+    const handleRemoveHoliday = (dateString: string) => {
+        updateState('holidays', holidays.filter(h => h.date !== dateString));
+    };
+
+    const holidayDates = holidays.map(h => parseISO(h.date));
+
+    return (
+        <Card className="flex flex-col h-full">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-3">
+                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary">
+                        <Calendar className="h-5 w-5" />
+                    </div>
+                    <span>Academic Calendar / Holidays</span>
+                </CardTitle>
+                <CardDescription>Mark holidays for the academic year. These dates will be excluded from adjustments and exams.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex-grow flex flex-col gap-4">
+                <div className="flex w-full items-center space-x-2">
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" className="w-[280px] justify-start text-left font-normal">
+                                <Calendar className="mr-2 h-4 w-4" />
+                                {date ? format(date, "PPP") : <span>Pick a date</span>}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                            <CalendarComponent mode="single" selected={date} onSelect={setDate} initialFocus />
+                        </PopoverContent>
+                    </Popover>
+                    <Input placeholder="Holiday description..." value={description} onChange={e => setDescription(e.target.value)} />
+                    <Button onClick={handleAddHoliday}>Add</Button>
+                </div>
+                <ScrollArea className="flex-grow h-64 border rounded-md p-2">
+                    <div className="space-y-2">
+                        {holidays.length > 0 ? (
+                            holidays.map((holiday) => (
+                                <div key={holiday.date} className="flex items-center justify-between bg-secondary p-2 rounded-md text-sm">
+                                    <div className="flex flex-col">
+                                        <span className="font-medium">{format(parseISO(holiday.date), "PPP")}</span>
+                                        <span className="text-xs text-muted-foreground">{holiday.description}</span>
+                                    </div>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveHoliday(holiday.date)}>
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="text-sm text-muted-foreground text-center py-10">No holidays added yet.</div>
+                        )}
+                    </div>
+                </ScrollArea>
+                 <div className="p-4 border rounded-md">
+                    <p className="text-sm font-medium mb-2">Calendar View</p>
+                    <CalendarComponent
+                        mode="multiple"
+                        selected={holidayDates}
+                        className="rounded-md"
+                        classNames={{
+                            day_selected: "bg-destructive text-destructive-foreground hover:bg-destructive hover:text-destructive-foreground focus:bg-destructive focus:text-destructive-foreground",
+                            day_today: "bg-accent text-accent-foreground",
+                        }}
+                    />
+                </div>
+            </CardContent>
+        </Card>
+    );
+};
+
 
 export default function DataManagementPage() {
     const { appState, updateState, setFullState } = useContext(AppStateContext);
@@ -163,6 +266,7 @@ export default function DataManagementPage() {
                     placeholder="e.g. 09:00 - 10:00"
                     description="Daily class time intervals."
                 />
+                <HolidayManager />
             </div>
         </div>
     );

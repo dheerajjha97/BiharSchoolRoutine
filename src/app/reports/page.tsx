@@ -71,7 +71,7 @@ function MultiSelectPopover({ options, selected, onSelectedChange, placeholder }
 
 export default function ReportsPage() {
     const { appState, updateState } = useContext(AppStateContext);
-    const { teachers, classes, subjects, rooms, examTimetable = [], schoolInfo } = appState;
+    const { teachers, classes, subjects, rooms, examTimetable = [], schoolInfo, holidays } = appState;
     const [dutyChart, setDutyChart] = useState<DutyChart | null>(null);
     const { toast } = useToast();
 
@@ -86,6 +86,12 @@ export default function ReportsPage() {
     const handleAddExamEntry = () => {
         if (!newExamDate || !newExamStartTime || !newExamEndTime || newExamClasses.length === 0 || newExamRooms.length === 0 || !newExamSubject) {
             toast({ variant: "destructive", title: "Missing Information", description: "Please fill all fields to add an exam entry." });
+            return;
+        }
+
+        const holidayOnDate = holidays.find(h => h.date === newExamDate);
+        if (holidayOnDate) {
+            toast({ variant: "destructive", title: "Cannot Schedule on Holiday", description: `The selected date is a holiday: ${holidayOnDate.description}` });
             return;
         }
 

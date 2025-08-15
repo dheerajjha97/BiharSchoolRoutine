@@ -13,9 +13,10 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn, dateToDay } from "@/lib/utils";
-import { Check as CheckIcon, PlusCircle } from "lucide-react";
+import { Check as CheckIcon, PlusCircle, CalendarX2 } from "lucide-react";
 import { generateSubstitutionPlan } from "@/lib/substitution-generator";
 import SubstitutionPlanDisplay from "@/components/routine/substitution-plan";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 function MultiSelectPopover({ options, selected, onSelectedChange, placeholder }: { options: Teacher[], selected: string[], onSelectedChange: (selected: string[]) => void, placeholder: string }) {
     const [open, setOpen] = useState(false);
@@ -73,13 +74,22 @@ function MultiSelectPopover({ options, selected, onSelectedChange, placeholder }
 
 export default function AdjustmentsPage() {
     const { appState, updateAdjustments } = useContext(AppStateContext);
-    const { teachers, routineHistory, activeRoutineId, teacherLoad, schoolInfo } = appState;
+    const { teachers, routineHistory, activeRoutineId, teacherLoad, schoolInfo, holidays } = appState;
     const { date, absentTeacherIds, substitutionPlan } = appState.adjustments;
     const { toast } = useToast();
 
     const activeRoutine = routineHistory.find(r => r.id === activeRoutineId);
 
+    const holidayOnSelectedDate = useMemo(() => {
+        return holidays.find(h => h.date === date);
+    }, [holidays, date]);
+
+
     const handleGeneratePlan = () => {
+        if (holidayOnSelectedDate) {
+             toast({ variant: "destructive", title: "Cannot Generate on Holiday", description: `The selected date (${holidayOnSelectedDate.description}) is a holiday.` });
+            return;
+        }
         if (!activeRoutine?.schedule?.schedule) {
             toast({ variant: "destructive", title: "No Active Routine Found", description: "Please generate or select a master routine on the dashboard first." });
             return;
@@ -90,7 +100,7 @@ export default function AdjustmentsPage() {
         }
 
         if (dateToDay(date) === null) {
-            toast({ variant: "destructive", title: "Cannot Generate for Sunday", description: "Sunday is a holiday." });
+            toast({ variant: "destructive", title: "Cannot Generate for Sunday", description: "Sunday is a holiday. Please check your working days configuration." });
             return;
         }
 
@@ -151,7 +161,17 @@ export default function AdjustmentsPage() {
                             />
                         </div>
                     </div>
-                     <Button onClick={handleGeneratePlan} disabled={!activeRoutine}>
+                    {holidayOnSelectedDate && (
+                         <Alert variant="destructive">
+                            <CalendarX2 className="h-4 w-4" />
+                            <AlertTitle>Holiday Alert!</AlertTitle>
+                            <AlertDescription>
+                                The selected date ({new Date(date).toLocaleDateString('en-GB')}) is marked as a holiday: <strong>{holidayOnSelectedDate.description}</strong>.
+                                You cannot generate a substitution plan for this day.
+                            </AlertDescription>
+                        </Alert>
+                    )}
+                     <Button onClick={handleGeneratePlan} disabled={!activeRoutine || !!holidayOnSelectedDate}>
                         Generate Substitution Plan
                     </Button>
                 </CardContent>

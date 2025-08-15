@@ -16,6 +16,11 @@ export const SchoolInfoSchema = z.object({
     details: z.string().default("Weekly Class Routine\n2024-25"), // For things like academic year, etc.
 });
 
+export const HolidaySchema = z.object({
+    date: z.string(), // YYYY-MM-DD
+    description: z.string(),
+});
+
 const DayEnum = z.enum(["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]);
 
 export const ScheduleEntrySchema = z.object({
@@ -124,6 +129,7 @@ export const SubstitutionPlanSchema = z.object({
 export type Day = z.infer<typeof DayEnum>;
 export type Teacher = z.infer<typeof TeacherSchema>;
 export type SchoolInfo = z.infer<typeof SchoolInfoSchema>;
+export type Holiday = z.infer<typeof HolidaySchema>;
 export type ScheduleEntry = z.infer<typeof ScheduleEntrySchema>;
 export type GenerateScheduleOutput = z.infer<typeof GenerateScheduleOutputSchema>;
 export type GenerateScheduleLogicInput = z.infer<typeof GenerateScheduleLogicInputSchema>;
@@ -148,6 +154,7 @@ export type AppState = {
   subjects: string[];
   timeSlots: string[];
   rooms: string[];
+  holidays: Holiday[];
   schoolInfo: SchoolInfo;
   config: SchoolConfig;
   routineHistory: RoutineVersion[];

@@ -16,6 +16,7 @@ import type {
     GenerateScheduleOutput, 
     AppState,
     SchoolInfo,
+    Holiday,
 } from '@/types';
 import AppShell from "@/components/app/app-shell";
 
@@ -55,6 +56,7 @@ const DEFAULT_APP_STATE: AppState = {
   subjects: [],
   timeSlots: [],
   rooms: [],
+  holidays: [],
   schoolInfo: {
     name: "",
     udise: "",
@@ -214,7 +216,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       if (key === 'timeSlots' && Array.isArray(value)) {
         newState.timeSlots = sortTimeSlots(value as string[]);
       }
-      if (['teachers', 'classes', 'subjects', 'timeSlots', 'rooms'].includes(key as string)) {
+      if (['teachers', 'classes', 'subjects', 'timeSlots', 'rooms', 'holidays'].includes(key as string)) {
           newState.routineHistory = [];
           newState.activeRoutineId = null;
           newState.teacherLoad = {};

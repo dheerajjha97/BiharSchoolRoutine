@@ -78,7 +78,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const navItems = isUserAdmin ? adminNavItems : teacherNavItems;
   const displayName = loggedInTeacher ? loggedInTeacher.name : user?.displayName;
 
-  const authControls = (
+  const authControls = user ? (
     <div className="flex flex-col items-end gap-1">
       <div className="flex items-center gap-2">
         {isSyncing && (
@@ -88,21 +88,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         )}
         <ThemeToggle />
-        {user && (
-          <>
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={user.photoURL || undefined} alt={displayName || user.email || 'User'} />
-              <AvatarFallback>{displayName?.charAt(0) || user.email?.charAt(0)}</AvatarFallback>
-            </Avatar>
-            <Button variant="outline" size="sm" onClick={handleLogout} disabled={isAuthLoading}>
-              <LogOut className="mr-2 h-4 w-4" />
-              Logout
-            </Button>
-          </>
-        )}
+        <Avatar className="h-8 w-8">
+          <AvatarImage src={user.photoURL || undefined} alt={displayName || user.email || 'User'} />
+          <AvatarFallback>{displayName?.charAt(0) || user.email?.charAt(0)}</AvatarFallback>
+        </Avatar>
+        <Button variant="outline" size="sm" onClick={handleLogout} disabled={isAuthLoading}>
+          <LogOut className="mr-2 h-4 w-4" />
+          Logout
+        </Button>
       </div>
     </div>
-  );
+  ) : null;
 
   const userProfileSection = user ? (
     <div className="p-4">

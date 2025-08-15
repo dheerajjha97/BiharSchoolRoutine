@@ -6,7 +6,7 @@ import { AppStateContext } from "@/context/app-state-provider";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Wand2, PlusSquare, Trash2, Edit, Check, X, UserCheck } from "lucide-react";
+import { Loader2, Wand2, PlusSquare, Trash2, Edit, Check, X, UserCheck, UserX } from "lucide-react";
 import RoutineDisplay from "@/components/routine/routine-display";
 import { generateScheduleLogic } from "@/lib/schedule-generator";
 import type { GenerateScheduleLogicInput, ScheduleEntry, RoutineVersion, Teacher } from "@/types";
@@ -24,6 +24,7 @@ export default function Home() {
   const { 
     appState, 
     isLoading, 
+    isAuthLoading,
     setIsLoading, 
     addRoutineVersion, 
     deleteRoutineVersion, 
@@ -43,14 +44,14 @@ export default function Home() {
   }, [routineHistory, activeRoutineId]);
 
   const { loggedInTeacher, isUserAdmin } = useMemo(() => {
-    if (!user || isLoading) {
+    if (!user || isLoading || isAuthLoading) {
         return { loggedInTeacher: undefined, isUserAdmin: false };
     }
     const teacher = teachers.find(t => t.email === user.email);
     // An admin is a user who is NOT found in the teachers list
     const isAdmin = !teacher; 
     return { loggedInTeacher: teacher, isUserAdmin: isAdmin };
-  }, [user, teachers, isLoading]);
+  }, [user, teachers, isLoading, isAuthLoading]);
 
   const handleGenerateRoutine = () => {
     setIsLoading(true);
@@ -309,8 +310,8 @@ export default function Home() {
   const renderTeacherView = () => {
     if (!loggedInTeacher) {
       return (
-         <Alert>
-            <UserCheck className="h-4 w-4" />
+         <Alert variant="destructive">
+            <UserX className="h-4 w-4" />
             <AlertTitle>Teacher Not Found</AlertTitle>
             <AlertDescription>Your email ({user?.email}) is not registered as a teacher in the system. Please contact the administrator.</AlertDescription>
         </Alert>
@@ -339,5 +340,3 @@ export default function Home() {
     </div>
   );
 }
-
-    

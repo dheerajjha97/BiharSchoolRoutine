@@ -67,13 +67,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   } = useContext(AppStateContext);
 
   const { loggedInTeacher, isUserAdmin } = useMemo(() => {
-    if (isLoading || !user) {
+    if (isLoading || isAuthLoading || !user) {
         return { loggedInTeacher: undefined, isUserAdmin: false };
     }
     const teacher = appState.teachers.find(t => t.email === user.email);
     const isAdmin = !teacher;
     return { loggedInTeacher: teacher, isUserAdmin: isAdmin };
-  }, [isLoading, user, appState.teachers]);
+  }, [isLoading, isAuthLoading, user, appState.teachers]);
 
   const navItems = isUserAdmin ? adminNavItems : teacherNavItems;
   const displayName = loggedInTeacher ? loggedInTeacher.name : user?.displayName;

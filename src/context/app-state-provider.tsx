@@ -310,12 +310,13 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     setIsAuthLoading(true);
     const auth = getFirebaseAuth();
     try {
-      await signOut(auth);
-      setAppState(DEFAULT_APP_STATE);
       if(firestoreUnsubscribeRef.current) {
         firestoreUnsubscribeRef.current();
         firestoreUnsubscribeRef.current = null;
       }
+      await signOut(auth);
+      setAppState(DEFAULT_APP_STATE);
+      setUser(null);
       router.push('/login');
     } catch (error) {
       const authError = error as AuthError;

@@ -4,7 +4,7 @@ import { createContext, useState, useEffect, useMemo, useCallback, useRef } from
 import { useToast } from "@/hooks/use-toast";
 import { sortTimeSlots } from "@/lib/utils";
 import { getFirebaseAuth, getFirestoreDB } from "@/lib/firebase";
-import { onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, type User, type AuthError } from "firebase/auth";
+import { onAuthStateChanged, GoogleAuthProvider, signInWithRedirect, signOut, type User, type AuthError } from "firebase/auth";
 import { doc, setDoc, onSnapshot, type Unsubscribe } from "firebase/firestore";
 import type { 
     Teacher, 
@@ -85,10 +85,11 @@ const removeUndefined = (obj: any): any => {
         return Object.keys(obj).reduce((acc, key) => {
             const value = obj[key];
             if (value !== undefined) {
-                acc[key] = removeUndefined(value);
+                const newKey = key as keyof typeof acc;
+                acc[newKey] = removeUndefined(value);
             }
             return acc;
-        }, {});
+        }, {} as { [key: string]: any });
     }
     return obj;
 };
@@ -278,7 +279,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     const auth = getFirebaseAuth();
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
+      await signInWithRedirect(auth, provider);
     } catch (error) {
       const authError = error as AuthError;
       toast({ variant: "destructive", title: "Login Failed", description: authError.message });
@@ -428,5 +429,3 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     </AppStateContext.Provider>
   );
 };
-
-    

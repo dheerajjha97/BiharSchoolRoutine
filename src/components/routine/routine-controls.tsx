@@ -17,7 +17,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Trash2, PlusCircle, AlertTriangle } from "lucide-react";
-import type { SchoolConfig, CombinedClassRule, SplitClassRule, Teacher, SubjectPriority, SubjectCategory, Unavailability } from "@/types";
+import type { SchoolConfig, CombinedClassRule, SplitClassRule, Teacher, SubjectPriority, SubjectCategory, Unavailability, Day } from "@/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogTrigger } from "../ui/dialog";
 import { Popover, PopoverTrigger, PopoverContent } from "../ui/popover";
 import { Command, CommandEmpty, CommandInput, CommandGroup, CommandItem, CommandList } from "../ui/command";
@@ -33,7 +33,7 @@ interface RoutineControlsProps {
   updateConfig: <K extends keyof SchoolConfig>(key: K, value: SchoolConfig[K]) => void;
 }
 
-const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const allDaysOfWeek: Day[] = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 function MultiSelectPopover({ options, selected, onSelectedChange, placeholder }: { options: string[], selected: string[], onSelectedChange: (selected: string[]) => void, placeholder: string }) {
     const [open, setOpen] = useState(false);
@@ -105,6 +105,17 @@ export default function RoutineControls({
   // State for new split rule
   const [splitRuleClass, setSplitRuleClass] = useState('');
   const [splitRuleParts, setSplitRuleParts] = useState<{ subject: string, teacherId: string }[]>([{ subject: '', teacherId: '' }]);
+
+  const handleWorkingDaysChange = (day: Day, checked: boolean) => {
+    const currentDays = config.workingDays || [];
+    const newDays = checked 
+        ? [...currentDays, day] 
+        : currentDays.filter(d => d !== day);
+    
+    // Maintain a consistent order
+    const sortedDays = allDaysOfWeek.filter(d => newDays.includes(d));
+    updateConfig('workingDays', sortedDays);
+  };
 
   const handleRequirementChange = (className: string, subject: string, checked: boolean) => {
     const currentReqs = config.classRequirements[className] || [];
@@ -203,6 +214,21 @@ export default function RoutineControls({
                   </SelectContent>
                 </Select>
               </div>
+               <div>
+                    <Label>Working Days</Label>
+                    <div className="flex flex-wrap gap-4 pt-2">
+                        {allDaysOfWeek.map(day => (
+                            <div key={day} className="flex items-center space-x-2">
+                                <Checkbox
+                                    id={`day-${day}`}
+                                    checked={(config.workingDays || []).includes(day)}
+                                    onCheckedChange={(checked) => handleWorkingDaysChange(day, !!checked)}
+                                />
+                                <Label htmlFor={`day-${day}`} className="font-normal">{day}</Label>
+                            </div>
+                        ))}
+                    </div>
+                </div>
           </div>
           <div className="flex items-center space-x-2">
             <Checkbox
@@ -353,7 +379,7 @@ export default function RoutineControls({
               </Select>
               <Select value={newUnavailability.day} onValueChange={(value) => setNewUnavailability({...newUnavailability, day: value})}>
                   <SelectTrigger><SelectValue placeholder="Select Day" /></SelectTrigger>
-                  <SelectContent>{daysOfWeek.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
+                  <SelectContent>{(config.workingDays || []).map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
               </Select>
               <Select value={newUnavailability.timeSlot} onValueChange={(value) => setNewUnavailability({...newUnavailability, timeSlot: value})}>
                   <SelectTrigger><SelectValue placeholder="Select Time Slot" /></SelectTrigger>

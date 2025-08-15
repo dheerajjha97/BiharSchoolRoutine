@@ -1,7 +1,8 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
+import { AppStateContext } from '@/context/app-state-provider';
 import type { TeacherLoad as TeacherLoadType, Teacher, SchoolInfo } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -17,9 +18,13 @@ interface TeacherLoadProps {
   schoolInfo: SchoolInfo;
 }
 
-const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Total"];
-
 export default function TeacherLoad({ teacherLoad, teachers, schoolInfo }: TeacherLoadProps) {
+  const { appState } = useContext(AppStateContext);
+  const { config } = appState;
+  
+  const workingDays = config.workingDays || [];
+  const displayDays = [...workingDays, "Total"];
+
   const teacherIds = Object.keys(teacherLoad).sort((a,b) => {
     const teacherA = teachers.find(t => t.id === a)?.name || a;
     const teacherB = teachers.find(t => t.id === b)?.name || b;
@@ -172,12 +177,12 @@ export default function TeacherLoad({ teacherLoad, teachers, schoolInfo }: Teach
               <TableHeader>
                 <TableRow>
                   <TableHead className="font-semibold sticky left-0 bg-card z-10" rowSpan={2}>Teacher</TableHead>
-                  {daysOfWeek.map(day => (
+                  {displayDays.map(day => (
                     <TableHead key={day} className="text-center font-semibold" colSpan={3}>{day}</TableHead>
                   ))}
                 </TableRow>
                  <TableRow>
-                  {daysOfWeek.map(day => (
+                  {displayDays.map(day => (
                     <React.Fragment key={day}>
                       <TableHead className="text-center">Main</TableHead>
                       <TableHead className="text-center">Add.</TableHead>
@@ -190,7 +195,7 @@ export default function TeacherLoad({ teacherLoad, teachers, schoolInfo }: Teach
                 {teacherIds.map(teacherId => (
                   <TableRow key={teacherId}>
                     <TableCell className="font-medium sticky left-0 bg-card z-10">{getTeacherName(teacherId)}</TableCell>
-                    {daysOfWeek.map(day => {
+                    {displayDays.map(day => {
                       const load = teacherLoad[teacherId]?.[day] ?? { total: 0, main: 0, additional: 0 };
                       return (
                          <React.Fragment key={`${teacherId}-${day}`}>

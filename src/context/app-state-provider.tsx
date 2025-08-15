@@ -61,6 +61,7 @@ const DEFAULT_APP_STATE: AppState = {
     details: ""
   },
   config: {
+    workingDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
     teacherSubjects: {},
     teacherClasses: {},
     classRequirements: {},
@@ -159,7 +160,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     const load: TeacherLoad = {};
     if (!activeRoutine?.schedule?.schedule || !appState.teachers) return {};
 
-    const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Total"];
+    const days = [...appState.config.workingDays, "Total"];
     
     appState.teachers.forEach(teacher => {
         load[teacher.id] = {};
@@ -188,6 +189,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
                     }
                 }
                 
+                if(!load[teacherId].Total) load[teacherId].Total = { total: 0, main: 0, additional: 0 };
                 load[teacherId].Total.total++;
                 if (category === 'main') {
                     load[teacherId].Total.main++;
@@ -199,7 +201,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     });
 
     return load;
-  }, [activeRoutine, appState.teachers, appState.config.subjectCategories]);
+  }, [activeRoutine, appState.teachers, appState.config.subjectCategories, appState.config.workingDays]);
   
   useEffect(() => {
     updateState('teacherLoad', calculatedTeacherLoad);
@@ -298,6 +300,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         firestoreUnsubscribeRef.current = null;
       }
       await signOut(auth);
+      setAppState(DEFAULT_APP_STATE);
     } catch (error) {
       const authError = error as AuthError;
       toast({ variant: "destructive", title: "Logout Failed", description: authError.message });
@@ -382,7 +385,6 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
             });
         } else {
             // This is a new user (likely an admin) with no associated school data.
-            // Load a default state and let AppShell redirect them to /data to set up.
             setFullState(DEFAULT_APP_STATE);
             setIsLoading(false);
             setIsAuthLoading(false);

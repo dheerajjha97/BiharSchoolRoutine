@@ -18,7 +18,6 @@ import { Input } from "@/components/ui/input";
 import TeacherScheduleView from "@/components/routine/teacher-schedule-view";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-const daysOfWeek: ScheduleEntry['day'][] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export default function Home() {
   const { 
@@ -59,8 +58,8 @@ export default function Home() {
           throw new Error("Please set the School Name and UDISE code in Data Management first.");
       }
 
-      if (classes.length === 0 || subjects.length === 0 || timeSlots.length === 0) {
-        throw new Error("Please define classes, subjects, and time slots in Data Management before generating a routine.");
+      if (classes.length === 0 || subjects.length === 0 || timeSlots.length === 0 || config.workingDays.length === 0) {
+        throw new Error("Please define classes, subjects, time slots, and working days in Data/Configuration before generating a routine.");
       }
       
       const input: GenerateScheduleLogicInput = {
@@ -95,8 +94,8 @@ export default function Home() {
        if (!schoolInfo.name || !schoolInfo.udise) {
           throw new Error("Please set the School Name and UDISE code in Data Management first.");
       }
-      if (classes.length === 0 || timeSlots.length === 0) {
-        throw new Error("Please define classes and time slots in Data Management first.");
+      if (classes.length === 0 || timeSlots.length === 0 || config.workingDays.length === 0) {
+        throw new Error("Please define classes, time slots, and working days in Data/Configuration first.");
       }
 
       const blankSchedule: ScheduleEntry[] = [];
@@ -104,7 +103,7 @@ export default function Home() {
         slot => slot !== config.prayerTimeSlot && slot !== config.lunchTimeSlot
       );
 
-      daysOfWeek.forEach(day => {
+      config.workingDays.forEach(day => {
         classes.forEach(className => {
           instructionalSlots.forEach(timeSlot => {
             blankSchedule.push({ day, timeSlot, className, subject: "---", teacher: "N/A" });
@@ -157,14 +156,14 @@ export default function Home() {
     };
     
     const generateButton = (
-      <Button size="lg" {...commonButtonProps} onClick={hasHistory ? undefined : handleGenerateRoutine}>
+      <Button size="lg" {...commonButtonProps}>
         {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Wand2 className="mr-2 h-5 w-5" />}
         Generate New Routine
       </Button>
     );
 
     const blankButton = (
-      <Button size="lg" variant="outline" {...commonButtonProps} onClick={hasHistory ? undefined : handleCreateBlankRoutine}>
+      <Button size="lg" variant="outline" {...commonButtonProps}>
         <PlusSquare className="mr-2 h-5 w-5" />
         Create New Blank Routine
       </Button>
@@ -189,6 +188,12 @@ export default function Home() {
         </AlertDialogContent>
       </AlertDialog>
     );
+    
+    const directActionButton = (trigger: 'generate' | 'blank') => (
+        <div onClick={trigger === 'generate' ? handleGenerateRoutine : handleCreateBlankRoutine}>
+             {trigger === 'generate' ? generateButton : blankButton}
+        </div>
+    );
       
     return (
        <Card>
@@ -200,8 +205,8 @@ export default function Home() {
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-4">
-              {hasHistory ? withConfirmation('generate') : generateButton}
-              {hasHistory ? withConfirmation('blank') : blankButton}
+              {hasHistory ? withConfirmation('generate') : directActionButton('generate')}
+              {hasHistory ? withConfirmation('blank') : directActionButton('blank')}
             </div>
           </CardContent>
         </Card>
@@ -297,6 +302,7 @@ export default function Home() {
           teacherSubjects={formattedTeacherSubjects}
           dailyPeriodQuota={config.dailyPeriodQuota}
           schoolInfo={schoolInfo}
+          workingDays={config.workingDays}
         />
         
           <TeacherLoad 
@@ -350,5 +356,3 @@ export default function Home() {
     </div>
   );
 }
-
-    

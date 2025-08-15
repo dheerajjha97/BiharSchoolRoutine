@@ -16,8 +16,10 @@ export const SchoolInfoSchema = z.object({
     details: z.string().default("Weekly Class Routine\n2024-25"), // For things like academic year, etc.
 });
 
+const DayEnum = z.enum(["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]);
+
 export const ScheduleEntrySchema = z.object({
-  day: z.enum(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]),
+  day: DayEnum,
   timeSlot: z.string(),
   className: z.string(),
   subject: z.string(),
@@ -59,6 +61,7 @@ export const SubjectPrioritySchema = z.enum(["before", "after", "none"]);
 export const SubjectCategorySchema = z.enum(["main", "additional"]);
 
 export const SchoolConfigSchema = z.object({
+  workingDays: z.array(DayEnum),
   classRequirements: z.record(z.string(), z.array(z.string())),
   subjectPriorities: z.record(z.string(), SubjectPrioritySchema),
   unavailability: z.array(UnavailabilitySchema),
@@ -118,6 +121,7 @@ export const SubstitutionPlanSchema = z.object({
 });
 
 // Inferred Types
+export type Day = z.infer<typeof DayEnum>;
 export type Teacher = z.infer<typeof TeacherSchema>;
 export type SchoolInfo = z.infer<typeof SchoolInfoSchema>;
 export type ScheduleEntry = z.infer<typeof ScheduleEntrySchema>;

@@ -18,12 +18,21 @@ import { Input } from "@/components/ui/input";
 import TeacherScheduleView from "@/components/routine/teacher-schedule-view";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-
 const daysOfWeek: ScheduleEntry['day'][] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export default function Home() {
-  const { appState, isLoading, setIsLoading, addRoutineVersion, deleteRoutineVersion, updateRoutineVersion, setActiveRoutineId, user } = useContext(AppStateContext);
-  const { routineHistory, activeRoutineId, teachers } = appState;
+  const { 
+    appState, 
+    isLoading, 
+    setIsLoading, 
+    addRoutineVersion, 
+    deleteRoutineVersion, 
+    updateRoutineVersion, 
+    setActiveRoutineId, 
+    user 
+  } = useContext(AppStateContext);
+
+  const { routineHistory, activeRoutineId, teachers, config, classes, subjects, timeSlots, schoolInfo, teacherLoad } = appState;
   const { toast } = useToast();
   const [renameValue, setRenameValue] = useState("");
   const [routineToRename, setRoutineToRename] = useState<RoutineVersion | null>(null);
@@ -38,17 +47,14 @@ export default function Home() {
         return { loggedInTeacher: undefined, isUserAdmin: false };
     }
     const teacher = teachers.find(t => t.email === user.email);
-    const isAdmin = !teacher;
+    // An admin is a user who is NOT found in the teachers list
+    const isAdmin = !teacher; 
     return { loggedInTeacher: teacher, isUserAdmin: isAdmin };
   }, [user, teachers, isLoading]);
-  
+
   const handleGenerateRoutine = () => {
     setIsLoading(true);
     try {
-      const { 
-        teachers, classes, subjects, timeSlots, config, schoolInfo
-      } = appState;
-
       if (!schoolInfo.name || !schoolInfo.udise) {
           throw new Error("Please set the School Name and UDISE code in Data Management first.");
       }
@@ -86,7 +92,6 @@ export default function Home() {
   const handleCreateBlankRoutine = () => {
     setIsLoading(true);
     try {
-      const { classes, timeSlots, config, schoolInfo } = appState;
        if (!schoolInfo.name || !schoolInfo.udise) {
           throw new Error("Please set the School Name and UDISE code in Data Management first.");
       }
@@ -143,9 +148,46 @@ export default function Home() {
   };
 
   const hasHistory = routineHistory && routineHistory.length > 0;
-  const isSchoolInfoSet = appState.schoolInfo && appState.schoolInfo.name && appState.schoolInfo.udise;
+  const isSchoolInfoSet = schoolInfo && schoolInfo.name && schoolInfo.udise;
 
   const renderAdminControls = () => {
+    const commonButtonProps = {
+      disabled: isLoading || !isSchoolInfoSet,
+      title: !isSchoolInfoSet ? "Please set School Name and UDISE code first" : ""
+    };
+    
+    const generateButton = (
+      <Button size="lg" {...commonButtonProps} onClick={handleGenerateRoutine}>
+        {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Wand2 className="mr-2 h-5 w-5" />}
+        Generate New Routine
+      </Button>
+    );
+
+    const blankButton = (
+      <Button size="lg" variant="outline" {...commonButtonProps} onClick={handleCreateBlankRoutine}>
+        <PlusSquare className="mr-2 h-5 w-5" />
+        Create New Blank Routine
+      </Button>
+    );
+
+    const withConfirmation = (trigger: React.ReactNode) => (
+      <AlertDialog>
+        <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will create a new version of the routine, leaving your current active routine untouched in the history. Do you want to continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={trigger === generateButton ? handleGenerateRoutine : handleCreateBlankRoutine}>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    );
+      
     return (
        <Card>
           <CardHeader>
@@ -155,61 +197,10 @@ export default function Home() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {hasHistory ? (
-                <div className="flex flex-wrap gap-4">
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button size="lg" disabled={isLoading || !isSchoolInfoSet} title={!isSchoolInfoSet ? "Please set School Name and UDISE code first" : ""}>
-                        {isLoading ? (<Loader2 className="mr-2 h-5 w-5 animate-spin" />) : (<Wand2 className="mr-2 h-5 w-5" />}
-                        Generate New Routine
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This will create a new version of the routine, leaving your current active routine untouched in the history. Do you want to continue?
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleGenerateRoutine}>Continue</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button size="lg" variant="outline" disabled={isLoading || !isSchoolInfoSet} title={!isSchoolInfoSet ? "Please set School Name and UDISE code first" : ""}>
-                        <PlusSquare className="mr-2 h-5 w-5" />
-                        Create New Blank Routine
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This will create a new version of the routine, leaving your current active routine untouched in the history. Do you want to continue?
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleCreateBlankRoutine}>Continue</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              ) : (
-                 <div className="flex flex-wrap gap-4">
-                    <Button size="lg" disabled={isLoading || !isSchoolInfoSet} onClick={handleGenerateRoutine} title={!isSchoolInfoSet ? "Please set School Name and UDISE code first" : ""}>
-                      {isLoading ? (<Loader2 className="mr-2 h-5 w-5 animate-spin" />) : (<Wand2 className="mr-2 h-5 w-5" />}
-                      Generate Routine
-                    </Button>
-                    <Button size="lg" variant="outline" disabled={isLoading || !isSchoolInfoSet} onClick={handleCreateBlankRoutine} title={!isSchoolInfoSet ? "Please set School Name and UDISE code first" : ""}>
-                      <PlusSquare className="mr-2 h-5 w-5" />
-                      Create Blank Routine
-                    </Button>
-                  </div>
-              )}
+            <div className="flex flex-wrap gap-4">
+              {hasHistory ? withConfirmation(generateButton) : generateButton}
+              {hasHistory ? withConfirmation(blankButton) : blankButton}
+            </div>
           </CardContent>
         </Card>
     );
@@ -217,9 +208,9 @@ export default function Home() {
   
   const renderAdminView = () => {
      const formattedTeacherSubjects = Object.fromEntries(
-        Object.entries(appState.config.teacherSubjects)
+        Object.entries(config.teacherSubjects)
             .map(([teacherId, subjects]) => {
-                const teacherName = appState.teachers.find(t => t.id === teacherId)?.name;
+                const teacherName = teachers.find(t => t.id === teacherId)?.name;
                 return teacherName ? [teacherName, subjects] : null;
             })
             .filter((entry): entry is [string, string[]] => entry !== null)
@@ -297,19 +288,19 @@ export default function Home() {
             }
           }}
           isEditable={true}
-          timeSlots={appState.timeSlots} 
-          classes={appState.classes}
-          subjects={appState.subjects}
-          teachers={appState.teachers}
+          timeSlots={timeSlots} 
+          classes={classes}
+          subjects={subjects}
+          teachers={teachers}
           teacherSubjects={formattedTeacherSubjects}
-          dailyPeriodQuota={appState.config.dailyPeriodQuota}
-          schoolInfo={appState.schoolInfo}
+          dailyPeriodQuota={config.dailyPeriodQuota}
+          schoolInfo={schoolInfo}
         />
         
           <TeacherLoad 
-              teacherLoad={appState.teacherLoad}
+              teacherLoad={teacherLoad}
               teachers={teachers}
-              schoolInfo={appState.schoolInfo}
+              schoolInfo={schoolInfo}
           />
       </>
     );

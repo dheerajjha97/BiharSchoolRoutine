@@ -44,7 +44,7 @@ export default function Home() {
   }, [routineHistory, activeRoutineId]);
 
   const { loggedInTeacher, isUserAdmin } = useMemo(() => {
-    if (!user || isLoading || isAuthLoading) {
+    if (!user || isLoading || isAuthLoading || teachers.length === 0) {
         return { loggedInTeacher: undefined, isUserAdmin: false };
     }
     const teacher = teachers.find(t => t.email === user.email);
@@ -308,20 +308,25 @@ export default function Home() {
   };
   
   const renderTeacherView = () => {
-    if (!loggedInTeacher) {
+    // Only show the "Not Found" alert if we are done loading and the teacher is still not found.
+    if (!isLoading && !isAuthLoading && !loggedInTeacher) {
       return (
          <Alert variant="destructive">
             <UserX className="h-4 w-4" />
             <AlertTitle>Teacher Not Found</AlertTitle>
-            <AlertDescription>Your email ({user?.email}) is not registered as a teacher in the system. Please contact the administrator.</AlertDescription>
+            <AlertDescription>Your email ({user?.email || '...'}) is not registered as a teacher in the system. Please contact the administrator.</AlertDescription>
         </Alert>
       );
     }
     
-    return <TeacherScheduleView teacher={loggedInTeacher} />;
+    if (loggedInTeacher) {
+        return <TeacherScheduleView teacher={loggedInTeacher} />;
+    }
+
+    return null; // Don't render anything while loading
   };
 
-  if (isLoading) {
+  if (isLoading || isAuthLoading) {
     return (
         <div className="flex justify-center items-center h-full">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -333,7 +338,7 @@ export default function Home() {
     <div className="space-y-6">
        <PageHeader 
           title="Dashboard"
-          description={isUserAdmin ? "Generate, view, and manage your school's class routine." : `Welcome, ${loggedInTeacher?.name || user?.displayName}. View your weekly schedule below.`}
+          description={isUserAdmin ? "Generate, view, and manage your school's class routine." : (loggedInTeacher ? `Welcome, ${loggedInTeacher.name}. View your weekly schedule below.` : 'Welcome. View your weekly schedule below.')}
         />
 
       {isUserAdmin ? renderAdminView() : renderTeacherView()}

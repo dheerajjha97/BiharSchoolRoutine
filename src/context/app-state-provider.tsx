@@ -361,10 +361,11 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         if (udiseCode) {
             const schoolDocRef = doc(db, "schoolData", udiseCode);
             firestoreUnsubscribeRef.current = onSnapshot(schoolDocRef, (docSnap) => {
+                setIsLoading(true); // Start loading when new snapshot arrives
                 if (docSnap.exists()) {
                     setFullState(docSnap.data() as Partial<AppState>);
                 }
-                setIsLoading(false);
+                setIsLoading(false); // Finish loading after state is set
                 setIsAuthLoading(false);
                 if (pathname === '/login') {
                     router.replace('/');
@@ -449,7 +450,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         setFullState,
         updateConfig,
         updateAdjustments,
-        isLoading: isLoading || (isAuthLoading && !user), 
+        isLoading: isLoading, 
         setIsLoading,
         isAuthLoading,
         isSyncing,

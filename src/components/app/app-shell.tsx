@@ -67,7 +67,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   } = useContext(AppStateContext);
 
   const { loggedInTeacher, isUserAdmin } = useMemo(() => {
-    if (isLoading || isAuthLoading || !user) {
+    if (isLoading || isAuthLoading || !user || appState.teachers.length === 0) {
         return { loggedInTeacher: undefined, isUserAdmin: false };
     }
     const teacher = appState.teachers.find(t => t.email === user.email);
@@ -78,7 +78,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const navItems = isUserAdmin ? adminNavItems : teacherNavItems;
   const displayName = loggedInTeacher ? loggedInTeacher.name : user?.displayName;
 
-  const authControls = user ? (
+  const authControls = !user ? null : (
     <div className="flex flex-col items-end gap-1">
       <div className="flex items-center gap-2">
         {isSyncing && (
@@ -98,9 +98,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </Button>
       </div>
     </div>
-  ) : null;
+  );
 
-  const userProfileSection = user ? (
+  const userProfileSection = !user ? null : (
     <div className="p-4">
       <Separator className="my-2" />
       <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary">
@@ -114,7 +114,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </div>
     </div>
-  ) : null;
+  );
   
   const creditSection = (
       <div className="p-4 text-xs text-muted-foreground space-y-2">
@@ -129,6 +129,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   );
 
   const renderNavItems = () => {
+    // Show loader while auth state is resolving or initial data is loading
     if (isLoading || (user && isAuthLoading)) {
         return (
             <div className="flex justify-center items-center h-full p-4">
@@ -137,6 +138,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         )
     }
     
+    // Don't render nav items if user is not logged in.
     if (!user) {
         return null;
     }

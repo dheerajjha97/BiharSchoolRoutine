@@ -70,8 +70,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   } = useContext(AppStateContext);
 
   const loggedInTeacher = !isLoading && user ? appState.teachers.find(t => t.email === user.email) : undefined;
-  
-  const navItems = loggedInTeacher ? teacherNavItems : adminNavItems;
+  const isUserAdmin = user && !loggedInTeacher;
+
+  const navItems = isUserAdmin ? adminNavItems : teacherNavItems;
   const displayName = loggedInTeacher ? loggedInTeacher.name : user?.displayName;
 
   const authControls = (

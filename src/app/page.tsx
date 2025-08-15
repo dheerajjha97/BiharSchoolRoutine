@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useContext, useMemo, useState } from "react";
@@ -29,6 +30,14 @@ export default function Home() {
     if (!routineHistory || routineHistory.length === 0) return null;
     return routineHistory.find(r => r.id === activeRoutineId) || routineHistory[0];
   }, [routineHistory, activeRoutineId]);
+
+  const loggedInTeacher = useMemo(() => {
+    return user ? teachers.find(t => t.email === user.email) : undefined;
+  }, [user, teachers]);
+
+  const isUserAdmin = useMemo(() => {
+    return user && !loggedInTeacher;
+  }, [user, loggedInTeacher]);
   
   const handleGenerateRoutine = () => {
     setIsLoading(true);
@@ -127,7 +136,7 @@ export default function Home() {
   const isLoggedIn = !!user;
 
   const renderGenerateButtons = () => {
-    if (!isLoggedIn) {
+    if (!isUserAdmin) {
         return (
             <TooltipProvider>
                 <div className="flex flex-wrap gap-4">
@@ -139,7 +148,7 @@ export default function Home() {
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                            <p>Please log in to generate a routine.</p>
+                            <p>You must be an admin to generate a routine.</p>
                         </TooltipContent>
                     </Tooltip>
                     <Tooltip>
@@ -150,7 +159,7 @@ export default function Home() {
                             </Button>
                         </TooltipTrigger>
                          <TooltipContent>
-                            <p>Please log in to create a routine.</p>
+                            <p>You must be an admin to create a routine.</p>
                         </TooltipContent>
                     </Tooltip>
                 </div>
@@ -238,6 +247,7 @@ export default function Home() {
           description="Generate, view, and manage your school's class routine."
         />
 
+      {isUserAdmin && (
         <Card>
           <CardHeader>
             <CardTitle>Generate New Routine</CardTitle>
@@ -249,8 +259,9 @@ export default function Home() {
               {renderGenerateButtons()}
           </CardContent>
         </Card>
+      )}
 
-        {isLoggedIn && hasHistory && activeRoutine && (
+        {isUserAdmin && hasHistory && activeRoutine && (
             <Card>
                 <CardHeader>
                     <CardTitle>Manage Active Routine</CardTitle>
@@ -318,7 +329,7 @@ export default function Home() {
               updateRoutineVersion(activeRoutine.id, { schedule: { schedule: newSchedule } });
             }
           }}
-          isEditable={isLoggedIn}
+          isEditable={isUserAdmin || false}
           timeSlots={appState.timeSlots} 
           classes={appState.classes}
           subjects={appState.subjects}
@@ -328,11 +339,13 @@ export default function Home() {
           pdfHeader={appState.pdfHeader}
         />
         
-        <TeacherLoad 
-            teacherLoad={appState.teacherLoad}
-            teachers={teachers}
-            pdfHeader={appState.pdfHeader}
-        />
+      {isUserAdmin && (
+          <TeacherLoad 
+              teacherLoad={appState.teacherLoad}
+              teachers={teachers}
+              pdfHeader={appState.pdfHeader}
+          />
+      )}
     </div>
   );
 }

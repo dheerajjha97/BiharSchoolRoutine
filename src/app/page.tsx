@@ -156,14 +156,14 @@ export default function Home() {
     };
     
     const generateButton = (
-      <Button size="lg" {...commonButtonProps}>
+       <Button size="lg" {...commonButtonProps}>
         {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Wand2 className="mr-2 h-5 w-5" />}
         Generate New Routine
       </Button>
     );
 
     const blankButton = (
-      <Button size="lg" variant="outline" {...commonButtonProps}>
+       <Button size="lg" variant="outline" {...commonButtonProps}>
         <PlusSquare className="mr-2 h-5 w-5" />
         Create New Blank Routine
       </Button>
@@ -189,11 +189,14 @@ export default function Home() {
       </AlertDialog>
     );
     
-    const directActionButton = (trigger: 'generate' | 'blank') => (
-        <div onClick={trigger === 'generate' ? handleGenerateRoutine : handleCreateBlankRoutine}>
+    const directActionButton = (trigger: 'generate' | 'blank') => {
+      const action = trigger === 'generate' ? handleGenerateRoutine : handleCreateBlankRoutine;
+      return (
+        <div onClick={action}>
              {trigger === 'generate' ? generateButton : blankButton}
         </div>
-    );
+      );
+    };
       
     return (
        <Card>
@@ -340,7 +343,7 @@ export default function Home() {
     );
   }
 
-  const pageTitle = isUserAdmin ? "Admin Dashboard" : "Teacher Routine";
+  const pageTitle = isUserAdmin ? "Admin Dashboard" : "Teacher Dashboard";
   const pageDescription = isUserAdmin 
     ? "Generate, view, and manage your school's class routine." 
     : (loggedInTeacher ? `Welcome, ${loggedInTeacher.name}. View your weekly schedule below.` : 'Welcome. Loading your schedule.');

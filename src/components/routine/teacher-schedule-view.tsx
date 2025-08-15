@@ -1,16 +1,20 @@
 
 "use client";
 
-import { useContext, useMemo } from 'react';
+import { useContext, useMemo, useState, useEffect, useRef } from 'react';
 import { AppStateContext } from '@/context/app-state-provider';
-import type { Teacher, ScheduleEntry } from '@/types';
+import type { Teacher, ScheduleEntry, Day } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { sortTimeSlots } from '@/lib/utils';
+import { sortTimeSlots, cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { UserCheck, UserX, UserPlus } from 'lucide-react';
+import { UserCheck, UserX, User, School, Circle, CircleDot, CheckCircle2 } from 'lucide-react';
+import { format, addDays, startOfWeek, isSameDay, getDay } from 'date-fns';
 
-const daysOfWeek: ScheduleEntry['day'][] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+type TimelineEntry = ScheduleEntry & { 
+    substituteTeacherId?: string;
+    isCurrent?: boolean;
+    isCompleted?: boolean;
+};
 
 interface TeacherScheduleViewProps {
     teacher: Teacher;
@@ -18,53 +22,84 @@ interface TeacherScheduleViewProps {
 
 export default function TeacherScheduleView({ teacher }: TeacherScheduleViewProps) {
     const { appState } = useContext(AppStateContext);
-    const { routineHistory, activeRoutineId, teachers, adjustments } = appState;
+    const { routineHistory, activeRoutineId, teachers, adjustments, config } = appState;
     const { substitutionPlan } = adjustments;
+
+    const today = new Date();
+    const [selectedDate, setSelectedDate] = useState(today);
+    const [currentTime, setCurrentTime] = useState(today);
+
+    useEffect(() => {
+        const timer = setInterval(() => setCurrentTime(new Date()), 60000); // Update every minute
+        return () => clearInterval(timer);
+    }, []);
+
+    const weekDates = useMemo(() => {
+        const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 }); // Monday
+        return Array.from({ length: 7 }).map((_, i) => addDays(weekStart, i));
+    }, [selectedDate]);
 
     const activeRoutine = useMemo(() => {
         return routineHistory.find(r => r.id === activeRoutineId);
     }, [routineHistory, activeRoutineId]);
 
-    const teacherWeeklySchedule = useMemo(() => {
-        if (!activeRoutine?.schedule?.schedule) return {};
-        
-        const teacherId = teacher.id;
-        const weeklySchedule: Record<string, (ScheduleEntry & { substituteTeacherId?: string })[]> = {};
-
-        daysOfWeek.forEach(day => {
-            const scheduleForDay = activeRoutine.schedule.schedule
-                .filter(entry => {
-                    if (!entry || entry.day !== day || !entry.teacher) return false;
-                    const teacherIdsInSlot = entry.teacher.split(' & ').map(id => id.trim());
-                    return teacherIdsInSlot.includes(teacherId);
-                })
-                .map(entry => {
-                    if (substitutionPlan && substitutionPlan.substitutions.length > 0) {
-                        const substitution = substitutionPlan.substitutions.find(sub => 
-                            sub.absentTeacherId === teacherId &&
-                            sub.timeSlot === entry.timeSlot &&
-                            sub.className === entry.className
-                        );
-                        if (substitution) {
-                            return { ...entry, substituteTeacherId: substitution.substituteTeacherId };
-                        }
-                    }
-                    return entry;
-                })
-                .sort((a, b) => sortTimeSlots([a.timeSlot, b.timeSlot]).indexOf(a.timeSlot) - sortTimeSlots([a.timeSlot, b.timeSlot]).indexOf(b.timeSlot));
-            
-            if (scheduleForDay.length > 0) {
-                weeklySchedule[day] = scheduleForDay;
-            }
-        });
-        
-        return weeklySchedule;
-
-    }, [activeRoutine, teacher, substitutionPlan]);
-
-    const weekHasClasses = Object.keys(teacherWeeklySchedule).length > 0;
     const getTeacherName = (id: string): string => teachers.find(t => t.id === id)?.name || id;
+
+    const parseTime = (timeStr: string) => {
+        const timePart = timeStr.split(' - ')[0].trim();
+        const date = new Date(selectedDate);
+        const [hours, minutes] = timePart.split(':').map(Number);
+        date.setHours(hours, minutes, 0, 0);
+        return date;
+    };
     
+    const selectedDaySchedule = useMemo(() => {
+        if (!activeRoutine?.schedule?.schedule) return [];
+        
+        const dayIndex = getDay(selectedDate);
+        const days: Day[] = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        const selectedDayName = days[dayIndex];
+        
+        if (!config.workingDays.includes(selectedDayName)) return [];
+
+        const teacherId = teacher.id;
+        const scheduleForDay = activeRoutine.schedule.schedule
+            .filter(entry => {
+                if (!entry || entry.day !== selectedDayName || !entry.teacher) return false;
+                const teacherIdsInSlot = entry.teacher.split(' & ').map(id => id.trim());
+                return teacherIdsInSlot.includes(teacherId);
+            })
+            .map((entry): TimelineEntry => {
+                let substituteTeacherId;
+                if (substitutionPlan && isSameDay(new Date(substitutionPlan.date), selectedDate)) {
+                    const substitution = substitutionPlan.substitutions.find(sub => 
+                        sub.absentTeacherId === teacherId &&
+                        sub.timeSlot === entry.timeSlot &&
+                        sub.className === entry.className
+                    );
+                    if (substitution) {
+                        substituteTeacherId = substitution.substituteTeacherId;
+                    }
+                }
+                
+                const startTime = parseTime(entry.timeSlot);
+                const endTimeString = entry.timeSlot.split(' - ')[1];
+                const endTime = endTimeString ? parseTime(endTimeString) : new Date(startTime.getTime() + 45 * 60000);
+                
+                return { 
+                    ...entry, 
+                    substituteTeacherId,
+                    isCompleted: currentTime > endTime,
+                    isCurrent: currentTime >= startTime && currentTime <= endTime
+                };
+            })
+            .sort((a, b) => sortTimeSlots([a.timeSlot, b.timeSlot]).indexOf(a.timeSlot) - sortTimeSlots([a.timeSlot, b.timeSlot]).indexOf(b.timeSlot));
+        
+        return scheduleForDay;
+
+    }, [activeRoutine, teacher, substitutionPlan, selectedDate, config.workingDays, currentTime]);
+
+
     if (!activeRoutine) {
         return (
              <Alert>
@@ -74,73 +109,102 @@ export default function TeacherScheduleView({ teacher }: TeacherScheduleViewProp
             </Alert>
         );
     }
+    
+    const TimelineIcon = ({ entry }: { entry: TimelineEntry }) => {
+        if (entry.isCompleted) {
+            return <CheckCircle2 className="h-6 w-6 text-green-500" />;
+        }
+        if (entry.isCurrent) {
+            return <CircleDot className="h-6 w-6 text-primary animate-pulse" />;
+        }
+        return <Circle className="h-6 w-6 text-muted-foreground/50" />;
+    }
 
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Your Weekly Schedule</CardTitle>
-                <CardDescription>
-                    A summary of your scheduled classes. This is based on your registered email: {teacher.email}.
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                {weekHasClasses ? (
-                    <div className="space-y-6">
-                        {daysOfWeek.map(day => {
-                            const daySchedule = teacherWeeklySchedule[day];
-                            if (!daySchedule || daySchedule.length === 0) return null;
+        <div className="bg-card text-card-foreground rounded-xl border shadow-sm">
+            <div className="p-4 border-b">
+                 <h3 className="font-semibold text-lg">{format(selectedDate, "MMMM")}</h3>
+                 <div className="flex justify-between items-center mt-4 overflow-x-auto pb-2 -mb-2">
+                    {weekDates.map(date => (
+                        <button 
+                            key={date.toString()} 
+                            onClick={() => setSelectedDate(date)}
+                            className={cn(
+                                "flex flex-col items-center justify-center w-14 h-16 rounded-lg transition-colors duration-200",
+                                isSameDay(date, selectedDate) 
+                                    ? "bg-primary text-primary-foreground" 
+                                    : "hover:bg-muted"
+                            )}
+                        >
+                            <span className="text-sm uppercase">{format(date, "EEE")}</span>
+                            <span className="text-xl font-bold">{format(date, "d")}</span>
+                        </button>
+                    ))}
+                 </div>
+            </div>
+            <div className="p-4 md:p-6">
+                {selectedDaySchedule.length > 0 ? (
+                    <div className="relative">
+                        {selectedDaySchedule.map((entry, index) => (
+                             <div key={index} className="flex gap-4 items-start">
+                                <div className="w-20 text-right text-sm text-muted-foreground shrink-0">{entry.timeSlot.split(' - ')[0]}</div>
+                                
+                                <div className="flex flex-col items-center self-stretch">
+                                    <TimelineIcon entry={entry} />
+                                    {index < selectedDaySchedule.length - 1 && (
+                                        <div className="w-px h-full bg-border flex-grow my-2"></div>
+                                    )}
+                                </div>
 
-                            return (
-                                <div key={day}>
-                                    <h3 className="text-lg font-semibold mb-2 border-b pb-2">{day}</h3>
-                                    <div className="border rounded-lg overflow-hidden">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead className="font-semibold">Time Slot</TableHead>
-                                                    <TableHead className="font-semibold">Class</TableHead>
-                                                    <TableHead className="font-semibold">Subject</TableHead>
-                                                    <TableHead className="font-semibold text-right">Status</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {daySchedule.map((entry, index) => (
-                                                    <TableRow key={index} className={entry.substituteTeacherId ? 'bg-muted/50' : ''}>
-                                                        <TableCell>{entry.timeSlot}</TableCell>
-                                                        <TableCell>{entry.className}</TableCell>
-                                                        <TableCell>{entry.subject}</TableCell>
-                                                        <TableCell className="text-right">
-                                                            {entry.substituteTeacherId ? (
-                                                                entry.substituteTeacherId === 'No Substitute Available' ? (
-                                                                    <div className="flex items-center justify-end text-orange-600">
-                                                                        <UserX className="mr-2 h-4 w-4" />
-                                                                        <span>No Substitute</span>
-                                                                    </div>
-                                                                ) : (
-                                                                    <div className="flex items-center justify-end text-green-600">
-                                                                        <UserPlus className="mr-2 h-4 w-4" />
-                                                                        <span>Sub: {getTeacherName(entry.substituteTeacherId)}</span>
-                                                                    </div>
-                                                                )
-                                                            ) : (
-                                                                 <span className="text-muted-foreground">Scheduled</span>
-                                                            )}
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
+                                <div className="flex-grow pb-8">
+                                    <p className="font-bold text-lg">{entry.subject}</p>
+                                    <div className="mt-2 space-y-2 text-muted-foreground">
+                                        <p className="flex items-center gap-2 text-sm">
+                                            <School className="h-4 w-4" />
+                                            <span>Class {entry.className}</span>
+                                        </p>
+                                        {entry.substituteTeacherId ? (
+                                            entry.substituteTeacherId === 'No Substitute Available' ? (
+                                                 <div className="flex items-center gap-2 text-sm text-amber-600">
+                                                    <UserX className="h-4 w-4" />
+                                                    <span>Cancelled (No Substitute)</span>
+                                                </div>
+                                            ) : (
+                                                 <div className="flex items-center gap-2 text-sm text-green-600">
+                                                    <User className="h-4 w-4" />
+                                                    <span>Substituted by: {getTeacherName(entry.substituteTeacherId)}</span>
+                                                </div>
+                                            )
+                                        ) : (
+                                           <div className="flex items-center gap-2 text-sm">
+                                                <User className="h-4 w-4" />
+                                                <span>{teacher.name} (You)</span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
-                            );
-                        })}
+
+                                 {entry.isCurrent && <div className="text-xs font-bold text-green-600 bg-green-100 dark:bg-green-900/50 px-2 py-1 rounded-full">Now</div>}
+
+                                 {entry.substituteTeacherId && (
+                                     <div className={cn(
+                                         "text-xs font-bold px-2 py-1 rounded-full",
+                                         entry.substituteTeacherId === 'No Substitute Available' 
+                                            ? "bg-destructive/20 text-destructive"
+                                            : "bg-primary/20 text-primary"
+                                     )}>
+                                         {entry.substituteTeacherId === 'No Substitute Available' ? 'Cancelled' : 'Substituted'}
+                                    </div>
+                                 )}
+                             </div>
+                        ))}
                     </div>
                 ) : (
-                     <div className="text-center py-12 text-muted-foreground">
-                        <p>You have no classes scheduled for the week in the active routine.</p>
+                    <div className="text-center py-16 text-muted-foreground">
+                        <p>No classes scheduled for {format(selectedDate, "eeee, MMMM d")}.</p>
                     </div>
                 )}
-            </CardContent>
-        </Card>
+            </div>
+        </div>
     );
 }

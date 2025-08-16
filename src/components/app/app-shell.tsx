@@ -25,6 +25,7 @@ import {
   Replace,
   CalendarDays,
   ClipboardList,
+  CalendarClock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -39,6 +40,7 @@ const adminNavItems = [
 const teacherNavItems = [
     { href: "/", label: "Teacher Routine", icon: ClipboardList },
     { href: "/school-routine", label: "Final School Routine", icon: CalendarDays },
+    { href: "/holidays", label: "Academic Calendar", icon: CalendarClock },
 ];
 
 function ThemeToggle() {
@@ -254,5 +256,3 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
-
-    

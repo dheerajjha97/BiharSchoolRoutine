@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useContext, useMemo } from "react";
+import { useContext } from "react";
 import { AppStateContext } from "@/context/app-state-provider";
 import PageHeader from "@/components/app/page-header";
 import RoutineDisplay from "@/components/routine/routine-display";
@@ -10,12 +10,7 @@ import type { Teacher } from "@/types";
 
 export default function SchoolRoutinePage() {
     const { appState, isLoading, isAuthLoading } = useContext(AppStateContext);
-    const { routineHistory, activeRoutineId, teachers, config, classes, subjects, timeSlots, schoolInfo } = appState;
-
-    const activeRoutine = useMemo(() => {
-        if (!routineHistory || routineHistory.length === 0) return null;
-        return routineHistory.find(r => r.id === activeRoutineId) || routineHistory[0];
-    }, [routineHistory, activeRoutineId]);
+    const { activeRoutine, teachers, config, classes, subjects, timeSlots, schoolInfo } = appState;
 
     if (isLoading || isAuthLoading) {
         return (
@@ -51,6 +46,7 @@ export default function SchoolRoutinePage() {
                 teacherSubjects={formattedTeacherSubjects}
                 dailyPeriodQuota={config.dailyPeriodQuota}
                 schoolInfo={schoolInfo}
+                workingDays={config.workingDays || []}
             />
         </div>
     );

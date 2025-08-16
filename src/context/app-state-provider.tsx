@@ -36,9 +36,6 @@ interface AppStateContextType {
   handleGoogleSignIn: () => void;
   handleLogout: () => void;
   // Routine history management
-  routineHistory: RoutineVersion[];
-  activeRoutineId: string | null;
-  setActiveRoutineId: (id: string) => void;
   addRoutineVersion: (schedule: GenerateScheduleOutput, name?: string) => void;
   updateRoutineVersion: (id: string, updates: Partial<Omit<RoutineVersion, 'id' | 'createdAt'>>) => void;
   deleteRoutineVersion: (id: string) => void;
@@ -80,14 +77,15 @@ const DEFAULT_APP_STATE: AppState = {
   },
   routineHistory: [],
   activeRoutineId: null,
+  activeRoutine: null,
   teacherLoad: {},
   examTimetable: [],
   adjustments: DEFAULT_ADJUSTMENTS_STATE,
 };
 
 // Function to strip non-persistent state for saving
-const getPersistentState = (state: AppState): Omit<AppState, 'adjustments' | 'teacherLoad' | 'examTimetable'> => {
-  const { adjustments, teacherLoad, examTimetable, ...persistentState } = state;
+const getPersistentState = (state: AppState): Omit<AppState, 'adjustments' | 'teacherLoad' | 'examTimetable' | 'activeRoutine'> => {
+  const { adjustments, teacherLoad, examTimetable, activeRoutine, ...persistentState } = state;
   return persistentState;
 };
 
@@ -154,13 +152,14 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   }, [appState]);
 
   const activeRoutine = useMemo(() => {
-    if (!appState.activeRoutineId || !appState.routineHistory) return null;
+    if (!appState.activeRoutineId) return null;
     return appState.routineHistory.find(r => r.id === appState.activeRoutineId);
   }, [appState.routineHistory, appState.activeRoutineId]);
 
   const calculatedTeacherLoad = useMemo(() => {
     const load: TeacherLoad = {};
-    if (!activeRoutine?.schedule?.schedule || !appState.teachers) return {};
+    const routine = stateRef.current.activeRoutine; // Use stateRef for latest routine
+    if (!routine?.schedule?.schedule || !appState.teachers) return {};
 
     const days = [...appState.config.workingDays, "Total"];
     
@@ -171,7 +170,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         });
     });
 
-    activeRoutine.schedule.schedule.forEach(entry => {
+    routine.schedule.schedule.forEach(entry => {
         if (!entry || entry.subject === "Prayer" || entry.subject === "Lunch" || entry.subject === "---") return;
         
         const teacherIdsInEntry = (entry.teacher || '').split(' & ').map(tId => tId.trim());
@@ -213,31 +212,30 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   const updateState = useCallback(<K extends keyof AppState>(key: K, value: AppState[K]) => {
     setAppState(prevState => {
       let newState = { ...prevState, [key]: value };
-      
       if (key === 'timeSlots' && Array.isArray(value)) {
         newState.timeSlots = sortTimeSlots(value as string[]);
-      }
-      
-      // Reset history only when core data that invalidates a routine is changed
-      if (['teachers', 'classes', 'subjects', 'timeSlots', 'rooms'].includes(key as string)) {
-          newState = {
-            ...newState,
-            routineHistory: [],
-            activeRoutineId: null,
-            teacherLoad: {},
-            adjustments: DEFAULT_ADJUSTMENTS_STATE,
-            examTimetable: [],
-          };
       }
       return newState;
     });
   }, []);
   
   const updateConfig = useCallback(<K extends keyof SchoolConfig>(key: K, value: SchoolConfig[K]) => {
-     setAppState(prevState => ({
-        ...prevState,
-        config: { ...prevState.config, [key]: value },
-    }));
+     setAppState(prevState => {
+        const newState = {
+          ...prevState,
+          config: { ...prevState.config, [key]: value },
+        };
+        // Reset history only when core data that invalidates a routine is changed
+        if (['teachers', 'classes', 'subjects', 'timeSlots', 'rooms', 'workingDays'].includes(key as string)) {
+            newState.routineHistory = [];
+            newState.activeRoutineId = null;
+            newState.activeRoutine = null;
+            newState.teacherLoad = {};
+            newState.adjustments = DEFAULT_ADJUSTMENTS_STATE;
+            newState.examTimetable = [];
+        }
+        return newState;
+    });
   }, []);
 
   const updateAdjustments = useCallback(<K extends keyof AppState['adjustments']>(key: K, value: AppState['adjustments'][K]) => {
@@ -261,6 +259,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
             ...prevState,
             routineHistory: newHistory,
             activeRoutineId: newVersion.id,
+            activeRoutine: newVersion,
         }
     });
   }, []);
@@ -270,7 +269,8 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       ...prevState,
       routineHistory: prevState.routineHistory.map(r => 
         r.id === id ? { ...r, ...updates } : r
-      )
+      ),
+      activeRoutine: prevState.activeRoutine?.id === id ? { ...prevState.activeRoutine, ...updates } : prevState.activeRoutine,
     }));
   }, []);
 
@@ -292,6 +292,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         ...prevState,
         routineHistory: newHistory,
         activeRoutineId: newActiveId,
+        activeRoutine: newHistory.find(r => r.id === newActiveId) || null,
       };
     });
   }, []);
@@ -347,10 +348,12 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         const userDocSnap = await getDoc(userDocRef);
 
         let udiseCode: string | null = null;
+        let isUserAdmin = false;
+        
         if (userDocSnap.exists() && userDocSnap.data()?.udise) {
             udiseCode = userDocSnap.data()?.udise;
+            isUserAdmin = true;
         } else {
-            // Check if user is a teacher in any school, by looking for their email.
             const schoolDataCollectionRef = collection(db, "schoolData");
             try {
                 const schoolDocs = await getDocs(schoolDataCollectionRef);
@@ -360,6 +363,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
                        const teacherExists = schoolData.teachers.some((teacher: any) => teacher.email === currentUser.email);
                        if (teacherExists) {
                            udiseCode = schoolDoc.id;
+                           isUserAdmin = false;
                            break;
                        }
                     }
@@ -368,13 +372,20 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
                 console.error("Error querying for teacher's school:", error);
             }
         }
-
+        
         if (udiseCode) {
-            // Found existing school data for user
             const schoolDocRef = doc(db, "schoolData", udiseCode);
             firestoreUnsubscribeRef.current = onSnapshot(schoolDocRef, (docSnap) => {
                 if (docSnap.exists()) {
-                    setFullState(docSnap.data() as Partial<AppState>);
+                    const data = docSnap.data();
+                    if (isUserAdmin) {
+                        setFullState(data as Partial<AppState>);
+                    } else {
+                        // Teacher: Load base data but only the active routine
+                        const { routineHistory, activeRoutineId, ...baseData } = data;
+                        const activeRoutine = routineHistory.find((r: RoutineVersion) => r.id === activeRoutineId) || null;
+                        setFullState({ ...baseData, activeRoutine, activeRoutineId });
+                    }
                 }
                 setIsLoading(false);
                 setIsAuthLoading(false);
@@ -388,7 +399,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
                 setIsAuthLoading(false);
             });
         } else {
-            // This is a new user (likely an admin) with no associated school data.
+            // New Admin
             setFullState(DEFAULT_APP_STATE);
             setIsLoading(false);
             setIsAuthLoading(false);
@@ -419,8 +430,9 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 
   // Debounced save effect
   useEffect(() => {
+    const isUserAdmin = user ? stateRef.current.teachers.every(t => t.email !== user.email) : false;
     const udise = stateRef.current.schoolInfo.udise;
-    if (isLoading || isAuthLoading || !user || !udise) return;
+    if (isLoading || isAuthLoading || !user || !udise || !isUserAdmin) return;
 
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
@@ -437,11 +449,8 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         const schoolDocRef = doc(db, "schoolData", udise);
         await setDoc(schoolDocRef, stateToSave, { merge: true });
 
-        const isUserAdmin = stateRef.current.teachers.every(t => t.email !== user.email);
-        if (isUserAdmin) {
-            const userDocRef = doc(db, "users", user.uid);
-            await setDoc(userDocRef, { udise: udise }, { merge: true });
-        }
+        const userDocRef = doc(db, "users", user.uid);
+        await setDoc(userDocRef, { udise: udise }, { merge: true });
         
       } catch (err) {
         console.error("Failed to save to Firestore:", err);
@@ -471,13 +480,24 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         user,
         handleGoogleSignIn,
         handleLogout,
-        routineHistory: appState.routineHistory,
-        activeRoutineId: appState.activeRoutineId,
-        setActiveRoutineId: (id: string) => updateState('activeRoutineId', id),
         addRoutineVersion,
         updateRoutineVersion,
         deleteRoutineVersion
   };
+  
+  useEffect(() => {
+    if (!appState.activeRoutineId && appState.routineHistory.length > 0) {
+        const sortedHistory = [...appState.routineHistory].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        updateState('activeRoutineId', sortedHistory[0].id);
+    }
+    if (appState.activeRoutineId) {
+        const newActiveRoutine = appState.routineHistory.find(r => r.id === appState.activeRoutineId);
+        if (newActiveRoutine && newActiveRoutine !== appState.activeRoutine) {
+            updateState('activeRoutine', newActiveRoutine);
+        }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appState.activeRoutineId, appState.routineHistory]);
 
   if (pathname === '/login') {
       return (

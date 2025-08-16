@@ -157,8 +157,9 @@ export type AppState = {
   holidays: Holiday[];
   schoolInfo: SchoolInfo;
   config: SchoolConfig;
-  routineHistory: RoutineVersion[];
+  routineHistory: RoutineVersion[]; // For admin
   activeRoutineId: string | null;
+  activeRoutine: RoutineVersion | null; // For teacher / active display
   teacherLoad: TeacherLoad;
   examTimetable: ExamEntry[];
   // Non-persistent state for daily adjustments

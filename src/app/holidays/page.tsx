@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useContext } from "react";
+import { useContext, useMemo } from "react";
 import PageHeader from "@/components/app/page-header";
 import { AppStateContext } from "@/context/app-state-provider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,12 +9,21 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format, parseISO } from 'date-fns';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Calendar } from "lucide-react";
+import type { Day } from "@/types";
+
+const allDaysOfWeek: Day[] = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export default function HolidaysPage() {
     const { appState } = useContext(AppStateContext);
-    const { holidays } = appState;
+    const { holidays, config } = appState;
 
     const holidayDates = holidays.map(h => parseISO(h.date));
+    
+    const nonWorkingDaysIndexes = useMemo(() => {
+        return allDaysOfWeek
+            .map((day, index) => (config.workingDays.includes(day) ? -1 : index))
+            .filter(index => index !== -1);
+    }, [config.workingDays]);
 
     return (
         <div className="space-y-6">
@@ -56,16 +65,18 @@ export default function HolidaysPage() {
                 <Card>
                      <CardHeader>
                         <CardTitle>Calendar View</CardTitle>
-                        <CardDescription>Holidays are marked in red.</CardDescription>
+                        <CardDescription>Holidays and non-working days are marked in red.</CardDescription>
                     </CardHeader>
                     <CardContent className="flex justify-center">
                         <CalendarComponent
                             mode="multiple"
                             selected={holidayDates}
+                            disabled={[{ dayOfWeek: nonWorkingDaysIndexes }]}
                             className="rounded-md border"
                             classNames={{
                                 day_selected: "bg-destructive text-destructive-foreground hover:bg-destructive hover:text-destructive-foreground focus:bg-destructive focus:text-destructive-foreground",
                                 day_today: "bg-accent text-accent-foreground",
+                                day_disabled: "bg-destructive/20 text-destructive-foreground",
                             }}
                         />
                     </CardContent>
@@ -74,3 +85,5 @@ export default function HolidaysPage() {
         </div>
     );
 }
+
+    

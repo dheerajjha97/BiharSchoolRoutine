@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useContext, useRef, useState } from "react";
+import { useContext, useRef, useState, useMemo } from "react";
 import type { ChangeEvent } from "react";
 import { AppStateContext } from "@/context/app-state-provider";
 import DataManager from "@/components/routine/data-manager";
@@ -14,19 +14,27 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import type { SchoolInfo, Holiday } from "@/types";
+import type { SchoolInfo, Holiday, Day } from "@/types";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format, parseISO } from 'date-fns';
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 
+const allDaysOfWeek: Day[] = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
 const HolidayManager = () => {
     const { appState, updateState } = useContext(AppStateContext);
-    const { holidays } = appState;
+    const { holidays, config } = appState;
     const [date, setDate] = useState<Date | undefined>(undefined);
     const [description, setDescription] = useState("");
     const { toast } = useToast();
+    
+    const nonWorkingDaysIndexes = useMemo(() => {
+        return allDaysOfWeek
+            .map((day, index) => (config.workingDays.includes(day) ? -1 : index))
+            .filter(index => index !== -1);
+    }, [config.workingDays]);
 
     const handleAddHoliday = () => {
         if (!date || !description.trim()) {
@@ -76,7 +84,13 @@ const HolidayManager = () => {
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">
-                            <CalendarComponent mode="single" selected={date} onSelect={setDate} initialFocus />
+                            <CalendarComponent 
+                                mode="single" 
+                                selected={date} 
+                                onSelect={setDate} 
+                                initialFocus 
+                                disabled={[{ dayOfWeek: nonWorkingDaysIndexes }]}
+                            />
                         </PopoverContent>
                     </Popover>
                     <Input placeholder="Holiday description..." value={description} onChange={e => setDescription(e.target.value)} />
@@ -106,10 +120,12 @@ const HolidayManager = () => {
                     <CalendarComponent
                         mode="multiple"
                         selected={holidayDates}
+                        disabled={[{ dayOfWeek: nonWorkingDaysIndexes }]}
                         className="rounded-md"
                         classNames={{
                             day_selected: "bg-destructive text-destructive-foreground hover:bg-destructive hover:text-destructive-foreground focus:bg-destructive focus:text-destructive-foreground",
                             day_today: "bg-accent text-accent-foreground",
+                            day_disabled: "bg-destructive/20 text-destructive-foreground",
                         }}
                     />
                 </div>
@@ -271,3 +287,5 @@ export default function DataManagementPage() {
         </div>
     );
 }
+
+    

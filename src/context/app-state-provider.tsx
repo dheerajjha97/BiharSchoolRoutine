@@ -234,15 +234,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
           ...prevState,
           config: { ...prevState.config, [key]: value },
         };
-        // Reset history only when core data that invalidates a routine is changed
-        if (['workingDays'].includes(key as string)) {
-            newState.routineHistory = [];
-            newState.activeRoutineId = null;
-            newState.activeRoutine = null;
-            newState.teacherLoad = {};
-            newState.adjustments = DEFAULT_ADJUSTMENTS_STATE;
-            newState.examTimetable = [];
-        }
+        // Do not reset history for general config changes
         return newState;
     });
   }, []);
@@ -313,8 +305,8 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         firestoreUnsubscribeRef.current();
         firestoreUnsubscribeRef.current = null;
       }
+      setAppState(DEFAULT_APP_STATE); // Proactively clear state
       await signOut(auth);
-      setAppState(DEFAULT_APP_STATE);
     } catch (error) {
       const authError = error as AuthError;
       toast({ variant: "destructive", title: "Logout Failed", description: authError.message });
@@ -534,3 +526,5 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     </AppStateContext.Provider>
   );
 };
+
+    

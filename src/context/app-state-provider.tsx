@@ -153,7 +153,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 
   const activeRoutine = useMemo(() => {
     if (!appState.activeRoutineId || !appState.routineHistory) return null;
-    return appState.routineHistory.find(r => r.id === appState.activeRoutineId);
+    return appState.routineHistory.find(r => r.id === appState.activeRoutineId) || null;
   }, [appState.routineHistory, appState.activeRoutineId]);
 
   const calculatedTeacherLoad = useMemo(() => {
@@ -305,13 +305,14 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         firestoreUnsubscribeRef.current();
         firestoreUnsubscribeRef.current = null;
       }
-      setAppState(DEFAULT_APP_STATE); // Proactively clear state
       await signOut(auth);
+      setAppState(DEFAULT_APP_STATE); // Proactively clear state
+      router.replace('/login'); // Immediately redirect
     } catch (error) {
       const authError = error as AuthError;
       toast({ variant: "destructive", title: "Logout Failed", description: authError.message });
     }
-  }, [toast]);
+  }, [toast, router]);
 
   const handleGoogleSignIn = useCallback(async () => {
     setIsAuthLoading(true);

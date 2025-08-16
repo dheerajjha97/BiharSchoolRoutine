@@ -234,7 +234,6 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
           ...prevState,
           config: { ...prevState.config, [key]: value },
         };
-        // Do not reset history for general config changes
         return newState;
     });
   }, []);
@@ -306,8 +305,8 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         firestoreUnsubscribeRef.current = null;
       }
       await signOut(auth);
-      setAppState(DEFAULT_APP_STATE); // Proactively clear state
-      router.replace('/login'); // Immediately redirect
+      setAppState(DEFAULT_APP_STATE);
+      router.replace('/login');
     } catch (error) {
       const authError = error as AuthError;
       toast({ variant: "destructive", title: "Logout Failed", description: authError.message });
@@ -386,13 +385,13 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
                         // Teacher: Load base data but only the active routine
                         const { routineHistory, ...baseData } = data;
                         const activeRoutineId = data.activeRoutineId;
-                        const activeRoutine = (data.routineHistory || []).find((r: RoutineVersion) => r.id === activeRoutineId) || null;
+                        const activeRoutineData = (data.routineHistory || []).find((r: RoutineVersion) => r.id === activeRoutineId) || null;
                         
                         setFullState({ 
                           ...baseData, 
-                          activeRoutine: activeRoutine,
+                          activeRoutine: activeRoutineData,
                           activeRoutineId: activeRoutineId,
-                          routineHistory: null, // Clear history for teacher
+                          routineHistory: null, 
                         });
                     }
                 }
@@ -527,3 +526,5 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     </AppStateContext.Provider>
   );
 };
+
+    

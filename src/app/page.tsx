@@ -6,7 +6,7 @@ import { AppStateContext } from "@/context/app-state-provider";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Wand2, PlusSquare, Trash2, Edit, Check, X, UserX } from "lucide-react";
+import { Loader2, Wand2, PlusSquare, Trash2, Edit, Check, X, UserX, LogIn } from "lucide-react";
 import RoutineDisplay from "@/components/routine/routine-display";
 import { generateScheduleLogic } from "@/lib/schedule-generator";
 import type { GenerateScheduleLogicInput, ScheduleEntry, RoutineVersion, Teacher } from "@/types";
@@ -28,19 +28,14 @@ export default function Home() {
     addRoutineVersion, 
     deleteRoutineVersion, 
     updateRoutineVersion, 
-    setActiveRoutineId, 
+    updateState,
     user 
   } = useContext(AppStateContext);
 
-  const { routineHistory, activeRoutineId, teachers, config, classes, subjects, timeSlots, schoolInfo, teacherLoad } = appState;
+  const { routineHistory, activeRoutineId, teachers, config, classes, subjects, timeSlots, schoolInfo, teacherLoad, activeRoutine } = appState;
   const { toast } = useToast();
   const [renameValue, setRenameValue] = useState("");
   const [routineToRename, setRoutineToRename] = useState<RoutineVersion | null>(null);
-
-  const activeRoutine = useMemo(() => {
-    if (!routineHistory || routineHistory.length === 0) return null;
-    return routineHistory.find(r => r.id === activeRoutineId) || routineHistory[0];
-  }, [routineHistory, activeRoutineId]);
 
   const { loggedInTeacher, isUserAdmin } = useMemo(() => {
     if (!user || isLoading || isAuthLoading || !appState.teachers) {
@@ -245,7 +240,7 @@ export default function Home() {
                                     <Button size="icon" variant="ghost" onClick={cancelRename}><X className="h-4 w-4" /></Button>
                                 </div>
                              ) : (
-                                <Select value={activeRoutine.id || ""} onValueChange={setActiveRoutineId}>
+                                <Select value={activeRoutine.id || ""} onValueChange={(value) => updateState('activeRoutineId', value)}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select a routine version..." />
                                     </SelectTrigger>
@@ -359,3 +354,5 @@ export default function Home() {
     </div>
   );
 }
+
+    

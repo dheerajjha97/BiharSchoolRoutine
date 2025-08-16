@@ -22,7 +22,7 @@ interface TeacherScheduleViewProps {
 
 export default function TeacherScheduleView({ teacher }: TeacherScheduleViewProps) {
     const { appState } = useContext(AppStateContext);
-    const { activeRoutine, teachers, adjustments, config } = appState;
+    const { activeRoutine, teachers, adjustments, config, holidays } = appState;
     const { substitutionPlan } = adjustments;
 
     const today = new Date();
@@ -54,8 +54,19 @@ export default function TeacherScheduleView({ teacher }: TeacherScheduleViewProp
         const days: Day[] = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
         const selectedDayName = days[dayIndex];
         
-        if (!config.workingDays.includes(selectedDayName) || !activeRoutine?.schedule?.schedule) {
+        // Check if it's a non-working day first
+        if (!config.workingDays.includes(selectedDayName)) {
              return [];
+        }
+
+        // Check if the selected date is a holiday
+        const dateString = format(selectedDate, "yyyy-MM-dd");
+        if (holidays.some(h => h.date === dateString)) {
+            return [];
+        }
+
+        if (!activeRoutine?.schedule?.schedule) {
+            return [];
         }
 
         const teacherId = teacher.id;
@@ -93,7 +104,7 @@ export default function TeacherScheduleView({ teacher }: TeacherScheduleViewProp
         
         return scheduleForDay;
 
-    }, [activeRoutine, teacher, substitutionPlan, selectedDate, config.workingDays, currentTime]);
+    }, [activeRoutine, teacher, substitutionPlan, selectedDate, config.workingDays, currentTime, holidays]);
 
 
     if (!activeRoutine) {

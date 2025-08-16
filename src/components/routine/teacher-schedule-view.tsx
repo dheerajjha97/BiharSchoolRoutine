@@ -22,7 +22,7 @@ interface TeacherScheduleViewProps {
 
 export default function TeacherScheduleView({ teacher }: TeacherScheduleViewProps) {
     const { appState } = useContext(AppStateContext);
-    const { routineHistory, activeRoutineId, teachers, adjustments, config } = appState;
+    const { activeRoutine, teachers, adjustments, config } = appState;
     const { substitutionPlan } = adjustments;
 
     const today = new Date();
@@ -38,10 +38,6 @@ export default function TeacherScheduleView({ teacher }: TeacherScheduleViewProp
         const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 }); // Monday
         return Array.from({ length: 7 }).map((_, i) => addDays(weekStart, i));
     }, [selectedDate]);
-
-    const activeRoutine = useMemo(() => {
-        return routineHistory.find(r => r.id === activeRoutineId);
-    }, [routineHistory, activeRoutineId]);
 
     const getTeacherName = (id: string): string => teachers.find(t => t.id === id)?.name || id;
 

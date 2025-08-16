@@ -50,13 +50,13 @@ export default function TeacherScheduleView({ teacher }: TeacherScheduleViewProp
     };
     
     const selectedDaySchedule = useMemo(() => {
-        if (!activeRoutine?.schedule?.schedule) return [];
-        
         const dayIndex = getDay(selectedDate);
         const days: Day[] = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
         const selectedDayName = days[dayIndex];
         
-        if (!config.workingDays.includes(selectedDayName)) return [];
+        if (!config.workingDays.includes(selectedDayName) || !activeRoutine?.schedule?.schedule) {
+             return [];
+        }
 
         const teacherId = teacher.id;
         const scheduleForDay = activeRoutine.schedule.schedule

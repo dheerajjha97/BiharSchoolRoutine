@@ -158,7 +158,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 
   const calculatedTeacherLoad = useMemo(() => {
     const load: TeacherLoad = {};
-    const routine = stateRef.current.activeRoutine; // Use stateRef for latest routine
+    const routine = activeRoutine; 
     if (!routine?.schedule?.schedule || !appState.teachers) return {};
 
     const days = [...appState.config.workingDays, "Total"];
@@ -526,5 +526,3 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     </AppStateContext.Provider>
   );
 };
-
-    

@@ -152,7 +152,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   }, [appState]);
 
   const activeRoutine = useMemo(() => {
-    if (!appState.activeRoutineId) return null;
+    if (!appState.activeRoutineId || !appState.routineHistory) return null;
     return appState.routineHistory.find(r => r.id === appState.activeRoutineId);
   }, [appState.routineHistory, appState.activeRoutineId]);
 
@@ -235,7 +235,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
           config: { ...prevState.config, [key]: value },
         };
         // Reset history only when core data that invalidates a routine is changed
-        if (['workingDays', 'rooms'].includes(key as string)) {
+        if (['workingDays'].includes(key as string)) {
             newState.routineHistory = [];
             newState.activeRoutineId = null;
             newState.activeRoutine = null;
@@ -446,7 +446,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
 
   // Debounced save effect
   useEffect(() => {
-    const isUserAdmin = user ? stateRef.current.teachers.every(t => t.email !== user.email) : false;
+    const isUserAdmin = user ? !stateRef.current.teachers.some(t => t.email === user.email) : false;
     const udise = stateRef.current.schoolInfo.udise;
     if (isLoading || isAuthLoading || !user || !udise || !isUserAdmin) return;
 

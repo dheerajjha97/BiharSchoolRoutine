@@ -212,6 +212,15 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   const updateState = useCallback(<K extends keyof AppState>(key: K, value: AppState[K]) => {
     setAppState(prevState => {
       let newState = { ...prevState, [key]: value };
+      // Reset history only when core data that invalidates a routine is changed
+      if (['teachers', 'classes', 'subjects', 'timeSlots'].includes(key as string)) {
+          newState.routineHistory = [];
+          newState.activeRoutineId = null;
+          newState.activeRoutine = null;
+          newState.teacherLoad = {};
+          newState.adjustments = DEFAULT_ADJUSTMENTS_STATE;
+          newState.examTimetable = [];
+      }
       if (key === 'timeSlots' && Array.isArray(value)) {
         newState.timeSlots = sortTimeSlots(value as string[]);
       }
@@ -226,7 +235,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
           config: { ...prevState.config, [key]: value },
         };
         // Reset history only when core data that invalidates a routine is changed
-        if (['teachers', 'classes', 'subjects', 'timeSlots', 'rooms', 'workingDays'].includes(key as string)) {
+        if (['workingDays', 'rooms'].includes(key as string)) {
             newState.routineHistory = [];
             newState.activeRoutineId = null;
             newState.activeRoutine = null;
@@ -382,9 +391,16 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
                         setFullState(data as Partial<AppState>);
                     } else {
                         // Teacher: Load base data but only the active routine
-                        const { routineHistory, activeRoutineId, ...baseData } = data;
-                        const activeRoutine = routineHistory.find((r: RoutineVersion) => r.id === activeRoutineId) || null;
-                        setFullState({ ...baseData, activeRoutine, activeRoutineId });
+                        const { routineHistory, ...baseData } = data;
+                        const activeRoutineId = data.activeRoutineId;
+                        const activeRoutine = (data.routineHistory || []).find((r: RoutineVersion) => r.id === activeRoutineId) || null;
+                        
+                        setFullState({ 
+                          ...baseData, 
+                          activeRoutine: activeRoutine,
+                          activeRoutineId: activeRoutineId,
+                          routineHistory: null, // Clear history for teacher
+                        });
                     }
                 }
                 setIsLoading(false);
@@ -486,14 +502,17 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   };
   
   useEffect(() => {
-    if (!appState.activeRoutineId && appState.routineHistory.length > 0) {
-        const sortedHistory = [...appState.routineHistory].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        updateState('activeRoutineId', sortedHistory[0].id);
-    }
-    if (appState.activeRoutineId) {
+    // This effect ensures that if the activeRoutineId is set, the activeRoutine object is also synced.
+    // This is particularly important for admins, as their activeRoutine is derived from the history.
+    if (appState.activeRoutineId && appState.routineHistory) {
         const newActiveRoutine = appState.routineHistory.find(r => r.id === appState.activeRoutineId);
         if (newActiveRoutine && newActiveRoutine !== appState.activeRoutine) {
             updateState('activeRoutine', newActiveRoutine);
+        }
+    } else if (!appState.activeRoutineId) {
+        // If activeId is cleared, clear the activeRoutine object too
+        if (appState.activeRoutine !== null) {
+            updateState('activeRoutine', null);
         }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps

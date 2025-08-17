@@ -26,6 +26,7 @@ import {
   Replace,
   UserCheck,
   NotebookText,
+  School,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -40,6 +41,7 @@ const adminNavItems = [
 
 const teacherNavItems = [
     { href: "/", label: "My Dashboard", icon: UserCheck },
+    { href: "/school-routine", label: "School Routine", icon: School },
     { href: "/holidays", label: "Academic Calendar", icon: NotebookText },
 ];
 

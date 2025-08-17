@@ -313,30 +313,6 @@ export default function Home() {
                 timeSlots={appState.timeSlots}
             />
         </div>
-
-        <Card className="mt-8">
-            <CardHeader>
-                <div className="flex items-center gap-2">
-                    <School className="h-5 w-5 text-primary" />
-                    <CardTitle>Full School Routine</CardTitle>
-                </div>
-                <CardDescription>View the complete routine for all classes.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                 <RoutineDisplay 
-                    scheduleData={activeRoutine?.schedule || null}
-                    onScheduleChange={() => {}}
-                    isEditable={false}
-                    timeSlots={appState.timeSlots} 
-                    classes={appState.classes}
-                    subjects={appState.subjects}
-                    teachers={appState.teachers}
-                    teacherSubjects={config.teacherSubjects}
-                    dailyPeriodQuota={appState.config.dailyPeriodQuota}
-                    pdfHeader={appState.schoolInfo.pdfHeader}
-                />
-            </CardContent>
-        </Card>
       </>
     )
   }

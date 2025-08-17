@@ -18,7 +18,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from "@/components/ui/input";
 import TeacherRoutineDisplay from "@/components/routine/teacher-routine-display";
 
-const daysOfWeek: ScheduleEntry['day'][] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export default function Home() {
   const router = useRouter();
@@ -93,7 +92,7 @@ export default function Home() {
         slot => slot !== config.prayerTimeSlot && slot !== config.lunchTimeSlot
       );
 
-      daysOfWeek.forEach(day => {
+      config.workingDays.forEach(day => {
         classes.forEach(className => {
           instructionalSlots.forEach(timeSlot => {
             blankSchedule.push({ day, timeSlot, className, subject: "---", teacher: "N/A" });
@@ -286,12 +285,14 @@ export default function Home() {
         teacherSubjects={config.teacherSubjects}
         dailyPeriodQuota={appState.config.dailyPeriodQuota}
         pdfHeader={appState.schoolInfo.pdfHeader}
+        workingDays={appState.config.workingDays}
       />
       
       <TeacherLoad 
           teacherLoad={appState.teacherLoad}
           teachers={teachers}
           pdfHeader={appState.schoolInfo.pdfHeader}
+          workingDays={appState.config.workingDays}
       />
     </>
   );
@@ -311,6 +312,7 @@ export default function Home() {
                 scheduleData={activeRoutine?.schedule || null}
                 teacher={currentTeacher || null}
                 timeSlots={appState.timeSlots}
+                workingDays={appState.config.workingDays}
             />
         </div>
       </>

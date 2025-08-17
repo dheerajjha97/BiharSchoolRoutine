@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import type { GenerateScheduleOutput, Teacher, ScheduleEntry } from "@/types";
+import type { GenerateScheduleOutput, Teacher, ScheduleEntry, DayOfWeek } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { User, ChevronLeft, ChevronRight, BookOpen } from "lucide-react";
@@ -12,9 +12,10 @@ interface TeacherRoutineDisplayProps {
     scheduleData: GenerateScheduleOutput | null;
     teacher: Teacher | null;
     timeSlots: string[];
+    workingDays: DayOfWeek[];
 }
 
-const daysOfWeek: ScheduleEntry['day'][] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const allDaysOfWeek: DayOfWeek[] = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 const DailyTimeline = ({ periods, timeSlots }: { periods: ScheduleEntry[], timeSlots: string[] }) => {
     const sortedPeriods = useMemo(() => {
@@ -33,13 +34,13 @@ const DailyTimeline = ({ periods, timeSlots }: { periods: ScheduleEntry[], timeS
     }
     
     return (
-        <div className="relative pl-8">
+        <div className="relative p-4 sm:p-6">
             {sortedPeriods.map((period, index) => (
                     <div key={period.timeSlot} className="relative flex items-start pb-8">
                     <div className="absolute left-0 text-right">
                         <p className="text-sm font-medium text-foreground w-16 -translate-x-20 mt-1">{period.timeSlot.split('-')[0].trim()}</p>
                     </div>
-                    <div className="absolute left-0 flex flex-col items-center h-full">
+                    <div className="absolute left-0 flex flex-col items-center">
                         <div className="z-10 h-5 w-5 rounded-full bg-background border-2 border-primary flex items-center justify-center">
                             <div className="h-2 w-2 rounded-full bg-primary" />
                         </div>
@@ -62,40 +63,52 @@ const DailyTimeline = ({ periods, timeSlots }: { periods: ScheduleEntry[], timeS
     );
 };
 
-export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots }: TeacherRoutineDisplayProps) {
+export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots, workingDays }: TeacherRoutineDisplayProps) {
     const [currentDate, setCurrentDate] = useState(new Date());
 
     useEffect(() => {
-        const todayIndex = new Date().getDay();
-        if (todayIndex === 0) { // If Sunday
-            const nextDay = new Date();
-            nextDay.setDate(nextDay.getDate() + 1); // Move to Monday
-            setCurrentDate(nextDay);
-        } else {
-            setCurrentDate(new Date());
+        const today = new Date();
+        const dayIndex = today.getDay(); // 0 for Sunday, 1 for Monday, etc.
+        const todayDayName = allDaysOfWeek[dayIndex];
+        
+        // If today is not a working day, find the next working day
+        if (!workingDays.includes(todayDayName)) {
+            let nextDate = new Date(today);
+            for (let i = 1; i <= 7; i++) {
+                nextDate.setDate(today.getDate() + i);
+                const nextDayIndex = nextDate.getDay();
+                const nextDayName = allDaysOfWeek[nextDayIndex];
+                if (workingDays.includes(nextDayName)) {
+                    setCurrentDate(nextDate);
+                    return;
+                }
+            }
         }
-    }, []);
+        setCurrentDate(today);
+    }, [workingDays]);
 
     const teacherScheduleByDay = useMemo(() => {
         if (!scheduleData?.schedule || !teacher) return {};
         const schedule: Record<string, ScheduleEntry[]> = {};
-        daysOfWeek.forEach(day => schedule[day] = []);
+        workingDays.forEach(day => schedule[day] = []);
 
         scheduleData.schedule.forEach(entry => {
-            if ((entry.teacher || '').includes(teacher.id) && entry.subject !== 'Prayer' && entry.subject !== 'Lunch' && entry.subject !== '---') {
-                schedule[entry.day].push(entry);
+            if (entry.day && (entry.teacher || '').includes(teacher.id) && entry.subject !== 'Prayer' && entry.subject !== 'Lunch' && entry.subject !== '---') {
+                if(schedule[entry.day]) {
+                    schedule[entry.day].push(entry);
+                }
             }
         });
         return schedule;
-    }, [scheduleData, teacher]);
+    }, [scheduleData, teacher, workingDays]);
     
     const weekDates = useMemo(() => {
         const startOfWeek = new Date(currentDate);
         const dayOfWeek = startOfWeek.getDay();
-        const diff = startOfWeek.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Adjust for Sunday
+        const diff = startOfWeek.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Adjust for Sunday, start week on Monday
         startOfWeek.setDate(diff);
 
-        return Array.from({ length: 6 }).map((_, i) => { // Only Monday to Saturday
+        return Array.from({ length: 7 }).map((_, i) => { 
             const date = new Date(startOfWeek);
             date.setDate(date.getDate() + i);
             return date;
@@ -134,10 +147,8 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
         );
     }
     
-    // Adjust index to be 0 for Monday, 5 for Saturday, and handle Sunday (0) correctly
     const dayIndex = currentDate.getDay();
-    const selectedDayIndex = dayIndex === 0 ? 0 : dayIndex - 1; // Treat Sunday like Monday for view, but logic handles days
-    const selectedDay = daysOfWeek[selectedDayIndex];
+    const selectedDay = allDaysOfWeek[dayIndex];
     const dailyPeriods = teacherScheduleByDay[selectedDay] || [];
 
     return (
@@ -151,20 +162,25 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
                         <Button variant="ghost" size="icon" onClick={() => changeWeek('next')}><ChevronRight /></Button>
                 </div>
                 <div className="flex items-center justify-center gap-1 rounded-lg bg-muted p-1">
-                    {weekDates.map(date => (
-                        <Button
-                            key={date.toString()}
-                            variant={currentDate.toDateString() === date.toDateString() ? "default" : "ghost"}
-                            size="sm"
-                            className="px-2 sm:px-3 flex-1"
-                            onClick={() => setCurrentDate(date)}
-                        >
-                            <div className="flex flex-col items-center">
-                                <span className="text-xs">{date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}</span>
-                                <span className="font-bold">{date.getDate()}</span>
-                            </div>
-                        </Button>
-                    ))}
+                    {weekDates.map(date => {
+                        const dayName = allDaysOfWeek[date.getDay()];
+                        const isWorkingDay = workingDays.includes(dayName);
+                        return (
+                            <Button
+                                key={date.toString()}
+                                variant={currentDate.toDateString() === date.toDateString() ? "default" : "ghost"}
+                                size="sm"
+                                className={cn("px-2 sm:px-3 flex-1", !isWorkingDay && "text-muted-foreground/50 line-through")}
+                                onClick={() => setCurrentDate(date)}
+                                disabled={!isWorkingDay}
+                            >
+                                <div className="flex flex-col items-center">
+                                    <span className="text-xs">{date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}</span>
+                                    <span className="font-bold">{date.getDate()}</span>
+                                </div>
+                            </Button>
+                        )
+                    })}
                 </div>
             </CardHeader>
             <CardContent className="flex justify-center items-center p-4 sm:p-6">

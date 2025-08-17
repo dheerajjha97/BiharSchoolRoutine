@@ -17,6 +17,7 @@ import type {
     AppState,
     SchoolInfo,
     Holiday,
+    DayOfWeek,
 } from '@/types';
 
 export const AppStateContext = createContext<AppStateContextType>({} as AppStateContextType);
@@ -59,6 +60,7 @@ const DEFAULT_APP_STATE: AppState = {
   rooms: [],
   holidays: [],
   config: {
+    workingDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
     teacherSubjects: {},
     teacherClasses: {},
     classRequirements: {},
@@ -126,7 +128,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     const load: TeacherLoad = {};
     if (!activeRoutine?.schedule?.schedule || !appState.teachers) return {};
 
-    const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Total"];
+    const days: (DayOfWeek | "Total")[] = [...appState.config.workingDays, "Total"];
     
     appState.teachers.forEach(teacher => {
         load[teacher.id] = {};
@@ -166,7 +168,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     });
 
     return load;
-  }, [activeRoutine, appState.teachers, appState.config.subjectCategories]);
+  }, [activeRoutine, appState.teachers, appState.config.subjectCategories, appState.config.workingDays]);
   
   useEffect(() => {
     if (!isLoading) {

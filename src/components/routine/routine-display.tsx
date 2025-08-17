@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useMemo, useState } from 'react';
-import type { GenerateScheduleOutput, ScheduleEntry, Teacher } from "@/types";
+import type { GenerateScheduleOutput, ScheduleEntry, Teacher, DayOfWeek } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,6 +37,7 @@ interface RoutineDisplayProps {
   dailyPeriodQuota: number;
   pdfHeader?: string;
   isEditable: boolean;
+  workingDays: DayOfWeek[];
 }
 
 type GridSchedule = Record<string, Record<string, Record<string, ScheduleEntry[]>>>;
@@ -47,10 +48,8 @@ type CellData = {
     teacher: string; // This will store the teacher's ID
 }
 
-const daysOfWeek: ScheduleEntry['day'][] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-
 type CurrentCell = {
-    day: ScheduleEntry['day'];
+    day: DayOfWeek;
     timeSlot: string;
     className: string;
     entry: ScheduleEntry | null;
@@ -86,7 +85,7 @@ const toRoman = (num: number): string => {
     return result;
 };
 
-const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, teacherSubjects, onScheduleChange, dailyPeriodQuota, pdfHeader = "", isEditable }: RoutineDisplayProps) => {
+const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, teacherSubjects, onScheduleChange, dailyPeriodQuota, pdfHeader = "", isEditable, workingDays }: RoutineDisplayProps) => {
   const { toast } = useToast();
   
   const [isCellDialogOpen, setIsCellDialogOpen] = React.useState(false);
@@ -164,7 +163,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 
   const gridSchedule = useMemo<GridSchedule>(() => {
     const grid: GridSchedule = {};
-    daysOfWeek.forEach(day => {
+    workingDays.forEach(day => {
         grid[day] = {};
         classes.forEach(c => {
             grid[day][c] = {};
@@ -184,7 +183,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
       });
     }
     return grid;
-  }, [scheduleData, timeSlots, classes]);
+  }, [scheduleData, timeSlots, classes, workingDays]);
   
   const availableTeachers = useMemo(() => {
     if (!cellData.subject || cellData.subject === '---') return teachers;
@@ -203,7 +202,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
     }
   }, [cellData.subject, cellData.teacher, availableTeachers]);
   
-  const handleCellClick = (day: ScheduleEntry['day'], timeSlot: string, className: string, entry: ScheduleEntry | null) => {
+  const handleCellClick = (day: DayOfWeek, timeSlot: string, className: string, entry: ScheduleEntry | null) => {
     if (!isEditable) return;
     setCurrentCell({ day, timeSlot, className, entry });
     setCellData(entry ? {
@@ -262,7 +261,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
      setCurrentCell(null);
   };
   
-  const handleCopyDay = (sourceDay: ScheduleEntry['day'], destinationDay: ScheduleEntry['day']) => {
+  const handleCopyDay = (sourceDay: DayOfWeek, destinationDay: DayOfWeek) => {
     if (!scheduleData?.schedule) return;
 
     const scheduleWithoutDestination = scheduleData.schedule.filter(entry => 
@@ -275,7 +274,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 
     const newDestinationEntries = sourceEntries.map(entry => ({
       ...entry,
-      day: destinationDay as ScheduleEntry['day']
+      day: destinationDay as DayOfWeek
     }));
 
     onScheduleChange([...scheduleWithoutDestination, ...newDestinationEntries]);
@@ -398,7 +397,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
     }
   }
 
-  const renderCellContent = (day: ScheduleEntry['day'], className: string, timeSlot: string) => {
+  const renderCellContent = (day: DayOfWeek, className: string, timeSlot: string) => {
     const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
     const isClashed = entries.some(entry => 
         (entry.teacher || '').split(' & ').some(t => clashSet.has(`teacher-${day}-${entry.timeSlot}-${t}`)) ||
@@ -464,7 +463,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
               </TableRow>
             </TableHeader>
             <TableBody>
-              {daysOfWeek.map((day) => (
+              {workingDays.map((day) => (
                 <React.Fragment key={day}>
                   {displayClasses.map((className, classIndex) => (
                     <TableRow key={`${day}-${className}`}>
@@ -484,7 +483,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                                         <DropdownMenuSubTrigger>Paste to...</DropdownMenuSubTrigger>
                                         <DropdownMenuPortal>
                                           <DropdownMenuSubContent>
-                                            {daysOfWeek.filter(d => d !== day).map(destinationDay => (
+                                            {workingDays.filter(d => d !== day).map(destinationDay => (
                                               <DropdownMenuItem key={destinationDay} onClick={() => handleCopyDay(day, destinationDay)}>
                                                 {destinationDay}
                                               </DropdownMenuItem>
@@ -504,7 +503,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                       ))}
                     </TableRow>
                   ))}
-                  {day !== 'Saturday' && <TableRow className="bg-background hover:bg-background"><TableCell colSpan={timeSlots.length + 2} className="p-1"></TableCell></TableRow>}
+                  {day !== workingDays[workingDays.length - 1] && <TableRow className="bg-background hover:bg-background"><TableCell colSpan={timeSlots.length + 2} className="p-1"></TableCell></TableRow>}
                 </React.Fragment>
               ))}
             </TableBody>

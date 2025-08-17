@@ -22,7 +22,7 @@ export const SchoolInfoSchema = z.object({
 });
 
 export const ScheduleEntrySchema = z.object({
-  day: z.enum(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]),
+  day: z.enum(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]),
   timeSlot: z.string(),
   className: z.string(),
   subject: z.string(),
@@ -63,6 +63,8 @@ export const SplitClassRuleSchema = z.object({
 export const SubjectPrioritySchema = z.enum(["before", "after", "none"]);
 export const SubjectCategorySchema = z.enum(["main", "additional"]);
 
+const DayEnum = z.enum(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]);
+
 export const SchoolConfigSchema = z.object({
   classRequirements: z.record(z.string(), z.array(z.string())),
   subjectPriorities: z.record(z.string(), SubjectPrioritySchema),
@@ -77,6 +79,7 @@ export const SchoolConfigSchema = z.object({
   dailyPeriodQuota: z.number(),
   combinedClasses: z.array(CombinedClassRuleSchema),
   splitClasses: z.array(SplitClassRuleSchema),
+  workingDays: z.array(DayEnum),
 });
 
 export const GenerateScheduleLogicInputSchema = SchoolConfigSchema.extend({
@@ -127,6 +130,7 @@ export type Teacher = z.infer<typeof TeacherSchema>;
 export type Holiday = z.infer<typeof HolidaySchema>;
 export type SchoolInfo = z.infer<typeof SchoolInfoSchema>;
 export type ScheduleEntry = z.infer<typeof ScheduleEntrySchema>;
+export type DayOfWeek = z.infer<typeof DayEnum>;
 export type GenerateScheduleOutput = z.infer<typeof GenerateScheduleOutputSchema>;
 export type GenerateScheduleLogicInput = z.infer<typeof GenerateScheduleLogicInputSchema>;
 export type RoutineVersion = z.infer<typeof RoutineVersionSchema>;

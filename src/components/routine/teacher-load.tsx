@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import type { TeacherLoad as TeacherLoadType, Teacher } from '@/types';
+import type { TeacherLoad as TeacherLoadType, Teacher, DayOfWeek } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Users, FileDown, Loader2 } from "lucide-react";
@@ -15,11 +15,11 @@ interface TeacherLoadProps {
   teacherLoad: TeacherLoadType;
   teachers: Teacher[];
   pdfHeader?: string;
+  workingDays: DayOfWeek[];
 }
 
-const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Total"];
 
-export default function TeacherLoad({ teacherLoad, teachers, pdfHeader = "" }: TeacherLoadProps) {
+export default function TeacherLoad({ teacherLoad, teachers, pdfHeader = "", workingDays }: TeacherLoadProps) {
   const teacherIds = Object.keys(teacherLoad).sort((a,b) => {
     const teacherA = teachers.find(t => t.id === a)?.name || a;
     const teacherB = teachers.find(t => t.id === b)?.name || b;
@@ -28,6 +28,9 @@ export default function TeacherLoad({ teacherLoad, teachers, pdfHeader = "" }: T
   
   const { toast } = useToast();
   const [isDownloading, setIsDownloading] = useState(false);
+  
+  const daysOfWeek: (DayOfWeek | "Total")[] = [...workingDays, "Total"];
+
 
   if (teacherIds.length === 0) {
     return (

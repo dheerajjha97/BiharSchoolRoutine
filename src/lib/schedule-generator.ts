@@ -1,7 +1,9 @@
+
 import type { 
     GenerateScheduleOutput, 
     ScheduleEntry,
-    GenerateScheduleLogicInput
+    GenerateScheduleLogicInput,
+    DayOfWeek
 } from "@/types";
 
 type Booking = {
@@ -9,8 +11,6 @@ type Booking = {
     classBookings: Record<string, Set<string>>;   // className -> "day-timeSlot"
     classSubjectBookings: Record<string, Set<string>>; // className -> "day-subject"
 };
-
-const daysOfWeek: ScheduleEntry['day'][] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 const shuffleArray = <T>(array: T[]): T[] => {
     const newArray = [...array];
@@ -40,6 +40,7 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
         dailyPeriodQuota,
         combinedClasses = [],
         splitClasses = [],
+        workingDays,
     } = input;
 
     const schedule: ScheduleEntry[] = [];
@@ -101,7 +102,7 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
     const afterLunchSlots = lunchIndex !== -1 ? instructionalSlots.filter(slot => timeSlots.indexOf(slot) > lunchIndex) : instructionalSlots;
 
     // 1. Book Prayer and Lunch
-    daysOfWeek.forEach(day => {
+    workingDays.forEach(day => {
         classes.forEach(className => {
             if (prayerTimeSlot && !isClassBooked(className, day, prayerTimeSlot)) bookSlot({ day, timeSlot: prayerTimeSlot, className, subject: "Prayer", teacher: "N/A" });
             if (lunchTimeSlot && !isClassBooked(className, day, lunchTimeSlot)) bookSlot({ day, timeSlot: lunchTimeSlot, className, subject: "Lunch", teacher: "N/A" });
@@ -109,7 +110,7 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
     });
     
     // 2. Book Special Rules (Combined/Split)
-    daysOfWeek.forEach(day => {
+    workingDays.forEach(day => {
         combinedClasses.forEach(rule => {
              const availableSlot = shuffleArray(instructionalSlots).find(slot => 
                 !isTeacherBooked(rule.teacherId, day, slot) &&
@@ -146,7 +147,7 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
     });
 
     // 3. Book Class Teacher's First Period
-    daysOfWeek.forEach(day => {
+    workingDays.forEach(day => {
         classes.forEach(className => {
             const classTeacherId = classTeachers[className];
             const firstSlot = instructionalSlots[0];
@@ -166,7 +167,7 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
     });
 
     // 4. Book Main Subjects (Hard Requirement)
-    daysOfWeek.forEach(day => {
+    workingDays.forEach(day => {
         shuffleArray(subjects).filter(s => subjectCategories[s] === 'main').forEach(subject => {
             shuffleArray(classes).forEach(className => {
                 const needsSubject = (classRequirements[className] || []).includes(subject);
@@ -208,7 +209,7 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
     });
 
     // 5. Book Additional Subjects
-    daysOfWeek.forEach(day => {
+    workingDays.forEach(day => {
         instructionalSlots.forEach(timeSlot => {
             shuffleArray(classes).forEach(className => {
                 if (isClassBooked(className, day, timeSlot)) return;
@@ -236,7 +237,7 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
     });
 
     // 6. Fill any remaining empty slots
-    daysOfWeek.forEach(day => {
+    workingDays.forEach(day => {
         instructionalSlots.forEach(timeSlot => {
             classes.forEach(className => {
                 if (!isClassBooked(className, day, timeSlot)) {
@@ -245,10 +246,12 @@ export function generateScheduleLogic(input: GenerateScheduleLogicInput): Genera
             });
         });
     });
+    
+    const allDaysOfWeek: DayOfWeek[] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
     schedule.sort((a, b) => {
-        const dayIndexA = daysOfWeek.indexOf(a.day);
-        const dayIndexB = daysOfWeek.indexOf(b.day);
+        const dayIndexA = allDaysOfWeek.indexOf(a.day);
+        const dayIndexB = allDaysOfWeek.indexOf(b.day);
         if (dayIndexA !== dayIndexB) return dayIndexA - dayIndexB;
 
         const timeIndexA = timeSlots.indexOf(a.timeSlot);

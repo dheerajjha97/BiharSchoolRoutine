@@ -3,19 +3,19 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { AppStateProvider } from '@/context/app-state-provider';
-import { Poppins } from 'next/font/google';
+import { Inter } from 'next/font/google';
 import { ThemeProvider } from '@/components/app/theme-provider';
 import MainLayout from '@/components/app/main-layout';
 
-const poppins = Poppins({ 
+const inter = Inter({ 
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'] 
 });
 
-const APP_NAME = "School Routine";
-const APP_DEFAULT_TITLE = "School Routine";
-const APP_TITLE_TEMPLATE = "%s - School Routine";
-const APP_DESCRIPTION = "AI-Powered School Routine Generator";
+const APP_NAME = "BiharSchoolRoutine";
+const APP_DEFAULT_TITLE = "BiharSchoolRoutine";
+const APP_TITLE_TEMPLATE = "%s - BiharSchoolRoutine";
+const APP_DESCRIPTION = "AI-Powered School Routine Generator for Bihar";
 
 export const metadata: Metadata = {
   applicationName: APP_NAME,
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
   },
   icons: {
     shortcut: "/favicon.ico",
-    apple: "/icons/calendar-192x192.png",
+    apple: "/icons/apple-touch-icon.png",
   },
 };
 
@@ -51,7 +51,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={poppins.className}>
+      <body className={inter.className}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

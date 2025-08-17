@@ -30,6 +30,7 @@ export default function SchoolRoutinePage() {
                 teacherSubjects={config.teacherSubjects}
                 dailyPeriodQuota={config.dailyPeriodQuota}
                 pdfHeader={schoolInfo.pdfHeader}
+                workingDays={config.workingDays}
             />
         </div>
     );

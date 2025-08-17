@@ -38,7 +38,7 @@ const DailyTimeline = ({ periods, timeSlots, holidayInfo }: { periods: ScheduleE
 
     if (sortedPeriods.length === 0) {
         return (
-            <div className="flex items-center justify-center h-full text-center py-20 text-muted-foreground bg-secondary/50 rounded-lg">
+            <div className="flex flex-col h-full items-center justify-center text-center py-20 text-muted-foreground bg-secondary/50 rounded-lg">
                 No classes scheduled for this day.
             </div>
         );
@@ -48,26 +48,26 @@ const DailyTimeline = ({ periods, timeSlots, holidayInfo }: { periods: ScheduleE
         <div className="relative p-4 sm:p-6">
             {sortedPeriods.map((period, index) => (
                     <div key={period.timeSlot} className="relative flex items-start pb-8">
-                    <div className="absolute left-0 text-right">
-                        <p className="text-sm font-medium text-foreground w-16 -translate-x-20 mt-1">{period.timeSlot.split('-')[0].trim()}</p>
-                    </div>
-                    <div className="absolute left-0 flex flex-col items-center">
-                        <div className="z-10 h-5 w-5 rounded-full bg-background border-2 border-primary flex items-center justify-center">
-                            <div className="h-2 w-2 rounded-full bg-primary" />
+                        <div className="absolute left-0 text-right">
+                            <p className="text-sm font-medium text-foreground w-16 -translate-x-20 mt-1">{period.timeSlot.split('-')[0].trim()}</p>
                         </div>
-                        {index < sortedPeriods.length - 1 && <div className="w-px bg-border flex-grow" />}
-                    </div>
-                    <div className="ml-8 w-full -mt-1">
-                        <div className="p-4 rounded-lg border bg-card shadow-sm">
-                            <h3 className="font-bold text-lg text-primary">{period.subject}</h3>
-                            <div className="text-muted-foreground mt-2 text-sm space-y-1">
-                                <p className="flex items-center gap-2">
-                                    <BookOpen className="h-4 w-4" />
-                                    <span>Class: {period.className}</span>
-                                </p>
+                        <div className="absolute left-0 flex flex-col items-center h-full">
+                            <div className="z-10 h-5 w-5 rounded-full bg-background border-2 border-primary flex items-center justify-center">
+                                <div className="h-2 w-2 rounded-full bg-primary" />
+                            </div>
+                            {index < sortedPeriods.length - 1 && <div className="w-px bg-border flex-grow" />}
+                        </div>
+                        <div className="ml-8 w-full -mt-1">
+                            <div className="p-4 rounded-lg border bg-card shadow-sm">
+                                <h3 className="font-bold text-lg text-primary">{period.subject}</h3>
+                                <div className="text-muted-foreground mt-2 text-sm space-y-1">
+                                    <p className="flex items-center gap-2">
+                                        <BookOpen className="h-4 w-4" />
+                                        <span>Class: {period.className}</span>
+                                    </p>
+                                </div>
                             </div>
                         </div>
-                    </div>
                     </div>
             ))}
         </div>
@@ -76,12 +76,15 @@ const DailyTimeline = ({ periods, timeSlots, holidayInfo }: { periods: ScheduleE
 
 export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots, workingDays, holidays = [] }: TeacherRoutineDisplayProps) {
     const [currentDate, setCurrentDate] = useState(new Date());
+    const [touchStartX, setTouchStartX] = useState<number | null>(null);
+    const [touchEndX, setTouchEndX] = useState<number | null>(null);
+    const minSwipeDistance = 50; 
     
     const holidaysByDate = useMemo(() => {
         return new Map(holidays.map(h => [h.date, h]));
     }, [holidays]);
 
-    const isDayOff = (date: Date): boolean => {
+    const isDayOff = useCallback((date: Date): boolean => {
         const dayName = allDaysOfWeek[date.getDay()];
         if (!workingDays.includes(dayName)) return true;
 
@@ -89,20 +92,31 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
         if (holidaysByDate.has(dateString)) return true;
 
         return false;
-    }
+    }, [workingDays, holidaysByDate]);
 
     useEffect(() => {
         let newDate = new Date();
         if (isDayOff(newDate)) {
+            let foundNextDay = false;
             for (let i = 1; i <= 7; i++) {
                 newDate.setDate(new Date().getDate() + i);
                 if (!isDayOff(newDate)) {
+                    foundNextDay = true;
                     break;
+                }
+            }
+            if (!foundNextDay) { // If no working day in next 7 days, check previous
+                 newDate = new Date();
+                 for (let i = 1; i <= 7; i++) {
+                    newDate.setDate(new Date().getDate() - i);
+                    if (!isDayOff(newDate)) {
+                        break;
+                    }
                 }
             }
         }
         setCurrentDate(newDate);
-    }, [workingDays, holidays]);
+    }, [workingDays, holidays, isDayOff]);
 
     const teacherScheduleByDay = useMemo(() => {
         if (!scheduleData?.schedule || !teacher) return {};
@@ -132,10 +146,48 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
         });
     }, [currentDate]);
 
+    const changeDay = useCallback((direction: 'prev' | 'next') => {
+        const newDate = new Date(currentDate);
+        const increment = direction === 'prev' ? -1 : 1;
+        
+        for (let i = 0; i < 7; i++) {
+            newDate.setDate(newDate.getDate() + increment);
+            if (!isDayOff(newDate)) {
+                setCurrentDate(newDate);
+                return;
+            }
+        }
+    }, [currentDate, isDayOff]);
+
     const changeWeek = (direction: 'prev' | 'next') => {
         const newDate = new Date(currentDate);
         newDate.setDate(newDate.getDate() + (direction === 'prev' ? -7 : 7));
         setCurrentDate(newDate);
+    };
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        setTouchEndX(null);
+        setTouchStartX(e.targetTouches[0].clientX);
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        setTouchEndX(e.targetTouches[0].clientX);
+    };
+
+    const handleTouchEnd = () => {
+        if (!touchStartX || !touchEndX) return;
+        const distance = touchStartX - touchEndX;
+        const isLeftSwipe = distance > minSwipeDistance;
+        const isRightSwipe = distance < -minSwipeDistance;
+
+        if (isLeftSwipe) {
+            changeDay('next');
+        } else if (isRightSwipe) {
+            changeDay('prev');
+        }
+        
+        setTouchStartX(null);
+        setTouchEndX(null);
     };
 
     if (!teacher) {
@@ -202,7 +254,12 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
                     })}
                 </div>
             </CardHeader>
-            <CardContent className="flex items-center justify-center p-6">
+            <CardContent 
+                className="flex items-center justify-center"
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+            >
                 <DailyTimeline periods={dailyPeriods} timeSlots={timeSlots} holidayInfo={holidayInfo} />
             </CardContent>
         </Card>

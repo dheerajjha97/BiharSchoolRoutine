@@ -306,11 +306,13 @@ export default function Home() {
             description={`Welcome, ${user?.displayName || 'Teacher'}. View your personal daily routine.`}
         />
         
-        <TeacherRoutineDisplay
-            scheduleData={activeRoutine?.schedule || null}
-            teacher={currentTeacher || null}
-            timeSlots={appState.timeSlots}
-        />
+        <div className="flex justify-center">
+            <TeacherRoutineDisplay
+                scheduleData={activeRoutine?.schedule || null}
+                teacher={currentTeacher || null}
+                timeSlots={appState.timeSlots}
+            />
+        </div>
 
         <Card className="mt-8">
             <CardHeader>

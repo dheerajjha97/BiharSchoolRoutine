@@ -84,15 +84,26 @@ export default function DataManagementPage() {
                     <CardDescription>This information will be used across the application and on PDF exports.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div>
-                        <Label htmlFor="school-name">School Name</Label>
-                        <Input
-                            id="school-name"
-                            placeholder="e.g. Govt. High School, Patna"
-                            value={schoolInfo.name}
-                            onChange={(e) => updateSchoolInfo('name', e.target.value)}
-                            className="mt-1"
-                        />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <Label htmlFor="school-name">School Name</Label>
+                            <Input
+                                id="school-name"
+                                placeholder="e.g. Govt. High School, Patna"
+                                value={schoolInfo.name}
+                                onChange={(e) => updateSchoolInfo('name', e.target.value)}
+                                className="mt-1"
+                            />
+                        </div>
+                        <div>
+                            <Label htmlFor="udise-code">UDISE Code</Label>
+                            <Input
+                                id="udise-code"
+                                value={schoolInfo.udise}
+                                disabled
+                                className="mt-1"
+                            />
+                        </div>
                     </div>
                      <div>
                         <Label htmlFor="pdf-header-global">PDF Header Text</Label>

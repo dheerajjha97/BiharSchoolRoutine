@@ -25,6 +25,7 @@ import {
   ClipboardCheck,
   Replace,
   UserCheck,
+  NotebookText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -34,10 +35,12 @@ const adminNavItems = [
   { href: "/config", label: "Configuration", icon: SlidersHorizontal },
   { href: "/adjustments", label: "Adjustments", icon: Replace },
   { href: "/reports", label: "Exams & Reports", icon: ClipboardCheck },
+  { href: "/holidays", label: "Academic Calendar", icon: NotebookText },
 ];
 
 const teacherNavItems = [
     { href: "/", label: "My Dashboard", icon: UserCheck },
+    { href: "/holidays", label: "Academic Calendar", icon: NotebookText },
 ];
 
 function ThemeToggle() {

@@ -73,7 +73,7 @@ function MultiSelectPopover({ options, selected, onSelectedChange, placeholder }
 
 export default function AdjustmentsPage() {
     const { appState, updateAdjustments } = useContext(AppStateContext);
-    const { teachers, routineHistory, activeRoutineId, teacherLoad, pdfHeader } = appState;
+    const { teachers, routineHistory, activeRoutineId, teacherLoad, pdfHeader, holidays = [] } = appState;
     const { date, absentTeacherIds, substitutionPlan } = appState.adjustments;
     const { toast } = useToast();
 
@@ -88,7 +88,14 @@ export default function AdjustmentsPage() {
             toast({ variant: "destructive", title: "No Absent Teachers", description: "Please select at least one absent teacher." });
             return;
         }
-
+        
+        const isHoliday = holidays.some(h => h.date === date);
+        if (isHoliday) {
+            const holidayName = holidays.find(h => h.date === date)?.name;
+            toast({ variant: "destructive", title: "Cannot Generate on Holiday", description: `The selected date is a holiday: ${holidayName}.` });
+            return;
+        }
+        
         if (dateToDay(date) === null) {
             toast({ variant: "destructive", title: "Cannot Generate for Sunday", description: "Sunday is a holiday." });
             return;

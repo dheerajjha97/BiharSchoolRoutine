@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useMemo, useState } from 'react';
@@ -188,8 +189,8 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   const availableTeachers = useMemo(() => {
     if (!cellData.subject || cellData.subject === '---') return teachers;
     return teachers.filter(teacher => {
-      const teacherName = teacher.name;
-      return teacherSubjects[teacherName]?.includes(cellData.subject)
+      const teacherId = teacher.id;
+      return (teacherSubjects[teacherId] || []).includes(cellData.subject)
     });
   }, [cellData.subject, teachers, teacherSubjects]);
 
@@ -296,7 +297,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 
     const wrapperDiv = document.createElement('div');
     
-    if (pdfHeader.trim()) {
+    if (pdfHeader && pdfHeader.trim()) {
         const headerDiv = document.createElement('div');
         headerDiv.style.textAlign = 'center';
         headerDiv.style.marginBottom = '20px';
@@ -522,7 +523,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
         </CardHeader>
         <CardContent>
           <div className="text-center py-12 text-muted-foreground">
-            <p>Log in and click the "Generate Routine" or "Create Blank Routine" button to start.</p>
+            <p>Use the "Generate Routine" or "Create Blank Routine" button to start.</p>
           </div>
         </CardContent>
       </Card>

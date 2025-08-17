@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -36,7 +37,7 @@ const adminNavItems = [
 ];
 
 const teacherNavItems = [
-    { href: "/my-schedule", label: "My Schedule", icon: UserCheck },
+    { href: "/", label: "My Dashboard", icon: UserCheck },
 ];
 
 function ThemeToggle() {
@@ -59,19 +60,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const {
-    appState,
     user,
-    handleGoogleSignIn,
     handleLogout,
     isAuthLoading,
     isSyncing,
-    isLoading,
+    isUserAdmin,
+    appState,
   } = useContext(AppStateContext);
 
-  const loggedInTeacher = !isLoading && user ? appState.teachers.find(t => t.email === user.email) : undefined;
-  
-  const navItems = loggedInTeacher ? teacherNavItems : adminNavItems;
-  const displayName = loggedInTeacher ? loggedInTeacher.name : user?.displayName;
+  const navItems = isUserAdmin ? adminNavItems : teacherNavItems;
+  const displayName = user?.displayName;
+  const schoolName = appState.schoolInfo.name || "School Routine";
 
   const authControls = (
     <div className="flex items-center gap-2">
@@ -94,14 +93,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </Button>
         </>
       ) : (
-        <Button onClick={handleGoogleSignIn} disabled={isAuthLoading}>
-          {isAuthLoading ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <LogIn className="mr-2 h-4 w-4" />
-          )}
-          Login with Google
-        </Button>
+       <div />
       )}
     </div>
   );
@@ -135,15 +127,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   );
 
   const renderNavItems = () => {
-    // Don't render nav items until we know the user's role
-    if (isLoading) {
-        return (
-            <div className="flex justify-center items-center h-full">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-        )
-    }
-
     return (
          <nav className="grid items-start text-sm font-medium">
           {navItems.map((item) => (
@@ -182,7 +165,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <SheetTitle>
           <Link href="/" onClick={() => setIsSheetOpen(false)} className="flex items-center gap-2 font-semibold">
             <Logo className="h-6 w-6 text-primary" />
-            <span>School Routine</span>
+            <span>{schoolName}</span>
           </Link>
         </SheetTitle>
       </SheetHeader>
@@ -215,7 +198,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <div className="hidden lg:block">
           <Link href="/" className="flex items-center gap-2 font-semibold text-lg">
             <Logo className="h-6 w-6 text-primary" />
-            <span>School Routine</span>
+            <span>{schoolName}</span>
           </Link>
         </div>
         <div className="flex-1" />
@@ -229,11 +212,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             {sidebarContent}
           </div>
           <main className="flex-1 bg-background p-4 md:p-6 lg:p-8 overflow-y-auto">
-            {isLoading ? (
-                 <div className="flex justify-center items-center h-full">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
-            ) : children}
+            {children}
           </main>
         </div>
       </div>

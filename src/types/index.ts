@@ -1,3 +1,4 @@
+
 // A single source of truth for all major data types in the application.
 
 import { z } from 'zod';
@@ -7,6 +8,17 @@ export const TeacherSchema = z.object({
   id: z.string(),
   name: z.string(),
   email: z.string().email(),
+});
+
+export const HolidaySchema = z.object({
+  name: z.string(),
+  date: z.string(), // YYYY-MM-DD
+});
+
+export const SchoolInfoSchema = z.object({
+  name: z.string().default(""),
+  udise: z.string(),
+  pdfHeader: z.string().default(""),
 });
 
 export const ScheduleEntrySchema = z.object({
@@ -112,6 +124,8 @@ export const SubstitutionPlanSchema = z.object({
 
 // Inferred Types
 export type Teacher = z.infer<typeof TeacherSchema>;
+export type Holiday = z.infer<typeof HolidaySchema>;
+export type SchoolInfo = z.infer<typeof SchoolInfoSchema>;
 export type ScheduleEntry = z.infer<typeof ScheduleEntrySchema>;
 export type GenerateScheduleOutput = z.infer<typeof GenerateScheduleOutputSchema>;
 export type GenerateScheduleLogicInput = z.infer<typeof GenerateScheduleLogicInputSchema>;
@@ -129,14 +143,16 @@ export type DutyChart = z.infer<typeof DutyChartSchema>;
 export type Substitution = z.infer<typeof SubstitutionSchema>;
 export type SubstitutionPlan = z.infer<typeof SubstitutionPlanSchema>;
 
-// AppState Type
+// AppState Type: This is the main state object for the entire application.
+// It is stored in Firestore for admins and teachers.
 export type AppState = {
+  schoolInfo: SchoolInfo;
   teachers: Teacher[];
   classes: string[];
   subjects: string[];
   timeSlots: string[];
   rooms: string[];
-  pdfHeader: string;
+  holidays: Holiday[];
   config: SchoolConfig;
   routineHistory: RoutineVersion[];
   activeRoutineId: string | null;

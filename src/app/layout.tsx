@@ -3,9 +3,9 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { AppStateProvider } from '@/context/app-state-provider';
-import AppShell from '@/components/app/app-shell';
 import { Poppins } from 'next/font/google';
 import { ThemeProvider } from '@/components/app/theme-provider';
+import MainLayout from '@/components/app/main-layout';
 
 const poppins = Poppins({ 
   subsets: ['latin'],
@@ -59,9 +59,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AppStateProvider>
-            <AppShell>
+            <MainLayout>
               {children}
-            </AppShell>
+            </MainLayout>
           </AppStateProvider>
           <Toaster />
         </ThemeProvider>

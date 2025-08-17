@@ -66,7 +66,7 @@ export default function TeacherLoad({ teacherLoad, teachers, pdfHeader = "" }: T
     
     const wrapperDiv = document.createElement('div');
     
-    if (pdfHeader.trim()) {
+    if (pdfHeader && pdfHeader.trim()) {
         const headerDiv = document.createElement('div');
         headerDiv.style.textAlign = 'center';
         headerDiv.style.marginBottom = '20px';

@@ -1,11 +1,13 @@
+
 "use client";
 
 import { createContext, useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useRouter } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
 import { sortTimeSlots } from "@/lib/utils";
 import { getFirebaseAuth, getFirestoreDB } from "@/lib/firebase";
 import { onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, type User, type AuthError } from "firebase/auth";
-import { doc, setDoc, onSnapshot, type Unsubscribe } from "firebase/firestore";
+import { doc, setDoc, getDoc, onSnapshot, type Unsubscribe, collection, getDocs, query, where } from "firebase/firestore";
 import type { 
     Teacher, 
     SchoolConfig, 
@@ -13,14 +15,16 @@ import type {
     TeacherLoad,
     GenerateScheduleOutput, 
     AppState,
+    SchoolInfo,
+    Holiday,
 } from '@/types';
 
 export const AppStateContext = createContext<AppStateContextType>({} as AppStateContextType);
 
 interface AppStateContextType {
   appState: AppState;
-  updateState: <K extends keyof AppState>(key: K, value: AppState[K]) => void;
-  setFullState: (newState: Partial<AppState>) => void;
+  updateState: <K extends keyof AppState | 'fullState'>(key: K, value: K extends 'fullState' ? Partial<AppState> : AppState[K]) => void;
+  updateSchoolInfo: <K extends keyof SchoolInfo>(key: K, value: SchoolInfo[K]) => void;
   updateConfig: <K extends keyof SchoolConfig>(key: K, value: SchoolConfig[K]) => void;
   updateAdjustments: <K extends keyof AppState['adjustments']>(key: K, value: AppState['adjustments'][K]) => void;
   isLoading: boolean;
@@ -28,6 +32,7 @@ interface AppStateContextType {
   isAuthLoading: boolean;
   isSyncing: boolean;
   user: User | null;
+  isUserAdmin: boolean;
   handleGoogleSignIn: () => void;
   handleLogout: () => void;
   // Routine history management
@@ -45,15 +50,14 @@ const DEFAULT_ADJUSTMENTS_STATE = {
     substitutionPlan: null
 };
 
-const LOCAL_STORAGE_KEY = "schoolRoutineState";
-
 const DEFAULT_APP_STATE: AppState = {
+  schoolInfo: { name: "", udise: "", pdfHeader: ""},
   teachers: [],
   classes: [],
   subjects: [],
   timeSlots: [],
   rooms: [],
-  pdfHeader: "My School Name\nWeekly Class Routine\n2024-25",
+  holidays: [],
   config: {
     teacherSubjects: {},
     teacherClasses: {},
@@ -76,7 +80,6 @@ const DEFAULT_APP_STATE: AppState = {
   adjustments: DEFAULT_ADJUSTMENTS_STATE,
 };
 
-// Recursively removes undefined values from an object or array.
 const removeUndefined = (obj: any): any => {
     if (obj === null || obj === undefined) return undefined;
     if (Array.isArray(obj)) {
@@ -85,49 +88,30 @@ const removeUndefined = (obj: any): any => {
         return Object.keys(obj).reduce((acc, key) => {
             const value = obj[key];
             if (value !== undefined) {
-                acc[key] = removeUndefined(value);
+                const newValue = removeUndefined(value);
+                if (newValue !== undefined) {
+                    acc[key] = newValue;
+                }
             }
             return acc;
-        }, {});
+        }, {} as Record<string, any>);
     }
     return obj;
 };
 
-
-// Function to strip non-persistent state for saving
-const getPersistentState = (state: AppState): Omit<AppState, 'adjustments' | 'teacherLoad' | 'examTimetable'> => {
-  const { adjustments, teacherLoad, examTimetable, ...persistentState } = state;
-  return persistentState;
-};
-
-
 export const AppStateProvider = ({ children }: { children: React.ReactNode }) => {
   const [appState, setAppState] = useState<AppState>(DEFAULT_APP_STATE);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true); // General loading for operations like routine generation
+  const [isAuthLoading, setIsAuthLoading] = useState(true); // Specific loading for auth state
   const [isSyncing, setIsSyncing] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [isUserAdmin, setIsUserAdmin] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
 
   const stateRef = useRef(appState);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const firestoreUnsubscribeRef = useRef<Unsubscribe | null>(null);
-
-  const setFullState = useCallback((newState: Partial<AppState>) => {
-    setAppState(prevState => {
-      const mergedState: AppState = {
-        ...DEFAULT_APP_STATE,
-        ...prevState,
-        ...newState,
-        config: { ...DEFAULT_APP_STATE.config, ...(newState.config || {}) },
-        adjustments: { ...(newState.adjustments || DEFAULT_ADJUSTMENTS_STATE) },
-      };
-       if (newState.timeSlots && Array.isArray(newState.timeSlots)) {
-          mergedState.timeSlots = sortTimeSlots(newState.timeSlots);
-      }
-      return mergedState;
-    });
-  }, []);
 
   useEffect(() => {
     stateRef.current = appState;
@@ -185,12 +169,30 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   }, [activeRoutine, appState.teachers, appState.config.subjectCategories]);
   
   useEffect(() => {
-    updateState('teacherLoad', calculatedTeacherLoad);
+    if (!isLoading) {
+        updateState('teacherLoad', calculatedTeacherLoad);
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [calculatedTeacherLoad]);
+  }, [calculatedTeacherLoad, isLoading]);
   
-  const updateState = useCallback(<K extends keyof AppState>(key: K, value: AppState[K]) => {
+  const updateState = useCallback(<K extends keyof AppState | 'fullState'>(key: K, value: K extends 'fullState' ? Partial<AppState> : AppState[K]) => {
     setAppState(prevState => {
+      if (key === 'fullState') {
+        const newState = value as Partial<AppState>;
+        const mergedState: AppState = {
+            ...DEFAULT_APP_STATE,
+            ...prevState,
+            ...newState,
+            schoolInfo: { ...DEFAULT_APP_STATE.schoolInfo, ...prevState.schoolInfo, ...(newState.schoolInfo || {})},
+            config: { ...DEFAULT_APP_STATE.config, ...prevState.config, ...(newState.config || {}) },
+            adjustments: { ...(newState.adjustments || DEFAULT_ADJUSTMENTS_STATE) },
+        };
+        if (newState.timeSlots && Array.isArray(newState.timeSlots)) {
+            mergedState.timeSlots = sortTimeSlots(newState.timeSlots);
+        }
+        return mergedState;
+      }
+
       const newState = { ...prevState, [key]: value };
       if (key === 'timeSlots' && Array.isArray(value)) {
         newState.timeSlots = sortTimeSlots(value as string[]);
@@ -206,6 +208,13 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     });
   }, []);
   
+  const updateSchoolInfo = useCallback(<K extends keyof SchoolInfo>(key: K, value: SchoolInfo[K]) => {
+     setAppState(prevState => ({
+        ...prevState,
+        schoolInfo: { ...prevState.schoolInfo, [key]: value },
+    }));
+  }, []);
+
   const updateConfig = useCallback(<K extends keyof SchoolConfig>(key: K, value: SchoolConfig[K]) => {
      setAppState(prevState => ({
         ...prevState,
@@ -289,132 +298,160 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   const handleLogout = useCallback(async () => {
     setIsAuthLoading(true);
     const auth = getFirebaseAuth();
+    
+    if (firestoreUnsubscribeRef.current) {
+        firestoreUnsubscribeRef.current();
+        firestoreUnsubscribeRef.current = null;
+    }
+    
     try {
       await signOut(auth);
+      // Auth state listener will handle resetting state and redirecting
     } catch (error) {
       const authError = error as AuthError;
       toast({ variant: "destructive", title: "Logout Failed", description: authError.message });
-    } finally {
-        setIsAuthLoading(false);
-        setAppState(DEFAULT_APP_STATE); // Reset state on logout
-        localStorage.removeItem(LOCAL_STORAGE_KEY);
+      setIsAuthLoading(false);
     }
   }, [toast]);
 
   // Auth state listener - THE SINGLE SOURCE OF TRUTH FOR DATA LOADING
   useEffect(() => {
     const auth = getFirebaseAuth();
-    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
-      setIsAuthLoading(true);
-      setUser(currentUser);
-
-      // Unsubscribe from any previous Firestore listener
-      if (firestoreUnsubscribeRef.current) {
-        firestoreUnsubscribeRef.current();
-        firestoreUnsubscribeRef.current = null;
-      }
-
-      if (currentUser) {
-        // LOGGED IN: Load from Firestore
-        const db = getFirestoreDB();
-        const userDocRef = doc(db, "userSettings", currentUser.uid);
-
-        firestoreUnsubscribeRef.current = onSnapshot(userDocRef, (docSnap) => {
-          if (docSnap.exists()) {
-            const firestoreData = docSnap.data() as AppState;
-            setFullState(firestoreData);
-          } else {
-            // No data in Firestore, could be a new user.
-            // Save the current (or default) state to Firestore.
-            console.log("No data in Firestore for this user. Saving initial state.");
-            const stateToSave = getPersistentState(stateRef.current);
-            setDoc(userDocRef, removeUndefined(stateToSave));
-          }
-          setIsLoading(false);
-          setIsAuthLoading(false);
-        }, (error) => {
-          console.error("Firestore snapshot error:", error);
-          toast({ variant: "destructive", title: "Sync Error", description: "Could not sync data from the cloud." });
-          setIsLoading(false);
-          setIsAuthLoading(false);
-        });
-      } else {
-        // LOGGED OUT: Load from Local Storage
-        setAppState(DEFAULT_APP_STATE); // Reset to default first
-        try {
-          const savedStateJSON = localStorage.getItem(LOCAL_STORAGE_KEY);
-          if (savedStateJSON) {
-            setFullState(JSON.parse(savedStateJSON));
-          }
-        } catch (error) {
-          console.error("Failed to load state from local storage:", error);
-        } finally {
-          setIsLoading(false);
-          setIsAuthLoading(false);
+    const unsubscribeAuth = onAuthStateChanged(auth, async (newUser) => {
+        setIsAuthLoading(true);
+        setUser(newUser);
+        
+        if (firestoreUnsubscribeRef.current) {
+            firestoreUnsubscribeRef.current();
+            firestoreUnsubscribeRef.current = null;
         }
-      }
+        
+        if (newUser) {
+            const db = getFirestoreDB();
+            
+            // 1. Check for Admin role
+            const roleDocRef = doc(db, "userRoles", newUser.email!);
+            const roleSnap = await getDoc(roleDocRef);
+
+            if (roleSnap.exists()) {
+                const { role, udise } = roleSnap.data() as { role: 'admin' | 'teacher', udise: string };
+                if (role === 'admin') {
+                    setIsUserAdmin(true);
+                    const schoolDocRef = doc(db, "schoolAdmins", udise);
+                    
+                    firestoreUnsubscribeRef.current = onSnapshot(schoolDocRef, (dataSnap) => {
+                        if (dataSnap.exists()) {
+                            const schoolData = dataSnap.data() as AppState;
+                            updateState('fullState', schoolData);
+                            if (!schoolData.schoolInfo?.name) {
+                                router.replace('/data');
+                            }
+                        } else {
+                            // Admin's school doc doesn't exist, create it
+                            const newSchoolData: AppState = { ...DEFAULT_APP_STATE, schoolInfo: { name: "", udise, pdfHeader: "" } };
+                            setDoc(schoolDocRef, newSchoolData);
+                            updateState('fullState', newSchoolData);
+                            router.replace('/data');
+                        }
+                        setIsAuthLoading(false);
+                    });
+                    return;
+                }
+            }
+
+            // 2. If not admin, search for Teacher role across all schools
+            setIsUserAdmin(false);
+            const schoolsCollectionRef = collection(db, "schoolAdmins");
+            const schoolsSnapshot = await getDocs(schoolsCollectionRef);
+
+            if (schoolsSnapshot.empty) {
+                toast({ variant: "destructive", title: "Account Not Found", description: "No schools are registered. Please contact support." });
+                handleLogout();
+                return;
+            }
+
+            let foundTeacher = false;
+            for (const schoolDoc of schoolsSnapshot.docs) {
+                const schoolData = schoolDoc.data() as AppState;
+                const teacherMatch = (schoolData.teachers || []).find(t => t.email === newUser.email);
+                
+                if (teacherMatch) {
+                    foundTeacher = true;
+                    const schoolDocRef = doc(db, "schoolAdmins", schoolDoc.id);
+                    firestoreUnsubscribeRef.current = onSnapshot(schoolDocRef, (dataSnap) => {
+                        if (dataSnap.exists()) {
+                            updateState('fullState', dataSnap.data() as AppState);
+                        }
+                        setIsAuthLoading(false);
+                    });
+                    break;
+                }
+            }
+
+            if (!foundTeacher) {
+                toast({ variant: "destructive", title: "Account Not Found", description: "Your email is not registered as a teacher in any school." });
+                handleLogout();
+            }
+
+        } else {
+            // User is logged out
+            setUser(null);
+            setIsUserAdmin(false);
+            setAppState(DEFAULT_APP_STATE);
+            setIsAuthLoading(false);
+        }
     });
 
-    return () => {
-      unsubscribeAuth();
-      if (firestoreUnsubscribeRef.current) {
-        firestoreUnsubscribeRef.current();
-      }
-    };
+    return () => unsubscribeAuth();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Debounced save effect
   useEffect(() => {
-    if (isLoading || isAuthLoading) return;
+    if (isAuthLoading || !user || !appState.schoolInfo.udise) return;
 
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
 
     saveTimeoutRef.current = setTimeout(async () => {
-      const persistentState = getPersistentState(stateRef.current);
-      const stateToSave = removeUndefined(persistentState);
-      
-      if (user) {
-        // Logged in: save to Firestore
+        if (!isUserAdmin) return; // Only admins can save data
+
         setIsSyncing(true);
         try {
-          const db = getFirestoreDB();
-          const userDocRef = doc(db, "userSettings", user.uid);
-          await setDoc(userDocRef, stateToSave, { merge: true });
+            const db = getFirestoreDB();
+            const { adjustments, ...persistentState } = stateRef.current;
+            const stateToSave = removeUndefined(persistentState);
+            const userDocRef = doc(db, "schoolAdmins", appState.schoolInfo.udise);
+            await setDoc(userDocRef, stateToSave, { merge: true });
         } catch (err) {
-          console.error("Failed to save to Firestore:", err);
-          toast({ variant: "destructive", title: "Firestore Save Failed", description: (err as Error).message });
+            console.error("Failed to save to Firestore:", err);
+            toast({ variant: "destructive", title: "Firestore Save Failed", description: (err as Error).message });
         } finally {
-          setIsSyncing(false);
+            setIsSyncing(false);
         }
-      } else {
-        // Logged out: save to Local Storage
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
-        console.log("Data saved to local storage.");
-      }
-    }, 1500);
+    }, 2000);
 
     return () => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [appState, user, isLoading, isAuthLoading, toast]);
+  }, [appState, user, isAuthLoading, toast, isUserAdmin]);
 
   return (
     <AppStateContext.Provider value={{ 
         appState, 
-        updateState, 
-        setFullState,
+        updateState,
+        updateSchoolInfo,
         updateConfig,
         updateAdjustments,
-        isLoading: isLoading || isAuthLoading, 
+        isLoading, 
         setIsLoading,
         isAuthLoading,
         isSyncing,
         user,
+        isUserAdmin,
         handleGoogleSignIn,
         handleLogout,
         routineHistory: appState.routineHistory,
@@ -428,5 +465,3 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     </AppStateContext.Provider>
   );
 };
-
-    

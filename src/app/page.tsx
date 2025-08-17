@@ -16,6 +16,8 @@ import TeacherLoad from "@/components/routine/teacher-load";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
+import TeacherRoutineDisplay from "@/components/routine/teacher-routine-display";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const daysOfWeek: ScheduleEntry['day'][] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -29,7 +31,8 @@ export default function Home() {
       deleteRoutineVersion, 
       updateRoutineVersion, 
       setActiveRoutineId, 
-      isUserAdmin 
+      isUserAdmin,
+      user
   } = useContext(AppStateContext);
   const { routineHistory, activeRoutineId, teachers, config, schoolInfo } = appState;
   const { toast } = useToast();
@@ -295,25 +298,42 @@ export default function Home() {
   );
 
   const renderTeacherDashboard = () => {
-    const todayDay = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+    const currentTeacher = teachers.find(t => t.email === user?.email);
+    
     return (
       <>
          <PageHeader 
-            title={`My Schedule for ${todayDay}`}
-            description={`Welcome. Here are your classes for today, ${new Date().toLocaleDateString('en-GB')}.`}
+            title={`Teacher Dashboard`}
+            description={`Welcome, ${user?.displayName || 'Teacher'}. View your personal routine or the full school schedule.`}
         />
-        <RoutineDisplay 
-          scheduleData={activeRoutine?.schedule || null}
-          onScheduleChange={() => {}}
-          isEditable={false}
-          timeSlots={appState.timeSlots} 
-          classes={appState.classes}
-          subjects={appState.subjects}
-          teachers={appState.teachers}
-          teacherSubjects={config.teacherSubjects}
-          dailyPeriodQuota={appState.config.dailyPeriodQuota}
-          pdfHeader={appState.schoolInfo.pdfHeader}
-        />
+
+        <Tabs defaultValue="personal">
+            <TabsList className="grid w-full grid-cols-2 md:w-[400px]">
+                <TabsTrigger value="personal">My Weekly Routine</TabsTrigger>
+                <TabsTrigger value="school">Full School Routine</TabsTrigger>
+            </TabsList>
+            <TabsContent value="personal" className="mt-4">
+                <TeacherRoutineDisplay
+                    scheduleData={activeRoutine?.schedule || null}
+                    teacher={currentTeacher || null}
+                    timeSlots={appState.timeSlots}
+                />
+            </TabsContent>
+            <TabsContent value="school" className="mt-4">
+                 <RoutineDisplay 
+                    scheduleData={activeRoutine?.schedule || null}
+                    onScheduleChange={() => {}}
+                    isEditable={false}
+                    timeSlots={appState.timeSlots} 
+                    classes={appState.classes}
+                    subjects={appState.subjects}
+                    teachers={appState.teachers}
+                    teacherSubjects={config.teacherSubjects}
+                    dailyPeriodQuota={appState.config.dailyPeriodQuota}
+                    pdfHeader={appState.schoolInfo.pdfHeader}
+                />
+            </TabsContent>
+        </Tabs>
       </>
     )
   }

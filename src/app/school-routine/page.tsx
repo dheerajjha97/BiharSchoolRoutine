@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useContext, useState, useMemo } from "react";
+import { useContext, useState, useMemo, useEffect } from "react";
 import PageHeader from "@/components/app/page-header";
 import { AppStateContext } from "@/context/app-state-provider";
 import type { ScheduleEntry, Teacher, DayOfWeek, Holiday } from "@/types";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, BookOpen, CalendarX2, User } from "lucide-react";
 import { cn, sortClasses, sortTimeSlots } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import RoutineDisplay from "@/components/routine/routine-display";
 
 const allDaysOfWeek: DayOfWeek[] = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -76,9 +77,15 @@ export default function SchoolRoutinePage() {
     const { appState } = useContext(AppStateContext);
     const { routineHistory, activeRoutineId, teachers, config, classes, timeSlots, schoolInfo, holidays = [] } = appState;
     
-    const sortedClasses = useMemo(() => sortClasses(classes), [classes]);
-    const [selectedClass, setSelectedClass] = useState(sortedClasses[0] || null);
+    const sortedClasses = useMemo(() => [...classes].sort(sortClasses), [classes]);
+    const [selectedClass, setSelectedClass] = useState<string | null>(null);
     const [currentDate, setCurrentDate] = useState(new Date());
+
+    useEffect(() => {
+        if (sortedClasses.length > 0 && !selectedClass) {
+            setSelectedClass(sortedClasses[0]);
+        }
+    }, [sortedClasses, selectedClass]);
 
     const activeRoutine = routineHistory.find(r => r.id === activeRoutineId) || (routineHistory.length > 0 ? routineHistory[0] : null);
 
@@ -129,9 +136,31 @@ export default function SchoolRoutinePage() {
     };
     
     const selectedDayName = allDaysOfWeek[currentDate.getDay()];
-    const dailyPeriods = scheduleByDayAndClass[selectedDayName]?.[selectedClass] || [];
+    const dailyPeriods = selectedClass ? scheduleByDayAndClass[selectedDayName]?.[selectedClass] || [] : [];
     const currentDateString = currentDate.toISOString().split('T')[0];
     const holidayInfo = holidaysByDate.get(currentDateString) || null;
+
+    if (!activeRoutine) {
+        return (
+            <div className="space-y-6">
+                <PageHeader
+                    title="Full School Routine"
+                    description={`Viewing the daily active routine for ${schoolInfo.name || 'the school'}.`}
+                />
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>School Routine</CardTitle>
+                        <CardDescription>No routine has been generated or selected yet.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                    <div className="text-center py-12 text-muted-foreground">
+                        <p>No active routine found. The admin needs to generate one first.</p>
+                    </div>
+                    </CardContent>
+                </Card>
+            </div>
+        )
+    }
 
     return (
         <div className="space-y-6">

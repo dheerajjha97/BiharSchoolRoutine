@@ -26,7 +26,7 @@ const DailyTimeline = ({ periods, timeSlots }: { periods: ScheduleEntry[], timeS
 
     if (sortedPeriods.length === 0) {
         return (
-            <div className="flex items-center justify-center text-center py-20 text-muted-foreground bg-secondary/50 rounded-lg">
+            <div className="flex items-center justify-center h-full text-center py-20 text-muted-foreground bg-secondary/50 rounded-lg">
                 No classes scheduled for this day.
             </div>
         );
@@ -69,9 +69,9 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
 
     useEffect(() => {
         const todayIndex = new Date().getDay();
-        if (todayIndex === 0) { 
+        if (todayIndex === 0) { // If Sunday
             const nextDay = new Date();
-            nextDay.setDate(nextDay.getDate() + 1);
+            nextDay.setDate(nextDay.getDate() + 1); // Move to Monday
             setCurrentDate(nextDay);
         }
     }, []);
@@ -92,10 +92,10 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
     const weekDates = useMemo(() => {
         const startOfWeek = new Date(currentDate);
         const dayOfWeek = startOfWeek.getDay();
-        const diff = startOfWeek.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+        const diff = startOfWeek.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Adjust for Sunday
         startOfWeek.setDate(diff);
 
-        return Array.from({ length: 6 }).map((_, i) => {
+        return Array.from({ length: 6 }).map((_, i) => { // Only Monday to Saturday
             const date = new Date(startOfWeek);
             date.setDate(date.getDate() + i);
             return date;
@@ -134,7 +134,7 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
         );
     }
     
-    const selectedDayIndex = currentDate.getDay() -1;
+    const selectedDayIndex = currentDate.getDay() - 1; // Monday = 0, ..., Saturday = 5
     const selectedDay = daysOfWeek[selectedDayIndex >= 0 ? selectedDayIndex : 0];
     const dailyPeriods = teacherScheduleByDay[selectedDay] || [];
 
@@ -165,7 +165,7 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
                     ))}
                 </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex justify-center items-center">
                 <DailyTimeline periods={dailyPeriods} timeSlots={timeSlots} />
             </CardContent>
         </Card>

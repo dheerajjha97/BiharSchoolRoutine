@@ -7,7 +7,7 @@ import { AppStateContext } from "@/context/app-state-provider";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Wand2, PlusSquare, Trash2, Edit, Check, X } from "lucide-react";
+import { Loader2, Wand2, PlusSquare, Trash2, Edit, Check, X, School } from "lucide-react";
 import RoutineDisplay from "@/components/routine/routine-display";
 import { generateScheduleLogic } from "@/lib/schedule-generator";
 import type { GenerateScheduleLogicInput, ScheduleEntry, RoutineVersion } from "@/types";
@@ -17,7 +17,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import TeacherRoutineDisplay from "@/components/routine/teacher-routine-display";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const daysOfWeek: ScheduleEntry['day'][] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -304,22 +303,24 @@ export default function Home() {
       <>
          <PageHeader 
             title={`Teacher Dashboard`}
-            description={`Welcome, ${user?.displayName || 'Teacher'}. View your personal routine or the full school schedule.`}
+            description={`Welcome, ${user?.displayName || 'Teacher'}. View your personal daily routine.`}
+        />
+        
+        <TeacherRoutineDisplay
+            scheduleData={activeRoutine?.schedule || null}
+            teacher={currentTeacher || null}
+            timeSlots={appState.timeSlots}
         />
 
-        <Tabs defaultValue="personal">
-            <TabsList className="grid w-full grid-cols-2 md:w-[400px]">
-                <TabsTrigger value="personal">My Daily Routine</TabsTrigger>
-                <TabsTrigger value="school">Full School Routine</TabsTrigger>
-            </TabsList>
-            <TabsContent value="personal" className="mt-4">
-                <TeacherRoutineDisplay
-                    scheduleData={activeRoutine?.schedule || null}
-                    teacher={currentTeacher || null}
-                    timeSlots={appState.timeSlots}
-                />
-            </TabsContent>
-            <TabsContent value="school" className="mt-4">
+        <Card className="mt-8">
+            <CardHeader>
+                <div className="flex items-center gap-2">
+                    <School className="h-5 w-5 text-primary" />
+                    <CardTitle>Full School Routine</CardTitle>
+                </div>
+                <CardDescription>View the complete routine for all classes.</CardDescription>
+            </CardHeader>
+            <CardContent>
                  <RoutineDisplay 
                     scheduleData={activeRoutine?.schedule || null}
                     onScheduleChange={() => {}}
@@ -332,8 +333,8 @@ export default function Home() {
                     dailyPeriodQuota={appState.config.dailyPeriodQuota}
                     pdfHeader={appState.schoolInfo.pdfHeader}
                 />
-            </TabsContent>
-        </Tabs>
+            </CardContent>
+        </Card>
       </>
     )
   }

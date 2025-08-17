@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect } from "react";
 import type { GenerateScheduleOutput, Teacher, ScheduleEntry } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { User, ChevronLeft, ChevronRight, MapPin, BookOpen } from "lucide-react";
+import { User, ChevronLeft, ChevronRight, BookOpen } from "lucide-react";
 import { cn, sortTimeSlots } from "@/lib/utils";
 
 interface TeacherRoutineDisplayProps {
@@ -16,8 +16,7 @@ interface TeacherRoutineDisplayProps {
 
 const daysOfWeek: ScheduleEntry['day'][] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-
-const TeacherDailyRoutine = ({ periods, timeSlots }: { periods: ScheduleEntry[], timeSlots: string[] }) => {
+const DailyTimeline = ({ periods, timeSlots }: { periods: ScheduleEntry[], timeSlots: string[] }) => {
     const sortedPeriods = useMemo(() => {
         if (!periods) return [];
         const periodMap = new Map(periods.map(p => [p.timeSlot, p]));
@@ -25,36 +24,37 @@ const TeacherDailyRoutine = ({ periods, timeSlots }: { periods: ScheduleEntry[],
         return sortedSlots.map(slot => periodMap.get(slot)).filter(Boolean) as ScheduleEntry[];
     }, [periods, timeSlots]);
 
-
     if (sortedPeriods.length === 0) {
         return (
-            <div className="text-center py-20 text-muted-foreground">
+            <div className="flex items-center justify-center text-center py-20 text-muted-foreground bg-secondary/50 rounded-lg">
                 No classes scheduled for this day.
             </div>
         );
     }
     
     return (
-        <div className="p-1">
+        <div className="p-4 sm:p-6">
             <div className="relative pl-8">
                 {sortedPeriods.map((period, index) => (
                      <div key={period.timeSlot} className="flex items-start mb-8">
                         <div className="absolute left-0 text-right">
                            <p className="text-sm font-medium text-foreground w-16 -translate-x-20 mt-1">{period.timeSlot.split('-')[0].trim()}</p>
                         </div>
-                        <div className="absolute left-0 h-full">
-                           <div className="h-5 w-5 rounded-full bg-primary/20 border-2 border-primary flex items-center justify-center">
+                        <div className="absolute left-0 flex flex-col items-center h-full">
+                           <div className="z-10 h-5 w-5 rounded-full bg-background border-2 border-primary flex items-center justify-center">
                               <div className="h-2 w-2 rounded-full bg-primary" />
                            </div>
-                           {index < sortedPeriods.length - 1 && <div className="ml-[9px] h-full w-px bg-border" />}
+                           {index < sortedPeriods.length - 1 && <div className="h-full w-px bg-border" />}
                         </div>
-                        <div className="ml-8 w-full">
-                           <h3 className="font-bold text-lg text-foreground">{period.subject}</h3>
-                           <div className="text-muted-foreground mt-1 text-sm space-y-1">
-                                <p className="flex items-center gap-2">
-                                   <BookOpen className="h-4 w-4" />
-                                   <span>Class: {period.className}</span>
-                                </p>
+                        <div className="ml-8 w-full -mt-1">
+                           <div className="p-4 rounded-lg border bg-card shadow-sm">
+                               <h3 className="font-bold text-lg text-primary">{period.subject}</h3>
+                               <div className="text-muted-foreground mt-2 text-sm space-y-1">
+                                    <p className="flex items-center gap-2">
+                                       <BookOpen className="h-4 w-4" />
+                                       <span>Class: {period.className}</span>
+                                    </p>
+                               </div>
                            </div>
                         </div>
                      </div>
@@ -68,9 +68,8 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
     const [currentDate, setCurrentDate] = useState(new Date());
 
     useEffect(() => {
-        // Set initial day to today or the next valid school day
-        const todayIndex = new Date().getDay(); // Sunday - 0, Saturday - 6
-        if (todayIndex === 0) { // If Sunday, show Monday
+        const todayIndex = new Date().getDay();
+        if (todayIndex === 0) { 
             const nextDay = new Date();
             nextDay.setDate(nextDay.getDate() + 1);
             setCurrentDate(nextDay);
@@ -92,8 +91,7 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
     
     const weekDates = useMemo(() => {
         const startOfWeek = new Date(currentDate);
-        // Set to previous Monday
-        const dayOfWeek = startOfWeek.getDay(); // Sunday is 0, Monday is 1
+        const dayOfWeek = startOfWeek.getDay();
         const diff = startOfWeek.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
         startOfWeek.setDate(diff);
 
@@ -115,7 +113,6 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><User /> My Daily Routine</CardTitle>
-                    <CardDescription>Your personal routine will be displayed here.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <p className="text-muted-foreground text-center py-10">Could not identify the logged-in teacher.</p>
@@ -129,7 +126,6 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
              <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><User /> My Daily Routine</CardTitle>
-                    <CardDescription>Your personal routine will be displayed here once a school routine is active.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <p className="text-muted-foreground text-center py-10">No active school routine found.</p>
@@ -138,40 +134,39 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
         );
     }
     
-    const selectedDay = daysOfWeek[currentDate.getDay() - 1] || "Monday";
+    const selectedDayIndex = currentDate.getDay() -1;
+    const selectedDay = daysOfWeek[selectedDayIndex >= 0 ? selectedDayIndex : 0];
     const dailyPeriods = teacherScheduleByDay[selectedDay] || [];
 
     return (
-        <Card>
-            <CardHeader>
-                <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                         <Button variant="ghost" size="icon" onClick={() => changeWeek('prev')}><ChevronLeft /></Button>
-                         <h3 className="text-lg font-semibold w-32 text-center">
-                            {currentDate.toLocaleString('default', { month: 'long' })} {currentDate.getFullYear()}
-                        </h3>
-                         <Button variant="ghost" size="icon" onClick={() => changeWeek('next')}><ChevronRight /></Button>
-                    </div>
-                    <div className="hidden md:flex items-center justify-center gap-1 rounded-lg bg-muted p-1">
-                        {weekDates.map(date => (
-                            <Button
-                                key={date.toString()}
-                                variant={currentDate.toDateString() === date.toDateString() ? "default" : "ghost"}
-                                size="sm"
-                                className="px-3"
-                                onClick={() => setCurrentDate(date)}
-                            >
-                                <div className="flex flex-col items-center">
-                                    <span className="text-xs">{date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}</span>
-                                    <span className="font-bold">{date.getDate()}</span>
-                                </div>
-                            </Button>
-                        ))}
-                    </div>
+        <Card className="w-full max-w-2xl mx-auto">
+            <CardHeader className="pb-2">
+                <div className="flex justify-between items-center mb-4">
+                    <Button variant="ghost" size="icon" onClick={() => changeWeek('prev')}><ChevronLeft /></Button>
+                     <h3 className="text-lg font-semibold w-40 text-center">
+                        {currentDate.toLocaleString('default', { month: 'long' })} {currentDate.getFullYear()}
+                    </h3>
+                     <Button variant="ghost" size="icon" onClick={() => changeWeek('next')}><ChevronRight /></Button>
+                </div>
+                <div className="flex items-center justify-center gap-1 rounded-lg bg-muted p-1">
+                    {weekDates.map(date => (
+                        <Button
+                            key={date.toString()}
+                            variant={currentDate.toDateString() === date.toDateString() ? "default" : "ghost"}
+                            size="sm"
+                            className="px-2 sm:px-3 flex-1"
+                            onClick={() => setCurrentDate(date)}
+                        >
+                            <div className="flex flex-col items-center">
+                                <span className="text-xs">{date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}</span>
+                                <span className="font-bold">{date.getDate()}</span>
+                            </div>
+                        </Button>
+                    ))}
                 </div>
             </CardHeader>
             <CardContent>
-                <TeacherDailyRoutine periods={dailyPeriods} timeSlots={timeSlots} />
+                <DailyTimeline periods={dailyPeriods} timeSlots={timeSlots} />
             </CardContent>
         </Card>
     );

@@ -1,19 +1,19 @@
 
 "use client";
 
-import { useContext, useRef } from "react";
+import { useContext, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { AppStateContext } from "@/context/app-state-provider";
 import DataManager from "@/components/routine/data-manager";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Upload, Download, User, School, Book, Clock, DoorOpen, NotebookText } from "lucide-react";
+import { Upload, Download, User, School, Book, Clock, DoorOpen, NotebookText, Trash2 } from "lucide-react";
 import { importFromJSON, exportToJSON } from "@/lib/csv-helpers";
 import PageHeader from "@/components/app/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "../ui/input";
+import { Input } from "@/components/ui/input";
 
 export default function DataManagementPage() {
     const { appState, updateState, updateSchoolInfo } = useContext(AppStateContext);

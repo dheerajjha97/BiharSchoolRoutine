@@ -309,7 +309,7 @@ export default function Home() {
 
         <Tabs defaultValue="personal">
             <TabsList className="grid w-full grid-cols-2 md:w-[400px]">
-                <TabsTrigger value="personal">My Weekly Routine</TabsTrigger>
+                <TabsTrigger value="personal">My Daily Routine</TabsTrigger>
                 <TabsTrigger value="school">Full School Routine</TabsTrigger>
             </TabsList>
             <TabsContent value="personal" className="mt-4">

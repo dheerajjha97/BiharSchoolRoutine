@@ -40,7 +40,7 @@ const DailyTimeline = ({ periods, timeSlots }: { periods: ScheduleEntry[], timeS
                     <div className="absolute left-0 text-right">
                         <p className="text-sm font-medium text-foreground w-16 -translate-x-20 mt-1">{period.timeSlot.split('-')[0].trim()}</p>
                     </div>
-                    <div className="absolute left-0 flex flex-col items-center">
+                    <div className="absolute left-0 flex flex-col items-center h-full">
                         <div className="z-10 h-5 w-5 rounded-full bg-background border-2 border-primary flex items-center justify-center">
                             <div className="h-2 w-2 rounded-full bg-primary" />
                         </div>
@@ -127,7 +127,7 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><User /> My Daily Routine</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="flex items-center justify-center p-6">
                     <p className="text-muted-foreground text-center py-10">Could not identify the logged-in teacher.</p>
                 </CardContent>
             </Card>
@@ -140,7 +140,7 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><User /> My Daily Routine</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="flex items-center justify-center p-6">
                     <p className="text-muted-foreground text-center py-10">No active school routine found.</p>
                 </CardContent>
             </Card>
@@ -183,9 +183,10 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
                     })}
                 </div>
             </CardHeader>
-            <CardContent className="flex justify-center items-center p-4 sm:p-6">
+            <CardContent className="flex items-center justify-center p-6">
                 <DailyTimeline periods={dailyPeriods} timeSlots={timeSlots} />
             </CardContent>
         </Card>
     );
 }
+

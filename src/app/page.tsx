@@ -313,6 +313,7 @@ export default function Home() {
                 teacher={currentTeacher || null}
                 timeSlots={appState.timeSlots}
                 workingDays={appState.config.workingDays}
+                holidays={appState.holidays || []}
             />
         </div>
       </>

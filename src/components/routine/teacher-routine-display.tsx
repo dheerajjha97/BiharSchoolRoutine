@@ -2,10 +2,10 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import type { GenerateScheduleOutput, Teacher, ScheduleEntry, DayOfWeek } from "@/types";
+import type { GenerateScheduleOutput, Teacher, ScheduleEntry, DayOfWeek, Holiday } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { User, ChevronLeft, ChevronRight, BookOpen } from "lucide-react";
+import { User, ChevronLeft, ChevronRight, BookOpen, CalendarX2 } from "lucide-react";
 import { cn, sortTimeSlots } from "@/lib/utils";
 
 interface TeacherRoutineDisplayProps {
@@ -13,17 +13,28 @@ interface TeacherRoutineDisplayProps {
     teacher: Teacher | null;
     timeSlots: string[];
     workingDays: DayOfWeek[];
+    holidays: Holiday[];
 }
 
 const allDaysOfWeek: DayOfWeek[] = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-const DailyTimeline = ({ periods, timeSlots }: { periods: ScheduleEntry[], timeSlots: string[] }) => {
+const DailyTimeline = ({ periods, timeSlots, holidayInfo }: { periods: ScheduleEntry[], timeSlots: string[], holidayInfo: Holiday | null }) => {
     const sortedPeriods = useMemo(() => {
         if (!periods) return [];
         const periodMap = new Map(periods.map(p => [p.timeSlot, p]));
         const sortedSlots = sortTimeSlots(timeSlots);
         return sortedSlots.map(slot => periodMap.get(slot)).filter(Boolean) as ScheduleEntry[];
     }, [periods, timeSlots]);
+
+    if (holidayInfo) {
+        return (
+             <div className="flex flex-col items-center justify-center h-full text-center py-20 text-muted-foreground bg-secondary/50 rounded-lg">
+                <CalendarX2 className="h-12 w-12 mb-4" />
+                <p className="font-semibold">{holidayInfo.name}</p>
+                <p>This is a holiday.</p>
+            </div>
+        )
+    }
 
     if (sortedPeriods.length === 0) {
         return (
@@ -40,7 +51,7 @@ const DailyTimeline = ({ periods, timeSlots }: { periods: ScheduleEntry[], timeS
                     <div className="absolute left-0 text-right">
                         <p className="text-sm font-medium text-foreground w-16 -translate-x-20 mt-1">{period.timeSlot.split('-')[0].trim()}</p>
                     </div>
-                    <div className="absolute left-0 flex flex-col items-center h-full">
+                    <div className="absolute left-0 flex flex-col items-center">
                         <div className="z-10 h-5 w-5 rounded-full bg-background border-2 border-primary flex items-center justify-center">
                             <div className="h-2 w-2 rounded-full bg-primary" />
                         </div>
@@ -63,29 +74,35 @@ const DailyTimeline = ({ periods, timeSlots }: { periods: ScheduleEntry[], timeS
     );
 };
 
-export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots, workingDays }: TeacherRoutineDisplayProps) {
+export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots, workingDays, holidays = [] }: TeacherRoutineDisplayProps) {
     const [currentDate, setCurrentDate] = useState(new Date());
+    
+    const holidaysByDate = useMemo(() => {
+        return new Map(holidays.map(h => [h.date, h]));
+    }, [holidays]);
+
+    const isDayOff = (date: Date): boolean => {
+        const dayName = allDaysOfWeek[date.getDay()];
+        if (!workingDays.includes(dayName)) return true;
+
+        const dateString = date.toISOString().split('T')[0];
+        if (holidaysByDate.has(dateString)) return true;
+
+        return false;
+    }
 
     useEffect(() => {
-        const today = new Date();
-        const dayIndex = today.getDay(); // 0 for Sunday, 1 for Monday, etc.
-        const todayDayName = allDaysOfWeek[dayIndex];
-        
-        // If today is not a working day, find the next working day
-        if (!workingDays.includes(todayDayName)) {
-            let nextDate = new Date(today);
+        let newDate = new Date();
+        if (isDayOff(newDate)) {
             for (let i = 1; i <= 7; i++) {
-                nextDate.setDate(today.getDate() + i);
-                const nextDayIndex = nextDate.getDay();
-                const nextDayName = allDaysOfWeek[nextDayIndex];
-                if (workingDays.includes(nextDayName)) {
-                    setCurrentDate(nextDate);
-                    return;
+                newDate.setDate(new Date().getDate() + i);
+                if (!isDayOff(newDate)) {
+                    break;
                 }
             }
         }
-        setCurrentDate(today);
-    }, [workingDays]);
+        setCurrentDate(newDate);
+    }, [workingDays, holidays]);
 
     const teacherScheduleByDay = useMemo(() => {
         if (!scheduleData?.schedule || !teacher) return {};
@@ -148,8 +165,11 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
     }
     
     const dayIndex = currentDate.getDay();
-    const selectedDay = allDaysOfWeek[dayIndex];
-    const dailyPeriods = teacherScheduleByDay[selectedDay] || [];
+    const selectedDayName = allDaysOfWeek[dayIndex];
+    const dailyPeriods = teacherScheduleByDay[selectedDayName] || [];
+    
+    const currentDateString = currentDate.toISOString().split('T')[0];
+    const holidayInfo = holidaysByDate.get(currentDateString) || null;
 
     return (
         <Card className="w-full max-w-2xl mx-auto">
@@ -163,16 +183,15 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
                 </div>
                 <div className="flex items-center justify-center gap-1 rounded-lg bg-muted p-1">
                     {weekDates.map(date => {
-                        const dayName = allDaysOfWeek[date.getDay()];
-                        const isWorkingDay = workingDays.includes(dayName);
+                        const isOff = isDayOff(date);
                         return (
                             <Button
                                 key={date.toString()}
                                 variant={currentDate.toDateString() === date.toDateString() ? "default" : "ghost"}
                                 size="sm"
-                                className={cn("px-2 sm:px-3 flex-1", !isWorkingDay && "text-muted-foreground/50 line-through")}
+                                className={cn("px-2 sm:px-3 flex-1", isOff && "text-muted-foreground/50 line-through")}
                                 onClick={() => setCurrentDate(date)}
-                                disabled={!isWorkingDay}
+                                disabled={isOff}
                             >
                                 <div className="flex flex-col items-center">
                                     <span className="text-xs">{date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}</span>
@@ -184,9 +203,8 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
                 </div>
             </CardHeader>
             <CardContent className="flex items-center justify-center p-6">
-                <DailyTimeline periods={dailyPeriods} timeSlots={timeSlots} />
+                <DailyTimeline periods={dailyPeriods} timeSlots={timeSlots} holidayInfo={holidayInfo} />
             </CardContent>
         </Card>
     );
 }
-

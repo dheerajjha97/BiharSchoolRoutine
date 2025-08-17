@@ -8,6 +8,14 @@ import { Button } from "@/components/ui/button";
 import { User, ChevronLeft, ChevronRight, BookOpen } from "lucide-react";
 import { cn, sortTimeSlots } from "@/lib/utils";
 
+interface TeacherRoutineDisplayProps {
+    scheduleData: GenerateScheduleOutput | null;
+    teacher: Teacher | null;
+    timeSlots: string[];
+}
+
+const daysOfWeek: ScheduleEntry['day'][] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
 const DailyTimeline = ({ periods, timeSlots }: { periods: ScheduleEntry[], timeSlots: string[] }) => {
     const sortedPeriods = useMemo(() => {
         if (!periods) return [];
@@ -25,33 +33,31 @@ const DailyTimeline = ({ periods, timeSlots }: { periods: ScheduleEntry[], timeS
     }
     
     return (
-        <div className="p-4 sm:p-6">
-            <div className="relative pl-8">
-                {sortedPeriods.map((period, index) => (
-                     <div key={period.timeSlot} className="relative flex items-start pb-8">
-                        <div className="absolute left-0 text-right">
-                           <p className="text-sm font-medium text-foreground w-16 -translate-x-20 mt-1">{period.timeSlot.split('-')[0].trim()}</p>
+        <div className="relative pl-8">
+            {sortedPeriods.map((period, index) => (
+                    <div key={period.timeSlot} className="relative flex items-start pb-8">
+                    <div className="absolute left-0 text-right">
+                        <p className="text-sm font-medium text-foreground w-16 -translate-x-20 mt-1">{period.timeSlot.split('-')[0].trim()}</p>
+                    </div>
+                    <div className="absolute left-0 flex flex-col items-center h-full">
+                        <div className="z-10 h-5 w-5 rounded-full bg-background border-2 border-primary flex items-center justify-center">
+                            <div className="h-2 w-2 rounded-full bg-primary" />
                         </div>
-                        <div className="absolute left-0 flex flex-col items-center">
-                           <div className="z-10 h-5 w-5 rounded-full bg-background border-2 border-primary flex items-center justify-center">
-                              <div className="h-2 w-2 rounded-full bg-primary" />
-                           </div>
-                           {index < sortedPeriods.length - 1 && <div className="w-px bg-border flex-grow" />}
+                        {index < sortedPeriods.length - 1 && <div className="w-px bg-border flex-grow" />}
+                    </div>
+                    <div className="ml-8 w-full -mt-1">
+                        <div className="p-4 rounded-lg border bg-card shadow-sm">
+                            <h3 className="font-bold text-lg text-primary">{period.subject}</h3>
+                            <div className="text-muted-foreground mt-2 text-sm space-y-1">
+                                <p className="flex items-center gap-2">
+                                    <BookOpen className="h-4 w-4" />
+                                    <span>Class: {period.className}</span>
+                                </p>
+                            </div>
                         </div>
-                        <div className="ml-8 w-full -mt-1">
-                           <div className="p-4 rounded-lg border bg-card shadow-sm">
-                               <h3 className="font-bold text-lg text-primary">{period.subject}</h3>
-                               <div className="text-muted-foreground mt-2 text-sm space-y-1">
-                                    <p className="flex items-center gap-2">
-                                       <BookOpen className="h-4 w-4" />
-                                       <span>Class: {period.className}</span>
-                                    </p>
-                               </div>
-                           </div>
-                        </div>
-                     </div>
-                ))}
-            </div>
+                    </div>
+                    </div>
+            ))}
         </div>
     );
 };
@@ -117,7 +123,7 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
 
     if (!scheduleData || !scheduleData.schedule || scheduleData.schedule.length === 0) {
         return (
-             <Card>
+                <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><User /> My Daily Routine</CardTitle>
                 </CardHeader>
@@ -139,10 +145,10 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
             <CardHeader className="pb-2">
                 <div className="flex justify-between items-center mb-4">
                     <Button variant="ghost" size="icon" onClick={() => changeWeek('prev')}><ChevronLeft /></Button>
-                     <h3 className="text-lg font-semibold w-40 text-center">
+                        <h3 className="text-lg font-semibold w-40 text-center">
                         {currentDate.toLocaleString('default', { month: 'long' })} {currentDate.getFullYear()}
                     </h3>
-                     <Button variant="ghost" size="icon" onClick={() => changeWeek('next')}><ChevronRight /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => changeWeek('next')}><ChevronRight /></Button>
                 </div>
                 <div className="flex items-center justify-center gap-1 rounded-lg bg-muted p-1">
                     {weekDates.map(date => (
@@ -161,7 +167,7 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
                     ))}
                 </div>
             </CardHeader>
-            <CardContent className="flex justify-center items-center">
+            <CardContent className="flex justify-center items-center p-4 sm:p-6">
                 <DailyTimeline periods={dailyPeriods} timeSlots={timeSlots} />
             </CardContent>
         </Card>

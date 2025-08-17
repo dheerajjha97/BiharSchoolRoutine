@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import type { GenerateScheduleOutput, Teacher, ScheduleEntry, DayOfWeek, Holiday } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -51,7 +51,7 @@ const DailyTimeline = ({ periods, timeSlots, holidayInfo }: { periods: ScheduleE
                         <div className="absolute left-0 text-right">
                             <p className="text-sm font-medium text-foreground w-16 -translate-x-20 mt-1">{period.timeSlot.split('-')[0].trim()}</p>
                         </div>
-                        <div className="absolute left-0 flex flex-col items-center h-full">
+                        <div className="absolute left-0 flex flex-col items-center">
                             <div className="z-10 h-5 w-5 rounded-full bg-background border-2 border-primary flex items-center justify-center">
                                 <div className="h-2 w-2 rounded-full bg-primary" />
                             </div>
@@ -246,7 +246,7 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
                                 disabled={isOff}
                             >
                                 <div className="flex flex-col items-center">
-                                    <span className="text-xs">{date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}</span>
+                                    <span className="text-xs">{date.toLocaleString('en-US', { weekday: 'short' }).toUpperCase()}</span>
                                     <span className="font-bold">{date.getDate()}</span>
                                 </div>
                             </Button>

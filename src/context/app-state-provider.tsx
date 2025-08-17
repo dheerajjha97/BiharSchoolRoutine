@@ -314,7 +314,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     }
   }, [toast]);
 
-  // Auth state listener - THE SINGLE SOURCE OF TRUTH FOR DATA LOADING
+  // Auth state listener
   useEffect(() => {
     const auth = getFirebaseAuth();
     const unsubscribeAuth = onAuthStateChanged(auth, async (newUser) => {
@@ -343,17 +343,18 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
                         if (dataSnap.exists()) {
                             const schoolData = dataSnap.data() as AppState;
                             updateState('fullState', schoolData);
-                            if (!schoolData.schoolInfo?.name) {
-                                router.replace('/data');
-                            }
                         } else {
                             // Admin's school doc doesn't exist, create it
                             const newSchoolData: AppState = { ...DEFAULT_APP_STATE, schoolInfo: { name: "", udise, pdfHeader: "" } };
                             setDoc(schoolDocRef, newSchoolData);
                             updateState('fullState', newSchoolData);
-                            router.replace('/data');
                         }
+                        setIsLoading(false);
                         setIsAuthLoading(false);
+                    }, (error) => {
+                        console.error("Error in admin snapshot listener:", error);
+                        toast({ variant: "destructive", title: "Data Sync Error", description: "Could not sync admin data." });
+                        handleLogout();
                     });
                     return;
                 }
@@ -382,7 +383,12 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
                         if (dataSnap.exists()) {
                             updateState('fullState', dataSnap.data() as AppState);
                         }
+                        setIsLoading(false);
                         setIsAuthLoading(false);
+                    }, (error) => {
+                        console.error("Error in teacher snapshot listener:", error);
+                        toast({ variant: "destructive", title: "Data Sync Error", description: "Could not sync school data." });
+                        handleLogout();
                     });
                     break;
                 }
@@ -398,6 +404,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
             setUser(null);
             setIsUserAdmin(false);
             setAppState(DEFAULT_APP_STATE);
+            setIsLoading(false);
             setIsAuthLoading(false);
         }
     });
@@ -405,18 +412,28 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     return () => unsubscribeAuth();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  
+  // Admin redirect effect
+  useEffect(() => {
+    // Only run this after auth is complete and if the user is an admin
+    if (!isAuthLoading && isUserAdmin) {
+      // If the school name is missing, it's a new setup
+      if (!appState.schoolInfo.name) {
+        router.replace('/data');
+      }
+    }
+  }, [isAuthLoading, isUserAdmin, appState.schoolInfo.name, router]);
+
 
   // Debounced save effect
   useEffect(() => {
-    if (isAuthLoading || !user || !appState.schoolInfo.udise) return;
+    if (isAuthLoading || !user || !appState.schoolInfo.udise || !isUserAdmin) return;
 
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
 
     saveTimeoutRef.current = setTimeout(async () => {
-        if (!isUserAdmin) return; // Only admins can save data
-
         setIsSyncing(true);
         try {
             const db = getFirestoreDB();
@@ -465,3 +482,5 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     </AppStateContext.Provider>
   );
 };
+
+    

@@ -45,8 +45,14 @@ export default function DataManagementPage() {
         if (!file) return;
 
         try {
-            const data = await importFromJSON(file);
-            updateState('fullState', data);
+            const importedData = await importFromJSON(file);
+
+            // Security Check: Ensure the UDISE code in the backup matches the current school's UDISE.
+            if (importedData.schoolInfo.udise !== appState.schoolInfo.udise) {
+                throw new Error("The backup file belongs to a different school (UDISE code mismatch).");
+            }
+            
+            updateState('fullState', importedData);
             toast({ title: "Data imported successfully!", description: "Your entire school data and configuration has been restored." });
         } catch (error) {
             toast({ variant: "destructive", title: "Import failed", description: error instanceof Error ? error.message : "Could not parse the backup file." });

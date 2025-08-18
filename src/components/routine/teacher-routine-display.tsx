@@ -172,7 +172,7 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
                             return (
                                 <div key={index} className="relative flex min-h-[7.5rem]">
                                      {index < dailyPeriods.length - 1 && (
-                                        <div className="absolute left-4 top-5 h-full w-0.5 bg-border"></div>
+                                        <div className="absolute left-[calc(1rem-1px)] -top-1.5 h-full w-0.5 bg-border -z-0"></div>
                                     )}
                                     <div className="absolute -left-12 top-1 text-right">
                                         <p className="text-sm font-medium text-muted-foreground w-20">{period.timeSlot}</p>
@@ -230,3 +230,4 @@ style.innerHTML = `
   }
 `;
 document.head.appendChild(style);
+

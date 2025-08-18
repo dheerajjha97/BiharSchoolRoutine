@@ -134,21 +134,21 @@ export default function SchoolRoutinePage() {
                         </TabsList>
                         
                         {config.workingDays.map(day => (
-                            <TabsContent key={day} value={day} className={cn("mt-4 rounded-lg p-2 transition-colors duration-300", dayBgColors[day])}>
+                            <TabsContent key={day} value={day} className="mt-4 rounded-lg transition-colors duration-300">
                                 <div className="overflow-x-auto rounded-lg">
                                     <table className="min-w-full" style={{ borderCollapse: 'separate', borderSpacing: '0' }}>
                                         <thead>
                                             <tr className="bg-transparent">
-                                                <th className="sticky left-0 z-20 bg-transparent p-2 text-sm font-semibold text-foreground align-bottom">Time / Class</th>
+                                                <th className={cn("sticky left-0 z-20 p-2 text-sm font-semibold text-foreground align-bottom", dayBgColors[day])}>Time / Class</th>
                                                 {sortedClasses.map(c => (
-                                                    <th key={c} className="p-2 text-center text-sm font-semibold text-foreground min-w-[140px]">{c}</th>
+                                                    <th key={c} className={cn("p-2 text-center text-sm font-semibold text-foreground min-w-[140px]", dayBgColors[day])}>{c}</th>
                                                 ))}
                                             </tr>
                                         </thead>
-                                        <tbody>
+                                        <tbody className={cn("pt-2", dayBgColors[day])}>
                                             {sortedTimeSlots.map(slot => (
                                                 <tr key={slot}>
-                                                    <td className="sticky left-0 z-20 bg-transparent p-2 text-sm font-semibold text-foreground align-top min-w-[100px]">{slot}</td>
+                                                    <td className={cn("sticky left-0 z-20 p-2 text-sm font-semibold text-foreground align-top min-w-[100px]", dayBgColors[day])}>{slot}</td>
                                                     {sortedClasses.map(c => {
                                                         const entry = scheduleByDayClassTime[day]?.[c]?.[slot];
                                                         const isSpecial = entry?.subject === 'Prayer' || entry?.subject === 'Lunch';

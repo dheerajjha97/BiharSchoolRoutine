@@ -11,15 +11,15 @@ import { sortClasses, sortTimeSlots } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 const subjectColors = [
-    'bg-red-100 dark:bg-red-900/40 border-l-4 border-red-500',
-    'bg-blue-100 dark:bg-blue-900/40 border-l-4 border-blue-500',
-    'bg-green-100 dark:bg-green-900/40 border-l-4 border-green-500',
-    'bg-yellow-100 dark:bg-yellow-900/40 border-l-4 border-yellow-500',
-    'bg-purple-100 dark:bg-purple-900/40 border-l-4 border-purple-500',
-    'bg-pink-100 dark:bg-pink-900/40 border-l-4 border-pink-500',
-    'bg-indigo-100 dark:bg-indigo-900/40 border-l-4 border-indigo-500',
-    'bg-teal-100 dark:bg-teal-900/40 border-l-4 border-teal-500',
-    'bg-orange-100 dark:bg-orange-900/40 border-l-4 border-orange-500',
+    'border-red-500',
+    'border-blue-500',
+    'border-green-500',
+    'border-yellow-500',
+    'border-purple-500',
+    'border-pink-500',
+    'border-indigo-500',
+    'border-teal-500',
+    'border-orange-500',
 ];
 
 const getSubjectColor = (subject: string, subjectColorMap: Map<string, string>): string => {
@@ -54,7 +54,6 @@ export default function SchoolRoutinePage() {
             sortedTimeSlots.forEach(slot => {
                 grid[day][slot] = {};
                 sortedClasses.forEach(c => {
-                    // Initialize with a placeholder
                     grid[day][slot][c] = { day, timeSlot: slot, className: c, subject: "---", teacher: "N/A" };
                 });
             });
@@ -108,19 +107,19 @@ export default function SchoolRoutinePage() {
                         {config.workingDays.map(day => (
                             <TabsContent key={day} value={day}>
                                 <div className="overflow-x-auto border rounded-lg">
-                                    <table className="min-w-full divide-y divide-border">
+                                    <table className="min-w-full border-separate border-spacing-0">
                                         <thead className="bg-muted/50">
                                             <tr>
-                                                <th className="sticky left-0 z-10 bg-muted/50 px-4 py-3 text-left text-sm font-semibold text-foreground">Time / Class</th>
+                                                <th className="sticky left-0 z-10 bg-muted/50 px-4 py-3 text-left text-sm font-semibold text-foreground border-b">Time / Class</th>
                                                 {sortedClasses.map(c => (
-                                                    <th key={c} className="px-4 py-3 text-center text-sm font-semibold text-foreground">{c}</th>
+                                                    <th key={c} className="px-4 py-3 text-center text-sm font-semibold text-foreground border-b">{c}</th>
                                                 ))}
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-border bg-background">
+                                        <tbody>
                                             {sortedTimeSlots.map(slot => (
                                                 <tr key={slot}>
-                                                    <td className="sticky left-0 z-10 bg-background px-4 py-3 text-sm font-semibold text-foreground">{slot}</td>
+                                                    <td className="sticky left-0 z-10 bg-background px-4 py-3 text-sm font-semibold text-foreground border-b">{slot}</td>
                                                     {sortedClasses.map(c => {
                                                         const entry = scheduleByDayTimeClass[day]?.[slot]?.[c];
                                                         const isSpecial = entry?.subject === 'Prayer' || entry?.subject === 'Lunch';
@@ -129,21 +128,21 @@ export default function SchoolRoutinePage() {
 
                                                         if (isSpecial) {
                                                             return (
-                                                                <td key={`${c}-${slot}`} className="p-2 text-center bg-muted text-muted-foreground font-semibold">
+                                                                <td key={`${c}-${slot}`} className="p-2 text-center bg-muted text-muted-foreground font-semibold border-b">
                                                                     {entry.subject}
                                                                 </td>
                                                             );
                                                         }
                                                         
                                                         if (isEmpty) {
-                                                            return <td key={`${c}-${slot}`} className="p-2"></td>;
+                                                            return <td key={`${c}-${slot}`} className="p-2 border-b"></td>;
                                                         }
                                                         
                                                         const colorClass = getSubjectColor(entry.subject, subjectColorMap);
 
                                                         return (
-                                                            <td key={`${c}-${slot}`} className="p-0">
-                                                                <div className={cn("h-full text-center p-2 space-y-1", colorClass)}>
+                                                            <td key={`${c}-${slot}`} className="p-2 border-b">
+                                                                <div className={cn("text-left p-2 space-y-1 bg-card rounded-md shadow-sm border-l-4", colorClass)}>
                                                                     <p className="font-bold text-sm">{entry.subject}</p>
                                                                     <p className="text-xs text-muted-foreground">{teacherNames === 'N/A' ? '' : teacherNames}</p>
                                                                 </div>

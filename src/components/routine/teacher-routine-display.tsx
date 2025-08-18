@@ -4,7 +4,7 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import type { GenerateScheduleOutput, Teacher, ScheduleEntry, DayOfWeek, Holiday } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
-import { Check, MapPin, User } from "lucide-react";
+import { Check, MapPin, User, NotebookText } from "lucide-react";
 import { cn, sortTimeSlots } from "@/lib/utils";
 
 interface TeacherRoutineDisplayProps {
@@ -66,7 +66,7 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
     
     const weekDates = useMemo(() => {
         const startOfWeek = new Date(currentDate);
-        startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay() + 1); // Start week on Monday
+        startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay()); // Start week on Sunday
         return Array.from({ length: 7 }).map((_, i) => { 
             const date = new Date(startOfWeek);
             date.setDate(date.getDate() + i);
@@ -102,9 +102,9 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
 
     if (!teacher || !scheduleData || !scheduleData.schedule || scheduleData.schedule.length === 0) {
         return (
-            <Card className="w-full max-w-2xl mx-auto bg-gray-800 text-white border-gray-700">
+            <Card className="w-full max-w-2xl mx-auto">
                 <CardContent className="flex items-center justify-center p-6 min-h-[400px]">
-                    <p className="text-gray-400 text-center py-10">
+                    <p className="text-muted-foreground text-center py-10">
                         { !teacher ? "Could not identify teacher." : "No active school routine found." }
                     </p>
                 </CardContent>
@@ -121,28 +121,29 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
     const isTodayOff = holidayInfo || !workingDays.includes(selectedDayName);
 
     return (
-        <Card className="w-full max-w-md mx-auto overflow-hidden bg-[#1C1C1E] text-gray-200 border-gray-700 shadow-2xl font-sans">
-            <div className="p-6">
-                <div className="text-gray-400 text-sm font-bold tracking-wider mb-4">
+        <Card className="w-full max-w-md mx-auto overflow-hidden shadow-lg">
+            <div className="p-4 border-b">
+                <div className="text-muted-foreground text-sm font-bold tracking-wider mb-4 px-2">
                     {currentDate.toLocaleString('en-US', { month: 'long' }).toUpperCase()}
                 </div>
                 <div className="flex items-center justify-between">
                     {weekDates.map(date => {
                         const isSelected = currentDate.toDateString() === date.toDateString();
                         return (
-                            <button key={date.toString()} className="text-center" onClick={() => setCurrentDate(date)}>
-                                <div className={cn("text-lg", isSelected ? "font-bold text-white" : "text-gray-400")}>{date.getDate()}</div>
-                                <div className={cn("text-xs", isSelected ? "font-bold text-white" : "text-gray-500")}>{date.toLocaleString('en-US', { weekday: 'short' }).toUpperCase()}</div>
+                            <button key={date.toString()} className="text-center w-10 flex flex-col items-center" onClick={() => setCurrentDate(date)}>
+                                <div className={cn("text-xs text-muted-foreground", isSelected && "font-bold text-foreground")}>{date.toLocaleString('en-US', { weekday: 'short' }).toUpperCase()}</div>
+                                <div className={cn("mt-2 text-lg w-8 h-8 flex items-center justify-center rounded-full", isSelected ? "font-bold text-primary-foreground bg-primary" : "text-foreground")}>{date.getDate()}</div>
                             </button>
                         )
                     })}
                 </div>
             </div>
             
-            <CardContent className="p-6 bg-[#1C1C1E]">
+            <CardContent className="p-6 min-h-[400px]">
                 <div className="relative pl-8">
                     {isTodayOff ? (
-                         <div className="flex flex-col items-center justify-center h-full text-center py-20 text-gray-500">
+                         <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-muted-foreground">
+                            <NotebookText className="h-10 w-10 mb-2" />
                             <p className="font-semibold">{holidayInfo?.name || "Day Off"}</p>
                             <p>No classes scheduled.</p>
                         </div>
@@ -152,29 +153,34 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
                             return (
                                 <div key={index} className="relative flex pb-12">
                                      {index < dailyPeriods.length - 1 && (
-                                        <div className="absolute left-4 top-5 h-full w-0.5 bg-gray-700/50"></div>
+                                        <div className="absolute left-4 top-5 h-full w-0.5 bg-border"></div>
                                     )}
                                     <div className="absolute -left-12 top-1 text-right">
-                                        <p className="text-sm font-medium text-gray-400 w-20">{period.timeSlot.split('-')[0].trim()}</p>
+                                        <p className="text-sm font-medium text-muted-foreground w-20">{period.timeSlot}</p>
                                     </div>
-                                    <div className="z-10 h-8 w-8 rounded-full border-2 border-[#34D399]/50 flex items-center justify-center bg-[#1C1C1E]">
-                                        {status === 'completed' && <Check className="h-4 w-4 text-[#34D399]" />}
-                                        {status === 'now' && <div className="absolute h-4 w-4 rounded-full bg-[#34D399] animate-ping" />}
-                                        {status === 'now' && <div className="absolute h-4 w-4 rounded-full bg-[#34D399]" />}
+                                    <div className={cn(
+                                        "z-10 h-8 w-8 rounded-full border-2 flex items-center justify-center bg-background",
+                                        status === 'now' && 'border-primary',
+                                        status === 'completed' && 'border-green-500',
+                                        status === 'upcoming' && 'border-border'
+                                    )}>
+                                        {status === 'completed' && <Check className="h-4 w-4 text-green-500" />}
+                                        {status === 'now' && <div className="absolute h-3 w-3 rounded-full bg-primary animate-ping" />}
+                                        {status === 'now' && <div className="absolute h-2 w-2 rounded-full bg-primary" />}
                                     </div>
                                     
                                     <div className="ml-6 w-full">
                                         <div className="flex items-center gap-3">
-                                            <h3 className="font-bold text-lg text-white">{period.subject}</h3>
-                                            {status === 'now' && <div className="px-2 py-0.5 text-xs font-bold bg-[#34D399] text-black rounded-md">Now</div>}
+                                            <h3 className="font-bold text-lg text-foreground">{period.subject}</h3>
+                                            {status === 'now' && <div className="px-2 py-0.5 text-xs font-bold bg-primary text-primary-foreground rounded-md">Now</div>}
                                         </div>
-                                        <div className="text-gray-400 mt-2 text-sm space-y-1">
+                                        <div className="text-muted-foreground mt-2 text-sm space-y-1">
                                             <p className="flex items-center gap-2">
-                                                <MapPin className="h-4 w-4 text-[#34D399]" />
+                                                <MapPin className="h-4 w-4 text-primary" />
                                                 <span>{period.className}</span>
                                             </p>
                                             <p className="flex items-center gap-2">
-                                                <User className="h-4 w-4 text-[#34D399]" />
+                                                <User className="h-4 w-4 text-primary" />
                                                 <span>{teacher?.name}</span>
                                             </p>
                                         </div>
@@ -183,7 +189,7 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
                             )
                         })
                     ) : (
-                        <div className="flex flex-col items-center justify-center min-h-[200px] text-center text-gray-500">
+                        <div className="absolute inset-0 flex flex-col items-center justify-center min-h-[200px] text-center text-muted-foreground">
                             <p>No classes scheduled for you on this day.</p>
                         </div>
                     )}

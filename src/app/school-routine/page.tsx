@@ -116,7 +116,7 @@ export default function SchoolRoutinePage() {
             <Card>
                 <CardContent className="p-4 md:p-6">
                     <Tabs defaultValue={defaultTab} className="w-full">
-                        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 mb-4">
+                        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 mb-6">
                             {config.workingDays.map(day => (
                                 <TabsTrigger key={day} value={day}>{day}</TabsTrigger>
                             ))}
@@ -124,20 +124,20 @@ export default function SchoolRoutinePage() {
                         
                         {config.workingDays.map(day => (
                             <TabsContent key={day} value={day} className="mt-4">
-                                <div className="overflow-x-auto border rounded-lg">
+                                <div className="overflow-x-auto rounded-lg">
                                     <table className="min-w-full" style={{ borderCollapse: 'separate', borderSpacing: '0' }}>
                                         <thead>
                                             <tr className="bg-card">
-                                                <th className="sticky left-0 z-20 bg-card p-2 text-sm font-semibold text-foreground align-bottom border-b">Time / Class</th>
+                                                <th className="sticky left-0 z-20 bg-card p-2 text-sm font-semibold text-foreground align-bottom">Time / Class</th>
                                                 {sortedClasses.map(c => (
-                                                    <th key={c} className="p-2 text-center text-sm font-semibold text-foreground min-w-[140px] border-b">{c}</th>
+                                                    <th key={c} className="p-2 text-center text-sm font-semibold text-foreground min-w-[140px]">{c}</th>
                                                 ))}
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {sortedTimeSlots.map(slot => (
                                                 <tr key={slot}>
-                                                    <td className="sticky left-0 z-20 bg-card p-2 text-sm font-semibold text-foreground align-top min-w-[100px] border-b">{slot}</td>
+                                                    <td className="sticky left-0 z-20 bg-card p-2 text-sm font-semibold text-foreground align-top min-w-[100px]">{slot}</td>
                                                     {sortedClasses.map(c => {
                                                         const entry = scheduleByDayClassTime[day]?.[c]?.[slot];
                                                         const isSpecial = entry?.subject === 'Prayer' || entry?.subject === 'Lunch';
@@ -146,7 +146,7 @@ export default function SchoolRoutinePage() {
 
                                                         if (isSpecial) {
                                                             return (
-                                                                <td key={`${c}-${slot}`} className="p-1.5 align-middle border-b">
+                                                                <td key={`${c}-${slot}`} className="p-1.5 align-middle">
                                                                     <div className="h-full flex items-center justify-center p-2 text-center bg-muted text-muted-foreground font-semibold rounded-md">
                                                                         {entry.subject}
                                                                     </div>
@@ -155,13 +155,13 @@ export default function SchoolRoutinePage() {
                                                         }
                                                         
                                                         if (isEmpty) {
-                                                            return <td key={`${c}-${slot}`} className="p-1.5 border-b"></td>;
+                                                            return <td key={`${c}-${slot}`} className="p-1.5"></td>;
                                                         }
                                                         
                                                         const colorClass = getSubjectColor(entry.subject, subjectColorMap);
 
                                                         return (
-                                                            <td key={`${c}-${slot}`} className="p-1.5 align-top border-b">
+                                                            <td key={`${c}-${slot}`} className="p-1.5 align-top">
                                                                 <div className={cn("text-left p-2 space-y-1 bg-card rounded-md shadow-sm border-l-4 h-full", colorClass)}>
                                                                     <p className="font-bold text-sm text-foreground">{entry.subject}</p>
                                                                     <p className="text-xs text-muted-foreground">{teacherNames === 'N/A' ? '' : teacherNames}</p>

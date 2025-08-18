@@ -20,12 +20,12 @@ export default function LoginPage() {
     }, [user, router]);
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-secondary">
-            <Card className="w-full max-w-sm mx-4">
+        <div className="flex items-center justify-center min-h-screen bg-background">
+            <Card className="w-full max-w-sm mx-4 shadow-xl">
                 <CardHeader className="text-center">
                     <div className="flex justify-center items-center gap-3 mb-4">
                         <Logo className="h-8 w-8 text-primary" />
-                        <CardTitle className="text-3xl">School Routine</CardTitle>
+                        <CardTitle className="text-3xl font-bold">School Routine</CardTitle>
                     </div>
                     <CardDescription>
                         Please sign in to manage or view your school's schedule.

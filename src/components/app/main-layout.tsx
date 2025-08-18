@@ -31,7 +31,7 @@ function ConditionalLayout({ children }: { children: React.ReactNode }) {
 
     if (isAuthLoading) {
         return (
-            <div className="flex items-center justify-center h-screen">
+            <div className="flex items-center justify-center h-screen bg-background">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
         );
@@ -39,7 +39,7 @@ function ConditionalLayout({ children }: { children: React.ReactNode }) {
     
     // If we are on a public path (like /login), don't wrap it in the AppShell
     if (publicPaths.includes(pathname)) {
-        return <>{children}</>;
+        return <div className="h-screen">{children}</div>;
     }
 
     // If a user is logged in and on a protected path, show the AppShell
@@ -49,7 +49,7 @@ function ConditionalLayout({ children }: { children: React.ReactNode }) {
     
     // Fallback for edge cases, might show a flicker of the loader
     return (
-        <div className="flex items-center justify-center h-screen">
+        <div className="flex items-center justify-center h-screen bg-background">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
     );

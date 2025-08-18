@@ -201,12 +201,12 @@ export default function DataManagementPage() {
                         <div className="space-y-2 h-48 overflow-y-auto border rounded-md p-2">
                             {holidays.length > 0 ? holidays.map(h => (
                                 <div key={h.date} className="flex items-center justify-between text-sm bg-secondary p-2 rounded-md">
-                                    <span>{h.name} ({new Date(h.date).toLocaleDateString('en-GB')})</span>
+                                    <span>{h.name} ({new Date(h.date).toLocaleDateString('en-GB', { timeZone: 'UTC' })})</span>
                                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveHoliday(h.date)}>
                                         <Trash2 className="h-4 w-4" />
                                     </Button>
                                 </div>
-                            )) : <p className="text-sm text-center text-muted-foreground py-10">No holidays added.</p>}
+                            )) : <p className="text-sm text-center text-muted-foreground py-10">No holidays added yet.</p>}
                         </div>
                     </CardContent>
                 </Card>

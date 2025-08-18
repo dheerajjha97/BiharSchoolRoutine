@@ -24,9 +24,9 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
     const holidaysByDate = useMemo(() => new Map(holidays.map(h => [h.date, h])), [holidays]);
 
     const isDayOff = useCallback((date: Date): boolean => {
-        const dayName = allDaysOfWeek[date.getDay()];
+        const dayName = allDaysOfWeek[date.getUTCDay()];
         if (!workingDays.includes(dayName)) return true;
-        const dateString = date.toISOString().split('T')[0];
+        const dateString = new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
         return holidaysByDate.has(dateString);
     }, [workingDays, holidaysByDate]);
 
@@ -67,20 +67,20 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
     
     const monthDates = useMemo(() => {
         const date = new Date(currentDate);
-        const year = date.getFullYear();
-        const month = date.getMonth();
-        const firstDay = new Date(year, month, 1);
-        const lastDay = new Date(year, month + 1, 0);
+        const year = date.getUTCFullYear();
+        const month = date.getUTCMonth();
+        const firstDay = new Date(Date.UTC(year, month, 1));
+        const lastDay = new Date(Date.UTC(year, month + 1, 0));
         
         const dates = [];
-        for (let d = new Date(firstDay); d <= lastDay; d.setDate(d.getDate() + 1)) {
+        for (let d = new Date(firstDay); d <= lastDay; d.setUTCDate(d.getUTCDate() + 1)) {
             dates.push(new Date(d));
         }
         return dates;
     }, [currentDate]);
 
     useEffect(() => {
-        const selectedButton = document.getElementById(`date-btn-${currentDate.getDate()}`);
+        const selectedButton = document.getElementById(`date-btn-${currentDate.getUTCDate()}`);
         if (selectedButton && calendarRef.current) {
             const calendar = calendarRef.current;
             const scrollLeft = selectedButton.offsetLeft - (calendar.offsetWidth / 2) + (selectedButton.offsetWidth / 2);
@@ -126,11 +126,11 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
         );
     }
     
-    const dayIndex = currentDate.getDay();
+    const dayIndex = currentDate.getUTCDay();
     const selectedDayName = allDaysOfWeek[dayIndex];
     const dailyPeriods = teacherScheduleByDay[selectedDayName] || [];
     
-    const currentDateString = currentDate.toISOString().split('T')[0];
+    const currentDateString = new Date(currentDate.getTime() - (currentDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
     const holidayInfo = holidaysByDate.get(currentDateString) || null;
     const isTodayOff = holidayInfo || !workingDays.includes(selectedDayName);
 
@@ -138,7 +138,7 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
         <Card className="w-full max-w-md mx-auto overflow-hidden shadow-lg bg-card">
             <div className="p-4 border-b">
                 <div className="text-muted-foreground text-sm font-bold tracking-wider mb-4 px-2">
-                    {currentDate.toLocaleString('en-US', { month: 'long' }).toUpperCase()} {currentDate.getFullYear()}
+                    {currentDate.toLocaleString('en-US', { month: 'long', timeZone: 'UTC' }).toUpperCase()} {currentDate.getUTCFullYear()}
                 </div>
                 <div ref={calendarRef} className="flex items-center space-x-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
                     {monthDates.map(date => {
@@ -146,12 +146,12 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
                         return (
                             <button 
                                 key={date.toString()} 
-                                id={`date-btn-${date.getDate()}`}
+                                id={`date-btn-${date.getUTCDate()}`}
                                 className="text-center w-12 flex-shrink-0 flex flex-col items-center" 
                                 onClick={() => setCurrentDate(date)}
                             >
-                                <div className={cn("text-xs text-muted-foreground", isSelected && "font-bold text-card-foreground")}>{date.toLocaleString('en-US', { weekday: 'short' }).toUpperCase()}</div>
-                                <div className={cn("mt-2 text-lg w-8 h-8 flex items-center justify-center rounded-full", isSelected ? "font-bold text-primary-foreground bg-primary" : "text-card-foreground")}>{date.getDate()}</div>
+                                <div className={cn("text-xs text-muted-foreground", isSelected && "font-bold text-card-foreground")}>{date.toLocaleString('en-US', { weekday: 'short', timeZone: 'UTC' }).toUpperCase()}</div>
+                                <div className={cn("mt-2 text-lg w-8 h-8 flex items-center justify-center rounded-full", isSelected ? "font-bold text-primary-foreground bg-primary" : "text-card-foreground")}>{date.getUTCDate()}</div>
                             </button>
                         )
                     })}

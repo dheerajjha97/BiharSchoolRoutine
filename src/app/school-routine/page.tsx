@@ -1,11 +1,11 @@
 
 "use client";
 
-import { useContext, useState, useMemo } from "react";
+import React, { useContext, useMemo } from "react";
 import PageHeader from "@/components/app/page-header";
 import { AppStateContext } from "@/context/app-state-provider";
-import type { ScheduleEntry, Teacher, DayOfWeek } from "@/types";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import type { ScheduleEntry, DayOfWeek } from "@/types";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { sortClasses, sortTimeSlots } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -54,11 +54,12 @@ export default function SchoolRoutinePage() {
             sortedTimeSlots.forEach(slot => {
                 grid[day][slot] = {};
                 sortedClasses.forEach(c => {
+                    // Initialize with a placeholder
                     grid[day][slot][c] = { day, timeSlot: slot, className: c, subject: "---", teacher: "N/A" };
                 });
             });
         });
-
+        
         activeRoutine.schedule.schedule.forEach(entry => {
             const classNames = entry.className.split('&').map(c => c.trim());
             classNames.forEach(className => {
@@ -77,12 +78,9 @@ export default function SchoolRoutinePage() {
         return (
              <div className="flex h-full items-center justify-center p-4">
                  <Card>
-                    <CardHeader>
-                        <CardTitle>School Routine</CardTitle>
-                        <CardDescription>No routine has been generated or selected yet.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
+                    <CardContent className="p-6">
                     <div className="text-center py-12 text-muted-foreground">
+                        <h2 className="text-xl font-semibold mb-2">School Routine</h2>
                         <p>No active routine found. The admin needs to generate one first.</p>
                     </div>
                     </CardContent>
@@ -110,48 +108,52 @@ export default function SchoolRoutinePage() {
                         {config.workingDays.map(day => (
                             <TabsContent key={day} value={day}>
                                 <div className="overflow-x-auto border rounded-lg">
-                                    <div className="timetable-grid">
-                                        {/* Corner Header */}
-                                        <div className="timetable-header font-bold sticky top-0 left-0 z-20">Time / Class</div>
-                                        {/* Class Headers */}
-                                        {sortedClasses.map(c => (
-                                            <div key={c} className="timetable-header font-bold sticky top-0 z-10 text-center">{c}</div>
-                                        ))}
+                                    <table className="min-w-full divide-y divide-border">
+                                        <thead className="bg-muted/50">
+                                            <tr>
+                                                <th className="sticky left-0 z-10 bg-muted/50 px-4 py-3 text-left text-sm font-semibold text-foreground">Time / Class</th>
+                                                {sortedClasses.map(c => (
+                                                    <th key={c} className="px-4 py-3 text-center text-sm font-semibold text-foreground">{c}</th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-border bg-background">
+                                            {sortedTimeSlots.map(slot => (
+                                                <tr key={slot}>
+                                                    <td className="sticky left-0 z-10 bg-background px-4 py-3 text-sm font-semibold text-foreground">{slot}</td>
+                                                    {sortedClasses.map(c => {
+                                                        const entry = scheduleByDayTimeClass[day]?.[slot]?.[c];
+                                                        const isSpecial = entry?.subject === 'Prayer' || entry?.subject === 'Lunch';
+                                                        const isEmpty = !entry || entry?.subject === '---';
+                                                        const teacherNames = (entry?.teacher || '').split(' & ').map(tId => teacherNameMap.get(tId.trim()) || tId).join(' & ');
 
-                                        {/* Time Slots and Cells */}
-                                        {sortedTimeSlots.map(slot => (
-                                            <React.Fragment key={slot}>
-                                                <div className="timetable-header font-bold sticky left-0 z-10 text-center">{slot}</div>
-                                                {sortedClasses.map(c => {
-                                                    const entry = scheduleByDayTimeClass[day]?.[slot]?.[c];
-                                                    const isSpecial = entry?.subject === 'Prayer' || entry?.subject === 'Lunch';
-                                                    const isEmpty = entry?.subject === '---';
-                                                    const teacherNames = (entry?.teacher || '').split(' & ').map(tId => teacherNameMap.get(tId.trim()) || tId).join(' & ');
+                                                        if (isSpecial) {
+                                                            return (
+                                                                <td key={`${c}-${slot}`} className="p-2 text-center bg-muted text-muted-foreground font-semibold">
+                                                                    {entry.subject}
+                                                                </td>
+                                                            );
+                                                        }
+                                                        
+                                                        if (isEmpty) {
+                                                            return <td key={`${c}-${slot}`} className="p-2"></td>;
+                                                        }
+                                                        
+                                                        const colorClass = getSubjectColor(entry.subject, subjectColorMap);
 
-                                                    if (isSpecial) {
                                                         return (
-                                                            <div key={`${c}-${slot}`} className="timetable-cell bg-muted text-muted-foreground font-semibold">
-                                                                {entry.subject}
-                                                            </div>
+                                                            <td key={`${c}-${slot}`} className="p-0">
+                                                                <div className={cn("h-full text-center p-2 space-y-1", colorClass)}>
+                                                                    <p className="font-bold text-sm">{entry.subject}</p>
+                                                                    <p className="text-xs text-muted-foreground">{teacherNames === 'N/A' ? '' : teacherNames}</p>
+                                                                </div>
+                                                            </td>
                                                         );
-                                                    }
-                                                    
-                                                    if (isEmpty || !entry) {
-                                                        return <div key={`${c}-${slot}`} className="timetable-cell"></div>;
-                                                    }
-                                                    
-                                                    const colorClass = getSubjectColor(entry.subject, subjectColorMap);
-
-                                                    return (
-                                                        <div key={`${c}-${slot}`} className={cn("timetable-cell text-center p-1 justify-center space-y-1", colorClass)}>
-                                                            <p className="font-bold text-sm">{entry.subject}</p>
-                                                            <p className="text-xs text-muted-foreground">{teacherNames === 'N/A' ? '' : teacherNames}</p>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </React.Fragment>
-                                        ))}
-                                    </div>
+                                                    })}
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
                             </TabsContent>
                         ))}

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import type { GenerateScheduleOutput, Teacher, ScheduleEntry, DayOfWeek, Holiday } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Check, MapPin, User, NotebookText } from "lucide-react";
@@ -19,6 +19,7 @@ const allDaysOfWeek: DayOfWeek[] = ["Sunday", "Monday", "Tuesday", "Wednesday", 
 
 export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots, workingDays, holidays = [] }: TeacherRoutineDisplayProps) {
     const [currentDate, setCurrentDate] = useState(new Date());
+    const calendarRef = useRef<HTMLDivElement>(null);
     
     const holidaysByDate = useMemo(() => new Map(holidays.map(h => [h.date, h])), [holidays]);
 
@@ -32,7 +33,7 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
     useEffect(() => {
         let newDate = new Date();
         if (isDayOff(newDate)) {
-            for (let i = 1; i <= 7; i++) {
+            for (let i = 1; i <= 30; i++) { // Check next 30 days
                 const nextDay = new Date();
                 nextDay.setDate(new Date().getDate() + i);
                 if (!isDayOff(nextDay)) {
@@ -64,14 +65,27 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
         return schedule;
     }, [scheduleData, teacher, workingDays]);
     
-    const weekDates = useMemo(() => {
-        const startOfWeek = new Date(currentDate);
-        startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay()); // Start week on Sunday
-        return Array.from({ length: 7 }).map((_, i) => { 
-            const date = new Date(startOfWeek);
-            date.setDate(date.getDate() + i);
-            return date;
-        });
+    const monthDates = useMemo(() => {
+        const date = new Date(currentDate);
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        
+        const dates = [];
+        for (let d = new Date(firstDay); d <= lastDay; d.setDate(d.getDate() + 1)) {
+            dates.push(new Date(d));
+        }
+        return dates;
+    }, [currentDate]);
+
+    useEffect(() => {
+        const selectedButton = document.getElementById(`date-btn-${currentDate.getDate()}`);
+        if (selectedButton && calendarRef.current) {
+            const calendar = calendarRef.current;
+            const scrollLeft = selectedButton.offsetLeft - (calendar.offsetWidth / 2) + (selectedButton.offsetWidth / 2);
+            calendar.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+        }
     }, [currentDate]);
 
     const getStatus = (periodTime: string) => {
@@ -121,26 +135,31 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
     const isTodayOff = holidayInfo || !workingDays.includes(selectedDayName);
 
     return (
-        <Card className="w-full max-w-md mx-auto overflow-hidden shadow-lg">
+        <Card className="w-full max-w-md mx-auto overflow-hidden shadow-lg bg-card">
             <div className="p-4 border-b">
                 <div className="text-muted-foreground text-sm font-bold tracking-wider mb-4 px-2">
-                    {currentDate.toLocaleString('en-US', { month: 'long' }).toUpperCase()}
+                    {currentDate.toLocaleString('en-US', { month: 'long' }).toUpperCase()} {currentDate.getFullYear()}
                 </div>
-                <div className="flex items-center justify-between">
-                    {weekDates.map(date => {
+                <div ref={calendarRef} className="flex items-center space-x-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+                    {monthDates.map(date => {
                         const isSelected = currentDate.toDateString() === date.toDateString();
                         return (
-                            <button key={date.toString()} className="text-center w-10 flex flex-col items-center" onClick={() => setCurrentDate(date)}>
-                                <div className={cn("text-xs text-muted-foreground", isSelected && "font-bold text-foreground")}>{date.toLocaleString('en-US', { weekday: 'short' }).toUpperCase()}</div>
-                                <div className={cn("mt-2 text-lg w-8 h-8 flex items-center justify-center rounded-full", isSelected ? "font-bold text-primary-foreground bg-primary" : "text-foreground")}>{date.getDate()}</div>
+                            <button 
+                                key={date.toString()} 
+                                id={`date-btn-${date.getDate()}`}
+                                className="text-center w-12 flex-shrink-0 flex flex-col items-center" 
+                                onClick={() => setCurrentDate(date)}
+                            >
+                                <div className={cn("text-xs text-muted-foreground", isSelected && "font-bold text-card-foreground")}>{date.toLocaleString('en-US', { weekday: 'short' }).toUpperCase()}</div>
+                                <div className={cn("mt-2 text-lg w-8 h-8 flex items-center justify-center rounded-full", isSelected ? "font-bold text-primary-foreground bg-primary" : "text-card-foreground")}>{date.getDate()}</div>
                             </button>
                         )
                     })}
                 </div>
             </div>
             
-            <CardContent className="p-6 min-h-[400px]">
-                <div className="relative pl-8">
+            <CardContent className="p-6 min-h-[400px] flex items-center justify-center">
+                <div className="relative pl-8 w-full">
                     {isTodayOff ? (
                          <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-muted-foreground">
                             <NotebookText className="h-10 w-10 mb-2" />
@@ -159,7 +178,7 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
                                         <p className="text-sm font-medium text-muted-foreground w-20">{period.timeSlot}</p>
                                     </div>
                                     <div className={cn(
-                                        "z-10 h-8 w-8 rounded-full border-2 flex items-center justify-center bg-background",
+                                        "z-10 h-8 w-8 rounded-full border-2 flex items-center justify-center bg-card",
                                         status === 'now' && 'border-primary',
                                         status === 'completed' && 'border-green-500',
                                         status === 'upcoming' && 'border-border'
@@ -171,7 +190,7 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
                                     
                                     <div className="ml-6 w-full">
                                         <div className="flex items-center gap-3">
-                                            <h3 className="font-bold text-lg text-foreground">{period.subject}</h3>
+                                            <h3 className="font-bold text-lg text-card-foreground">{period.subject}</h3>
                                             {status === 'now' && <div className="px-2 py-0.5 text-xs font-bold bg-primary text-primary-foreground rounded-md">Now</div>}
                                         </div>
                                         <div className="text-muted-foreground mt-2 text-sm space-y-1">
@@ -198,3 +217,16 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
         </Card>
     );
 }
+
+// Helper to hide scrollbar
+const style = document.createElement('style');
+style.innerHTML = `
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+`;
+document.head.appendChild(style);

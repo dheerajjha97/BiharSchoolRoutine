@@ -170,7 +170,7 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
                         dailyPeriods.map((period, index) => {
                             const status = getStatus(period.timeSlot);
                             return (
-                                <div key={index} className="relative flex pb-12">
+                                <div key={index} className="relative flex min-h-[7rem]">
                                      {index < dailyPeriods.length - 1 && (
                                         <div className="absolute left-4 top-5 h-full w-0.5 bg-border"></div>
                                     )}
@@ -178,7 +178,7 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
                                         <p className="text-sm font-medium text-muted-foreground w-20">{period.timeSlot}</p>
                                     </div>
                                     <div className={cn(
-                                        "z-10 h-8 w-8 rounded-full border-2 flex items-center justify-center bg-card",
+                                        "z-10 h-8 w-8 rounded-full border-2 flex items-center justify-center bg-card flex-shrink-0 mt-1",
                                         status === 'now' && 'border-primary',
                                         status === 'completed' && 'border-green-500',
                                         status === 'upcoming' && 'border-border'

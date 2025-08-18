@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, BookOpen, CalendarX2, User } from "lucide-react";
 import { cn, sortClasses, sortTimeSlots } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import RoutineDisplay from "@/components/routine/routine-display";
 
 const allDaysOfWeek: DayOfWeek[] = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 

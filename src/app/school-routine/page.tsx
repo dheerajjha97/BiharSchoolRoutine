@@ -39,17 +39,20 @@ const parseTime = (timeStr: string) => {
     return hours * 60 + minutes;
 };
 
-const getEventPosition = (timeSlot: string, timeSlots: string[]) => {
-    const sortedSlots = [...timeSlots].sort((a, b) => parseTime(a) - parseTime(b));
-    const slotIndex = sortedSlots.indexOf(timeSlot);
-    if (slotIndex === -1) return { top: 0, height: 0 };
+const getEventPosition = (timeSlot: string, timelineStartHour: number) => {
+    if (!timeSlot || !timeSlot.includes('-')) return { top: 0, height: 0 };
     
-    const startMinutes = parseTime(timeSlot);
-    const endMinutes = parseTime(timeSlot.split('-')[1].trim());
-    const duration = endMinutes - startMinutes;
+    const startMinutesTotal = parseTime(timeSlot);
+    const endMinutesTotal = parseTime(timeSlot.split('-')[1].trim());
+
+    if (isNaN(startMinutesTotal) || isNaN(endMinutesTotal)) return { top: 0, height: 0 };
+    
+    const duration = endMinutesTotal - startMinutesTotal;
     
     const scaleFactor = 1.5; // pixels per minute
-    const top = startMinutes * scaleFactor;
+    const timelineStartMinutes = timelineStartHour * 60;
+    
+    const top = (startMinutesTotal - timelineStartMinutes) * scaleFactor;
     const height = duration * scaleFactor;
 
     return { top, height };
@@ -131,6 +134,12 @@ export default function SchoolRoutinePage() {
         return hours;
     }, [timeSlots]);
 
+    const timelineStartHour = useMemo(() => {
+        if (timelineHours.length === 0) return 0;
+        return timelineHours[0];
+    }, [timelineHours]);
+
+
     if (!activeRoutine) {
         return (
              <div className="flex h-full items-center justify-center">
@@ -150,8 +159,8 @@ export default function SchoolRoutinePage() {
     }
 
     return (
-        <div className="flex flex-col h-full">
-            <header className="flex-shrink-0 p-4 border-b">
+        <div className="flex flex-col h-full p-4 md:p-6">
+            <header className="flex-shrink-0 pb-4 border-b">
                  <div className="flex justify-between items-center mb-4">
                     <div>
                         <h2 className="text-xl font-bold">{currentDate.toLocaleString('en-US', { weekday: 'long' })}</h2>
@@ -175,10 +184,10 @@ export default function SchoolRoutinePage() {
                      ))}
                 </div>
             </header>
-            <main className="flex-1 overflow-auto bg-white dark:bg-slate-900">
+            <main className="flex-1 overflow-auto bg-card dark:bg-card mt-4 rounded-lg">
                 <div className="relative p-4 md:p-6">
                     {/* Hours timeline */}
-                    <div className="absolute left-0 top-0 bottom-0 flex flex-col pt-6">
+                    <div className="absolute left-0 top-6 bottom-0 flex flex-col pt-6">
                         {timelineHours.map(hour => (
                             <div key={hour} className="flex-shrink-0" style={{ height: `${60 * 1.5}px` }}>
                                 <div className="text-right pr-4 text-sm text-muted-foreground -mt-3">{hour}:00</div>
@@ -189,8 +198,8 @@ export default function SchoolRoutinePage() {
                     {/* Events container */}
                     <div className="relative ml-16">
                         {/* Horizontal lines */}
-                        {timelineHours.map(hour => (
-                             <div key={hour} className="absolute w-full border-t" style={{ top: `${(hour * 60) * 1.5}px` }}></div>
+                        {timelineHours.slice(1).map(hour => (
+                             <div key={hour} className="absolute w-full border-t" style={{ top: `${((hour - timelineStartHour) * 60) * 1.5}px` }}></div>
                         ))}
 
                         {isTodayOff ? (
@@ -201,14 +210,15 @@ export default function SchoolRoutinePage() {
                             </div>
                         ) : selectedClass && dailyPeriods.length > 0 ? (
                            dailyPeriods.map((period, index) => {
-                                const { top, height } = getEventPosition(period.timeSlot, timeSlots);
+                                const { top, height } = getEventPosition(period.timeSlot, timelineStartHour);
+                                if (height <= 0) return null;
                                 const {light, dark} = getSubjectColor(period.subject);
                                 const teacherNames = period.teacher.split('&').map(tId => getTeacherName(tId.trim())).join(' & ');
 
                                 return (
                                     <div
                                         key={`${period.timeSlot}-${index}`}
-                                        className={cn("absolute w-[calc(100%-1rem)] right-0 p-3 rounded-lg shadow-md bg-card border-l-4", light, dark)}
+                                        className={cn("absolute w-[calc(100%-1rem)] right-0 p-3 rounded-lg shadow-md bg-background dark:bg-slate-800 border-l-4", light, dark)}
                                         style={{ top: `${top}px`, height: `${height}px` }}
                                     >
                                         <h3 className="font-bold text-sm text-foreground truncate">{period.subject}</h3>

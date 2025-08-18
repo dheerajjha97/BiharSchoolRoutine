@@ -10,25 +10,35 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { sortClasses, sortTimeSlots } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
-const subjectColors = [
-    'border-red-500',
-    'border-blue-500',
-    'border-green-500',
-    'border-yellow-500',
-    'border-purple-500',
-    'border-pink-500',
-    'border-indigo-500',
-    'border-teal-500',
-    'border-orange-500',
-];
+const subjectColorPalettes = {
+    science: ['border-blue-500', 'border-sky-500', 'border-cyan-500'],
+    arts: ['border-orange-500', 'border-amber-500', 'border-yellow-500'],
+    language: ['border-green-500', 'border-emerald-500', 'border-teal-500'],
+    math: ['border-red-500'],
+    practical: ['border-purple-500', 'border-violet-500'],
+    other: ['border-slate-500', 'border-gray-500'],
+};
+
+const getSubjectCategory = (subject: string): keyof typeof subjectColorPalettes => {
+    const lowerSubject = subject.toLowerCase();
+    if (['physics', 'chemistry', 'biology', 'science', 'भौतिकी', 'रसायन', 'जीव विज्ञान', 'विज्ञान'].some(s => lowerSubject.includes(s))) return 'science';
+    if (['history', 'geography', 'political science', 'social science', 'economics', 'इतिहास', 'भूगोल', 'राजनीति विज्ञान', 'सा. विज्ञान', 'अर्थशास्त्र'].some(s => lowerSubject.includes(s))) return 'arts';
+    if (['hindi', 'english', 'sanskrit', 'हिंदी', 'अंग्रेजी', 'संस्कृत'].some(s => lowerSubject.includes(s))) return 'language';
+    if (['math', 'mathematics', 'गणित'].some(s => lowerSubject.includes(s))) return 'math';
+    if (['computer', 'sports', 'library', 'कंप्यूटर', 'खेल', 'पुस्तकालय'].some(s => lowerSubject.includes(s))) return 'practical';
+    return 'other';
+};
 
 const getSubjectColor = (subject: string, subjectColorMap: Map<string, string>): string => {
     if (!subjectColorMap.has(subject)) {
-        const color = subjectColors[subjectColorMap.size % subjectColors.length];
+        const category = getSubjectCategory(subject);
+        const palette = subjectColorPalettes[category];
+        const color = palette[subjectColorMap.size % palette.length];
         subjectColorMap.set(subject, color);
     }
     return subjectColorMap.get(subject)!;
 };
+
 
 export default function SchoolRoutinePage() {
     const { appState } = useContext(AppStateContext);
@@ -45,16 +55,16 @@ export default function SchoolRoutinePage() {
 
     const teacherNameMap = useMemo(() => new Map(teachers.map(t => [t.id, t.name])), [teachers]);
 
-    const scheduleByDayTimeClass = useMemo(() => {
+    const scheduleByDayClassTime = useMemo(() => {
         if (!activeRoutine?.schedule?.schedule) return {};
         const grid: Record<string, Record<string, Record<string, ScheduleEntry>>> = {};
 
         config.workingDays.forEach(day => {
             grid[day] = {};
-            sortedTimeSlots.forEach(slot => {
-                grid[day][slot] = {};
-                sortedClasses.forEach(c => {
-                    grid[day][slot][c] = { day, timeSlot: slot, className: c, subject: "---", teacher: "N/A" };
+            sortedClasses.forEach(c => {
+                grid[day][c] = {};
+                sortedTimeSlots.forEach(slot => {
+                     // Intentionally left empty, will be filled below
                 });
             });
         });
@@ -62,8 +72,8 @@ export default function SchoolRoutinePage() {
         activeRoutine.schedule.schedule.forEach(entry => {
             const classNames = entry.className.split('&').map(c => c.trim());
             classNames.forEach(className => {
-                if (grid[entry.day]?.[entry.timeSlot]?.[className]) {
-                    grid[entry.day][entry.timeSlot][className] = entry;
+                if (grid[entry.day]?.[className]) {
+                    grid[entry.day][className][entry.timeSlot] = entry;
                 }
             });
         });
@@ -107,43 +117,43 @@ export default function SchoolRoutinePage() {
                         {config.workingDays.map(day => (
                             <TabsContent key={day} value={day}>
                                 <div className="overflow-x-auto border rounded-lg">
-                                    <table className="min-w-full border-separate border-spacing-0">
-                                        <thead className="bg-muted/50">
+                                    <table className="min-w-full border-separate" style={{ borderSpacing: '4px' }}>
+                                        <thead className="bg-card">
                                             <tr>
-                                                <th className="sticky left-0 z-10 bg-muted/50 px-4 py-3 text-left text-sm font-semibold text-foreground border-b">Time / Class</th>
+                                                <th className="sticky left-0 z-10 bg-card p-2 text-sm font-semibold text-foreground align-bottom">Time / Class</th>
                                                 {sortedClasses.map(c => (
-                                                    <th key={c} className="px-4 py-3 text-center text-sm font-semibold text-foreground border-b">{c}</th>
+                                                    <th key={c} className="p-2 text-center text-sm font-semibold text-foreground min-w-[120px]">{c}</th>
                                                 ))}
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {sortedTimeSlots.map(slot => (
                                                 <tr key={slot}>
-                                                    <td className="sticky left-0 z-10 bg-background px-4 py-3 text-sm font-semibold text-foreground border-b">{slot}</td>
+                                                    <td className="sticky left-0 z-10 bg-card p-2 text-sm font-semibold text-foreground align-top min-w-[100px]">{slot}</td>
                                                     {sortedClasses.map(c => {
-                                                        const entry = scheduleByDayTimeClass[day]?.[slot]?.[c];
+                                                        const entry = scheduleByDayClassTime[day]?.[c]?.[slot];
                                                         const isSpecial = entry?.subject === 'Prayer' || entry?.subject === 'Lunch';
                                                         const isEmpty = !entry || entry?.subject === '---';
                                                         const teacherNames = (entry?.teacher || '').split(' & ').map(tId => teacherNameMap.get(tId.trim()) || tId).join(' & ');
 
                                                         if (isSpecial) {
                                                             return (
-                                                                <td key={`${c}-${slot}`} className="p-2 text-center bg-muted text-muted-foreground font-semibold border-b">
+                                                                <td key={`${c}-${slot}`} className="p-2 text-center bg-muted text-muted-foreground font-semibold rounded-md">
                                                                     {entry.subject}
                                                                 </td>
                                                             );
                                                         }
                                                         
                                                         if (isEmpty) {
-                                                            return <td key={`${c}-${slot}`} className="p-2 border-b"></td>;
+                                                            return <td key={`${c}-${slot}`} className="p-2"></td>;
                                                         }
                                                         
                                                         const colorClass = getSubjectColor(entry.subject, subjectColorMap);
 
                                                         return (
-                                                            <td key={`${c}-${slot}`} className="p-2 border-b">
-                                                                <div className={cn("text-left p-2 space-y-1 bg-card rounded-md shadow-sm border-l-4", colorClass)}>
-                                                                    <p className="font-bold text-sm">{entry.subject}</p>
+                                                            <td key={`${c}-${slot}`} className="p-0 align-top">
+                                                                <div className={cn("text-left p-2 space-y-1 bg-card rounded-md shadow-sm border-l-4 h-full", colorClass)}>
+                                                                    <p className="font-bold text-sm text-foreground">{entry.subject}</p>
                                                                     <p className="text-xs text-muted-foreground">{teacherNames === 'N/A' ? '' : teacherNames}</p>
                                                                 </div>
                                                             </td>

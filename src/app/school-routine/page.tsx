@@ -139,25 +139,25 @@ export default function SchoolRoutinePage() {
             <Card>
                 <CardContent className="p-4 md:p-6">
                     <Tabs defaultValue={defaultTab} className="w-full">
-                        <TabsList className="mb-6">
+                        <TabsList className="mb-6 flex-nowrap overflow-x-auto justify-start">
                             {config.workingDays.map(day => (
                                 <TabsTrigger key={day} value={day}>{day}</TabsTrigger>
                             ))}
                         </TabsList>
                         
                         {config.workingDays.map(day => (
-                            <TabsContent key={day} value={day} className="mt-4 rounded-lg transition-colors duration-300">
-                                <div className="overflow-x-auto rounded-lg">
+                            <TabsContent key={day} value={day} className={cn("mt-4 rounded-lg transition-colors duration-300 p-4", dayBgColors[day])}>
+                                <div className="overflow-x-auto">
                                     <table className="min-w-full" style={{ borderCollapse: 'separate', borderSpacing: '0 4px' }}>
                                         <thead>
                                             <tr className="bg-transparent">
-                                                <th className={cn("sticky left-0 z-20 p-2 text-sm font-semibold text-foreground align-bottom", dayBgColors[day])}>Time / Class</th>
+                                                <th className={cn("sticky left-0 z-20 p-2 text-sm font-semibold text-foreground align-bottom bg-inherit")}>Time / Class</th>
                                                 {sortedClasses.map(c => (
-                                                    <th key={c} className={cn("p-2 text-center text-sm font-semibold text-foreground min-w-[140px]", dayBgColors[day])}>{c}</th>
+                                                    <th key={c} className={cn("p-2 text-center text-sm font-semibold text-foreground min-w-[140px] bg-inherit")}>{c}</th>
                                                 ))}
                                             </tr>
                                         </thead>
-                                        <tbody className={cn("pt-2", dayBgColors[day])}>
+                                        <tbody className="pt-2">
                                             {sortedTimeSlots.map(slot => {
                                                 const firstEntry = scheduleByDayClassTime[day]?.[sortedClasses[0]]?.[slot];
                                                 const isSpecial = firstEntry?.subject === 'Prayer' || firstEntry?.subject === 'Lunch';
@@ -165,7 +165,7 @@ export default function SchoolRoutinePage() {
                                                 if (isSpecial) {
                                                     return (
                                                         <tr key={slot}>
-                                                            <td className={cn("sticky left-0 z-20 p-2 text-sm font-semibold text-foreground align-top min-w-[100px]", dayBgColors[day])}>{slot}</td>
+                                                            <td className={cn("sticky left-0 z-20 p-2 text-sm font-semibold text-foreground align-top min-w-[100px] bg-inherit")}>{slot}</td>
                                                             <td colSpan={sortedClasses.length} className="p-1.5 align-middle">
                                                                 <div className="h-full flex items-center justify-center p-2 text-center bg-secondary text-secondary-foreground font-semibold rounded-md">
                                                                     {firstEntry.subject}
@@ -177,7 +177,7 @@ export default function SchoolRoutinePage() {
 
                                                 return (
                                                     <tr key={slot}>
-                                                        <td className={cn("sticky left-0 z-20 p-2 text-sm font-semibold text-foreground align-top min-w-[100px]", dayBgColors[day])}>{slot}</td>
+                                                        <td className={cn("sticky left-0 z-20 p-2 text-sm font-semibold text-foreground align-top min-w-[100px] bg-inherit")}>{slot}</td>
                                                         {sortedClasses.map(c => {
                                                             const entry = scheduleByDayClassTime[day]?.[c]?.[slot];
                                                             const isEmpty = !entry || entry?.subject === '---';

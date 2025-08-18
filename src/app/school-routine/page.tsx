@@ -1,14 +1,15 @@
 
 "use client";
 
-import React, { useContext, useMemo } from "react";
+import React, { useContext, useMemo, useState, useEffect } from "react";
 import PageHeader from "@/components/app/page-header";
 import { AppStateContext } from "@/context/app-state-provider";
-import type { ScheduleEntry, DayOfWeek } from "@/types";
+import type { ScheduleEntry, DayOfWeek, Teacher } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { sortClasses, sortTimeSlots } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import DailyTimeline from "@/components/routine/daily-timeline";
 
 const subjectColorPalettes = {
     science: ['border-blue-500', 'border-sky-500', 'border-cyan-500'],
@@ -42,7 +43,8 @@ const getSubjectColor = (subject: string, subjectColorMap: Map<string, string>):
 
 export default function SchoolRoutinePage() {
     const { appState } = useContext(AppStateContext);
-    const { routineHistory, activeRoutineId, timeSlots, config, schoolInfo, teachers } = appState;
+    const { routineHistory, activeRoutineId, timeSlots, config, schoolInfo, teachers, classes } = appState;
+    const [selectedClass, setSelectedClass] = useState<string | null>(null);
 
     const today = new Date();
     const currentDayName = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][today.getDay()] as DayOfWeek;
@@ -50,11 +52,17 @@ export default function SchoolRoutinePage() {
 
     const activeRoutine = routineHistory.find(r => r.id === activeRoutineId);
     
-    const sortedClasses = useMemo(() => [...appState.classes].sort(sortClasses), [appState.classes]);
+    const sortedClasses = useMemo(() => [...classes].sort(sortClasses), [classes]);
     const sortedTimeSlots = useMemo(() => sortTimeSlots(timeSlots), [timeSlots]);
 
     const teacherNameMap = useMemo(() => new Map(teachers.map(t => [t.id, t.name])), [teachers]);
 
+    useEffect(() => {
+        if (sortedClasses.length > 0 && !selectedClass) {
+            setSelectedClass(sortedClasses[0]);
+        }
+    }, [sortedClasses, selectedClass]);
+    
     const scheduleByDayClassTime = useMemo(() => {
         if (!activeRoutine?.schedule?.schedule) return {};
         const grid: Record<string, Record<string, Record<string, ScheduleEntry>>> = {};
@@ -115,21 +123,21 @@ export default function SchoolRoutinePage() {
                         </TabsList>
                         
                         {config.workingDays.map(day => (
-                            <TabsContent key={day} value={day}>
+                            <TabsContent key={day} value={day} className="mt-4">
                                 <div className="overflow-x-auto border rounded-lg">
-                                    <table className="min-w-full border-separate" style={{ borderSpacing: '4px' }}>
-                                        <thead className="bg-card">
-                                            <tr>
-                                                <th className="sticky left-0 z-10 bg-card p-2 text-sm font-semibold text-foreground align-bottom">Time / Class</th>
+                                    <table className="min-w-full" style={{ borderCollapse: 'separate', borderSpacing: '0' }}>
+                                        <thead>
+                                            <tr className="bg-card">
+                                                <th className="sticky left-0 z-20 bg-card p-2 text-sm font-semibold text-foreground align-bottom border-b">Time / Class</th>
                                                 {sortedClasses.map(c => (
-                                                    <th key={c} className="p-2 text-center text-sm font-semibold text-foreground min-w-[120px]">{c}</th>
+                                                    <th key={c} className="p-2 text-center text-sm font-semibold text-foreground min-w-[140px] border-b">{c}</th>
                                                 ))}
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {sortedTimeSlots.map(slot => (
                                                 <tr key={slot}>
-                                                    <td className="sticky left-0 z-10 bg-card p-2 text-sm font-semibold text-foreground align-top min-w-[100px]">{slot}</td>
+                                                    <td className="sticky left-0 z-20 bg-card p-2 text-sm font-semibold text-foreground align-top min-w-[100px] border-b">{slot}</td>
                                                     {sortedClasses.map(c => {
                                                         const entry = scheduleByDayClassTime[day]?.[c]?.[slot];
                                                         const isSpecial = entry?.subject === 'Prayer' || entry?.subject === 'Lunch';
@@ -138,20 +146,22 @@ export default function SchoolRoutinePage() {
 
                                                         if (isSpecial) {
                                                             return (
-                                                                <td key={`${c}-${slot}`} className="p-2 text-center bg-muted text-muted-foreground font-semibold rounded-md">
-                                                                    {entry.subject}
+                                                                <td key={`${c}-${slot}`} className="p-1.5 align-middle border-b">
+                                                                    <div className="h-full flex items-center justify-center p-2 text-center bg-muted text-muted-foreground font-semibold rounded-md">
+                                                                        {entry.subject}
+                                                                    </div>
                                                                 </td>
                                                             );
                                                         }
                                                         
                                                         if (isEmpty) {
-                                                            return <td key={`${c}-${slot}`} className="p-2"></td>;
+                                                            return <td key={`${c}-${slot}`} className="p-1.5 border-b"></td>;
                                                         }
                                                         
                                                         const colorClass = getSubjectColor(entry.subject, subjectColorMap);
 
                                                         return (
-                                                            <td key={`${c}-${slot}`} className="p-0 align-top">
+                                                            <td key={`${c}-${slot}`} className="p-1.5 align-top border-b">
                                                                 <div className={cn("text-left p-2 space-y-1 bg-card rounded-md shadow-sm border-l-4 h-full", colorClass)}>
                                                                     <p className="font-bold text-sm text-foreground">{entry.subject}</p>
                                                                     <p className="text-xs text-muted-foreground">{teacherNames === 'N/A' ? '' : teacherNames}</p>

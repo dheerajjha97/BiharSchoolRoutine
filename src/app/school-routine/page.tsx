@@ -167,7 +167,7 @@ export default function SchoolRoutinePage() {
                                                         <tr key={slot}>
                                                             <td className={cn("sticky left-0 z-20 p-2 text-sm font-semibold text-foreground align-top min-w-[100px]", dayBgColors[day])}>{slot}</td>
                                                             <td colSpan={sortedClasses.length} className="p-1.5 align-middle">
-                                                                <div className="h-full flex items-center justify-center p-2 text-center bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 font-semibold rounded-md">
+                                                                <div className="h-full flex items-center justify-center p-2 text-center bg-secondary text-secondary-foreground font-semibold rounded-md">
                                                                     {firstEntry.subject}
                                                                 </div>
                                                             </td>

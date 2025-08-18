@@ -73,7 +73,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   const navItems = isUserAdmin ? adminNavItems : teacherNavItems;
   const displayName = user?.displayName;
-  const schoolName = appState.schoolInfo.name || "School Routine";
 
   const userProfileSection = user ? (
     <div className="p-4 text-center">
@@ -142,7 +141,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <SheetTitle>
           <Link href="/" onClick={() => setIsSheetOpen(false)} className="flex items-center gap-2 font-semibold">
             <Logo className="h-6 w-6 text-primary" />
-            <span>{schoolName}</span>
           </Link>
         </SheetTitle>
       </SheetHeader>
@@ -177,7 +175,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <div className="flex-1">
                  <Link href="/" className="flex items-center gap-2 font-semibold text-lg">
                     <Logo className="h-6 w-6 text-primary" />
-                    <span>{schoolName}</span>
                 </Link>
             </div>
             <ThemeToggle />

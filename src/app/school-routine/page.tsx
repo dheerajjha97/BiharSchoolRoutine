@@ -139,7 +139,7 @@ export default function SchoolRoutinePage() {
             <Card>
                 <CardContent className="p-4 md:p-6">
                     <Tabs defaultValue={defaultTab} className="w-full">
-                        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 mb-6">
+                        <TabsList className="mb-6">
                             {config.workingDays.map(day => (
                                 <TabsTrigger key={day} value={day}>{day}</TabsTrigger>
                             ))}

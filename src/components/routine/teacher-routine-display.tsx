@@ -51,7 +51,7 @@ const DailyTimeline = ({ periods, timeSlots, holidayInfo }: { periods: ScheduleE
                         <div className="absolute left-0 text-right">
                             <p className="text-sm font-medium text-foreground w-16 -translate-x-20 mt-1">{period.timeSlot.split('-')[0].trim()}</p>
                         </div>
-                        <div className="absolute left-0 flex flex-col items-center">
+                        <div className="absolute left-0 flex flex-col items-center h-full">
                             <div className="z-10 h-5 w-5 rounded-full bg-background border-2 border-primary flex items-center justify-center">
                                 <div className="h-2 w-2 rounded-full bg-primary" />
                             </div>

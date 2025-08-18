@@ -58,3 +58,22 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+    .timetable-grid {
+        display: grid;
+        grid-template-columns: minmax(100px, 1fr) repeat(auto-fill, minmax(120px, 1fr));
+        gap: 1px;
+        background-color: hsl(var(--border));
+        border: 1px solid hsl(var(--border));
+    }
+    .timetable-cell, .timetable-header {
+        background-color: hsl(var(--card));
+        padding: 0.5rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        min-height: 80px;
+    }
+}

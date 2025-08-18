@@ -1,17 +1,14 @@
-
 "use client";
 
-import React, { useContext, useMemo, useState, useEffect } from "react";
+import React, { useContext, useMemo } from "react";
 import PageHeader from "@/components/app/page-header";
 import { AppStateContext } from "@/context/app-state-provider";
 import type { ScheduleEntry, DayOfWeek, Teacher } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { sortClasses, sortTimeSlots } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { Book, Microscope, Laptop, Palette, Landmark, Dumbbell, Languages } from "lucide-react";
-import useMediaQuery from "@/hooks/use-media-query";
 
 const subjectColorPalettes = {
     science: ['border-blue-500', 'border-sky-500', 'border-cyan-500'],
@@ -69,14 +66,7 @@ const getSubjectColor = (subject: string, subjectColorMap: Map<string, string>):
 export default function SchoolRoutinePage() {
     const { appState } = useContext(AppStateContext);
     const { routineHistory, activeRoutineId, timeSlots, config, schoolInfo, teachers, classes } = appState;
-    const isDesktop = useMediaQuery("(min-width: 768px)");
-
-    const today = new Date();
-    const currentDayName = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][today.getDay()] as DayOfWeek;
-    const defaultDay = config.workingDays.includes(currentDayName) ? currentDayName : config.workingDays[0] || "Monday";
-
-    const [selectedDay, setSelectedDay] = useState<DayOfWeek>(defaultDay);
-    const [selectedClass, setSelectedClass] = useState<string | null>(null);
+    const defaultDay = new Date().toLocaleString('en-US', { weekday: 'long' }) as DayOfWeek;
 
     const activeRoutine = routineHistory.find(r => r.id === activeRoutineId);
     
@@ -84,12 +74,6 @@ export default function SchoolRoutinePage() {
     const sortedTimeSlots = useMemo(() => sortTimeSlots(timeSlots), [timeSlots]);
 
     const teacherNameMap = useMemo(() => new Map(teachers.map(t => [t.id, t.name])), [teachers]);
-
-    useEffect(() => {
-        if (sortedClasses.length > 0 && !selectedClass) {
-            setSelectedClass(sortedClasses[0]);
-        }
-    }, [sortedClasses, selectedClass]);
     
     const scheduleByDayClassTime = useMemo(() => {
         if (!activeRoutine?.schedule?.schedule) return {};
@@ -119,6 +103,7 @@ export default function SchoolRoutinePage() {
 
     const subjectColorMap = useMemo(() => new Map<string, string>(), []);
 
+
     if (!activeRoutine) {
         return (
              <div className="flex h-full items-center justify-center p-4">
@@ -134,147 +119,6 @@ export default function SchoolRoutinePage() {
         )
     }
 
-    const renderDesktopView = () => (
-        <Tabs defaultValue={defaultDay} className="w-full">
-            <TabsList className="mb-6 flex-nowrap overflow-x-auto justify-start">
-                {config.workingDays.map(day => (
-                    <TabsTrigger key={day} value={day}>{day}</TabsTrigger>
-                ))}
-            </TabsList>
-            
-            {config.workingDays.map(day => (
-                <TabsContent key={day} value={day} className={cn("mt-4 rounded-lg transition-colors duration-300 p-4", dayBgColors[day])}>
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full" style={{ borderCollapse: 'separate', borderSpacing: '0 4px' }}>
-                            <thead className="pt-2">
-                                <tr className="bg-transparent">
-                                    <th className={cn("sticky left-0 z-20 p-2 text-sm font-semibold text-foreground align-bottom", dayBgColors[day])}>Time / Class</th>
-                                    {sortedClasses.map(c => (
-                                        <th key={c} className={cn("p-2 text-center text-sm font-semibold text-foreground min-w-[140px]", dayBgColors[day])}>{c}</th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {sortedTimeSlots.map(slot => {
-                                    const firstEntry = scheduleByDayClassTime[day]?.[sortedClasses[0]]?.[slot];
-                                    const isSpecial = firstEntry?.subject === 'Prayer' || firstEntry?.subject === 'Lunch';
-                                    
-                                    if (isSpecial) {
-                                        return (
-                                            <tr key={slot}>
-                                                <td className={cn("sticky left-0 z-20 p-2 text-sm font-semibold text-foreground align-top min-w-[100px]", dayBgColors[day])}>{slot}</td>
-                                                <td colSpan={sortedClasses.length} className="p-1.5 align-middle">
-                                                    <div className="h-full flex items-center justify-center p-2 text-center bg-secondary text-secondary-foreground font-semibold rounded-md">
-                                                        {firstEntry.subject}
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        );
-                                    }
-
-                                    return (
-                                        <tr key={slot}>
-                                            <td className={cn("sticky left-0 z-20 p-2 text-sm font-semibold text-foreground align-top min-w-[100px]", dayBgColors[day])}>{slot}</td>
-                                            {sortedClasses.map(c => {
-                                                const entry = scheduleByDayClassTime[day]?.[c]?.[slot];
-                                                const isEmpty = !entry || entry?.subject === '---';
-                                                const teacherNames = (entry?.teacher || '').split(' & ').map(tId => teacherNameMap.get(tId.trim()) || tId).join(' & ');
-                                                
-                                                if (isEmpty) {
-                                                    return <td key={`${c}-${slot}`} className="p-1.5"></td>;
-                                                }
-                                                
-                                                const colorClass = getSubjectColor(entry.subject, subjectColorMap);
-
-                                                return (
-                                                    <td key={`${c}-${slot}`} className="p-1.5 align-top">
-                                                        <div className={cn("text-left p-2 space-y-1 bg-card rounded-md shadow-sm border-l-4 h-full", colorClass)}>
-                                                            <p className="font-bold text-sm text-foreground flex items-center">
-                                                                {getSubjectIcon(entry.subject)}
-                                                                {entry.subject}
-                                                            </p>
-                                                            <p className="text-xs text-muted-foreground">{teacherNames === 'N/A' ? '' : teacherNames}</p>
-                                                        </div>
-                                                    </td>
-                                                );
-                                            })}
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                </TabsContent>
-            ))}
-        </Tabs>
-    );
-
-    const renderMobileView = () => {
-        if (!selectedClass) return null;
-        
-        return (
-            <div className="space-y-4">
-                 <div className="grid grid-cols-2 gap-4">
-                    <Select value={selectedDay} onValueChange={(v) => setSelectedDay(v as DayOfWeek)}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                            {config.workingDays.map(day => (
-                                <SelectItem key={day} value={day}>{day}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    <Select value={selectedClass} onValueChange={setSelectedClass}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                            {sortedClasses.map(c => (
-                                <SelectItem key={c} value={c}>{c}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className={cn("rounded-lg p-4", dayBgColors[selectedDay])}>
-                     <table className="w-full" style={{ borderCollapse: 'separate', borderSpacing: '0 8px' }}>
-                        <tbody>
-                            {sortedTimeSlots.map(slot => {
-                                const entry = scheduleByDayClassTime[selectedDay]?.[selectedClass]?.[slot];
-                                const isEmpty = !entry || entry.subject === '---';
-                                const teacherNames = (entry?.teacher || '').split(' & ').map(tId => teacherNameMap.get(tId.trim()) || tId).join(' & ');
-
-                                if (entry?.subject === 'Prayer' || entry?.subject === 'Lunch') {
-                                    return (
-                                        <tr key={slot}>
-                                            <td className="w-24 pr-4 text-right align-middle text-sm font-semibold">{slot}</td>
-                                            <td colSpan={2} className="p-1.5">
-                                                <div className="text-center p-3 bg-secondary text-secondary-foreground rounded-md font-semibold">{entry.subject}</div>
-                                            </td>
-                                        </tr>
-                                    );
-                                }
-
-                                return (
-                                    <tr key={slot}>
-                                        <td className="w-24 pr-4 text-right align-middle text-sm font-semibold">{slot}</td>
-                                        <td className="p-1.5">
-                                            {isEmpty ? <div className="h-16"></div> : (
-                                                <div className={cn("p-3 space-y-1 bg-card rounded-md shadow-sm border-l-4", getSubjectColor(entry.subject, subjectColorMap))}>
-                                                    <p className="font-bold text-sm text-foreground flex items-center">
-                                                        {getSubjectIcon(entry.subject)}
-                                                        {entry.subject}
-                                                    </p>
-                                                    <p className="text-xs text-muted-foreground">{teacherNames === 'N/A' ? '' : teacherNames}</p>
-                                                </div>
-                                            )}
-                                        </td>
-                                    </tr>
-                                )
-                            })}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        );
-    };
-
     return (
         <div className="space-y-6 p-4 md:p-6">
             <PageHeader
@@ -284,7 +128,78 @@ export default function SchoolRoutinePage() {
 
             <Card>
                 <CardContent className="p-4 md:p-6">
-                    {isDesktop ? renderDesktopView() : renderMobileView()}
+                    <Tabs defaultValue={config.workingDays.includes(defaultDay) ? defaultDay : (config.workingDays[0] || "Monday")} className="w-full">
+                        <TabsList className="mb-6 flex-nowrap overflow-x-auto justify-start">
+                            {config.workingDays.map(day => (
+                                <TabsTrigger key={day} value={day}>{day}</TabsTrigger>
+                            ))}
+                        </TabsList>
+                        
+                        {config.workingDays.map(day => (
+                            <TabsContent key={day} value={day} className={cn("mt-4 rounded-lg transition-colors duration-300 p-4", dayBgColors[day])}>
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full" style={{ borderCollapse: 'separate', borderSpacing: '0 4px' }}>
+                                        <thead className="pt-2">
+                                            <tr className="bg-transparent">
+                                                <th className={cn("sticky left-0 z-20 p-2 text-sm font-semibold text-foreground align-bottom", dayBgColors[day])}>Time / Class</th>
+                                                {sortedClasses.map(c => (
+                                                    <th key={c} className={cn("p-2 text-center text-sm font-semibold text-foreground min-w-[140px]", dayBgColors[day])}>{c}</th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {sortedTimeSlots.map(slot => {
+                                                const firstEntry = scheduleByDayClassTime[day]?.[sortedClasses[0]]?.[slot];
+                                                const isSpecial = firstEntry?.subject === 'Prayer' || firstEntry?.subject === 'Lunch';
+                                                
+                                                if (isSpecial) {
+                                                    return (
+                                                        <tr key={slot}>
+                                                            <td className={cn("sticky left-0 z-20 p-2 text-sm font-semibold text-foreground align-top min-w-[100px]", dayBgColors[day])}>{slot}</td>
+                                                            <td colSpan={sortedClasses.length} className="p-1.5 align-middle">
+                                                                <div className="h-full flex items-center justify-center p-2 text-center bg-secondary text-secondary-foreground font-semibold rounded-md">
+                                                                    {firstEntry.subject}
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                }
+
+                                                return (
+                                                    <tr key={slot}>
+                                                        <td className={cn("sticky left-0 z-20 p-2 text-sm font-semibold text-foreground align-top min-w-[100px]", dayBgColors[day])}>{slot}</td>
+                                                        {sortedClasses.map(c => {
+                                                            const entry = scheduleByDayClassTime[day]?.[c]?.[slot];
+                                                            const isEmpty = !entry || entry?.subject === '---';
+                                                            const teacherNames = (entry?.teacher || '').split(' & ').map(tId => teacherNameMap.get(tId.trim()) || tId).join(' & ');
+                                                            
+                                                            if (isEmpty) {
+                                                                return <td key={`${c}-${slot}`} className="p-1.5"></td>;
+                                                            }
+                                                            
+                                                            const colorClass = getSubjectColor(entry.subject, subjectColorMap);
+
+                                                            return (
+                                                                <td key={`${c}-${slot}`} className="p-1.5 align-top">
+                                                                    <div className={cn("text-left p-2 space-y-1 bg-card rounded-md shadow-sm border-l-4 h-full", colorClass)}>
+                                                                        <p className="font-bold text-sm text-foreground flex items-center">
+                                                                            {getSubjectIcon(entry.subject)}
+                                                                            {entry.subject}
+                                                                        </p>
+                                                                        <p className="text-xs text-muted-foreground">{teacherNames === 'N/A' ? '' : teacherNames}</p>
+                                                                    </div>
+                                                                </td>
+                                                            );
+                                                        })}
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </TabsContent>
+                        ))}
+                    </Tabs>
                 </CardContent>
             </Card>
         </div>

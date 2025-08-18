@@ -1,12 +1,11 @@
+
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
 import type { GenerateScheduleOutput, Teacher, ScheduleEntry, DayOfWeek, Holiday } from "@/types";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { User, ChevronLeft, ChevronRight, CalendarX2 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { sortTimeSlots } from "@/lib/utils";
+import { Card, CardContent } from "@/components/ui/card";
+import { Check, MapPin, User } from "lucide-react";
+import { cn, sortTimeSlots } from "@/lib/utils";
 
 interface TeacherRoutineDisplayProps {
     scheduleData: GenerateScheduleOutput | null;
@@ -18,22 +17,8 @@ interface TeacherRoutineDisplayProps {
 
 const allDaysOfWeek: DayOfWeek[] = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-const getSubjectDetails = (subject: string): { icon: string, color: string } => {
-    const lowerSubject = subject.toLowerCase();
-    if (lowerSubject.includes("physics")) return { icon: "⚛️", color: "border-blue-500" };
-    if (lowerSubject.includes("chemistry")) return { icon: "🧪", color: "border-orange-500" };
-    if (lowerSubject.includes("gardening")) return { icon: "🌱", color: "border-green-500" };
-    if (lowerSubject.includes("math")) return { icon: "🧮", color: "border-red-500" };
-    if (lowerSubject.includes("english")) return { icon: "📚", color: "border-indigo-500" };
-    if (lowerSubject.includes("hindi")) return { icon: "📖", color: "border-yellow-500" };
-    return { icon: "📘", color: "border-primary" };
-}
-
 export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots, workingDays, holidays = [] }: TeacherRoutineDisplayProps) {
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [touchStartX, setTouchStartX] = useState<number | null>(null);
-    const [touchEndX, setTouchEndX] = useState<number | null>(null);
-    const minSwipeDistance = 50; 
     
     const holidaysByDate = useMemo(() => new Map(holidays.map(h => [h.date, h])), [holidays]);
 
@@ -48,8 +33,12 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
         let newDate = new Date();
         if (isDayOff(newDate)) {
             for (let i = 1; i <= 7; i++) {
-                newDate.setDate(new Date().getDate() + i);
-                if (!isDayOff(newDate)) break;
+                const nextDay = new Date();
+                nextDay.setDate(new Date().getDate() + i);
+                if (!isDayOff(nextDay)) {
+                    newDate = nextDay;
+                    break;
+                }
             }
         }
         setCurrentDate(newDate);
@@ -68,7 +57,6 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
             }
         });
 
-        // Sort periods within each day
         for (const day in schedule) {
             schedule[day] = schedule[day].sort((a, b) => sortTimeSlots([a.timeSlot, b.timeSlot]).indexOf(a.timeSlot) - sortTimeSlots([a.timeSlot, b.timeSlot]).indexOf(b.timeSlot));
         }
@@ -86,41 +74,39 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
         });
     }, [currentDate]);
 
-    const changeWeek = (direction: 'prev' | 'next') => {
-        const newDate = new Date(currentDate);
-        newDate.setDate(newDate.getDate() + (direction === 'prev' ? -7 : 7));
-        setCurrentDate(newDate);
+    const getStatus = (periodTime: string) => {
+        const now = new Date();
+        if (!periodTime || !periodTime.includes(':')) return 'upcoming';
+
+        const [hours, minutes] = (periodTime.split('-')[0].trim()).split(':').map(Number);
+        
+        const periodDate = new Date(currentDate);
+        periodDate.setHours(hours, minutes, 0, 0);
+
+        if (periodDate.toDateString() !== now.toDateString()) {
+             return now > periodDate ? 'completed' : 'upcoming';
+        }
+
+        if (now > periodDate) {
+            const endTimeStr = periodTime.split(' - ')[1];
+            if (endTimeStr) {
+                const [endHours, endMinutes] = endTimeStr.split(':').map(Number);
+                const periodEndDate = new Date(currentDate);
+                periodEndDate.setHours(endHours, endMinutes, 0, 0);
+                if (now < periodEndDate) return 'now';
+            }
+            return 'completed';
+        }
+        return 'upcoming';
     };
 
-    const handleTouchStart = (e: React.TouchEvent) => { setTouchStartX(e.targetTouches[0].clientX); };
-    const handleTouchMove = (e: React.TouchEvent) => { setTouchEndX(e.targetTouches[0].clientX); };
-
-    const handleTouchEnd = () => {
-        if (!touchStartX || !touchEndX) return;
-        const distance = touchStartX - touchEndX;
-        if (distance > minSwipeDistance) changeWeek('next');
-        else if (distance < -minSwipeDistance) changeWeek('prev');
-        setTouchStartX(null);
-        setTouchEndX(null);
-    };
-
-    if (!teacher) {
+    if (!teacher || !scheduleData || !scheduleData.schedule || scheduleData.schedule.length === 0) {
         return (
-            <Card className="w-full max-w-2xl mx-auto">
-                <CardHeader><CardTitle className="flex items-center gap-2"><User /> My Daily Routine</CardTitle></CardHeader>
-                <CardContent className="flex items-center justify-center p-6">
-                    <p className="text-muted-foreground text-center py-10">Could not identify the logged-in teacher.</p>
-                </CardContent>
-            </Card>
-        );
-    }
-
-    if (!scheduleData || !scheduleData.schedule || scheduleData.schedule.length === 0) {
-        return (
-            <Card className="w-full max-w-2xl mx-auto">
-                <CardHeader><CardTitle className="flex items-center gap-2"><User /> My Daily Routine</CardTitle></CardHeader>
-                <CardContent className="flex items-center justify-center p-6">
-                    <p className="text-muted-foreground text-center py-10">No active school routine found.</p>
+            <Card className="w-full max-w-2xl mx-auto bg-gray-800 text-white border-gray-700">
+                <CardContent className="flex items-center justify-center p-6 min-h-[400px]">
+                    <p className="text-gray-400 text-center py-10">
+                        { !teacher ? "Could not identify teacher." : "No active school routine found." }
+                    </p>
                 </CardContent>
             </Card>
         );
@@ -135,78 +121,72 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
     const isTodayOff = holidayInfo || !workingDays.includes(selectedDayName);
 
     return (
-        <Card className="w-full max-w-2xl mx-auto overflow-hidden">
-            <CardHeader className="pb-4">
-                 <div className="flex justify-between items-center mb-4">
-                    <Button variant="ghost" size="icon" onClick={() => changeWeek('prev')}><ChevronLeft className="h-5 w-5" /></Button>
-                    <h3 className="text-lg font-semibold w-40 text-center">
-                        {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
-                    </h3>
-                    <Button variant="ghost" size="icon" onClick={() => changeWeek('next')}><ChevronRight className="h-5 w-5" /></Button>
+        <Card className="w-full max-w-md mx-auto overflow-hidden bg-[#1C1C1E] text-gray-200 border-gray-700 shadow-2xl font-sans">
+            <div className="p-6">
+                <div className="text-gray-400 text-sm font-bold tracking-wider mb-4">
+                    {currentDate.toLocaleString('en-US', { month: 'long' }).toUpperCase()}
                 </div>
-                <div className="flex items-center justify-center gap-1">
+                <div className="flex items-center justify-between">
                     {weekDates.map(date => {
-                        const isDaySelected = currentDate.toDateString() === date.toDateString();
+                        const isSelected = currentDate.toDateString() === date.toDateString();
                         return (
-                            <Button
-                                key={date.toString()}
-                                variant={isDaySelected ? "default" : "ghost"}
-                                size="sm"
-                                className="px-2 sm:px-3 flex-1 flex flex-col h-auto"
-                                onClick={() => setCurrentDate(date)}
-                            >
-                                <span className="text-xs">{date.toLocaleString('en-US', { weekday: 'short' }).toUpperCase()}</span>
-                                <span className="font-bold text-lg">{date.getDate()}</span>
-                            </Button>
+                            <button key={date.toString()} className="text-center" onClick={() => setCurrentDate(date)}>
+                                <div className={cn("text-lg", isSelected ? "font-bold text-white" : "text-gray-400")}>{date.getDate()}</div>
+                                <div className={cn("text-xs", isSelected ? "font-bold text-white" : "text-gray-500")}>{date.toLocaleString('en-US', { weekday: 'short' }).toUpperCase()}</div>
+                            </button>
                         )
                     })}
                 </div>
-            </CardHeader>
-            <CardContent 
-                className="p-4 sm:p-6"
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-            >
-                <div className="relative pl-6 border-l-2 border-muted/40 min-h-[300px]">
-                {isTodayOff ? (
-                    <div className="flex flex-col items-center justify-center h-full text-center py-20 text-muted-foreground">
-                        <CalendarX2 className="h-12 w-12 mb-4" />
-                        <p className="font-semibold">{holidayInfo?.name || "Day Off"}</p>
-                        <p>No classes scheduled.</p>
-                    </div>
-                ) : dailyPeriods.length > 0 ? (
-                    dailyPeriods.map((period, index) => {
-                        const { icon, color } = getSubjectDetails(period.subject);
-                        return (
-                            <div key={`${period.timeSlot}-${index}`} className="relative flex items-start pb-8">
-                                <div className="absolute -left-[1.6rem] top-1 text-right">
-                                    <p className="text-xs font-medium text-muted-foreground w-12">{period.timeSlot.split('-')[0].trim()}</p>
+            </div>
+            
+            <CardContent className="p-6 bg-[#1C1C1E]">
+                <div className="relative pl-8">
+                    {isTodayOff ? (
+                         <div className="flex flex-col items-center justify-center h-full text-center py-20 text-gray-500">
+                            <p className="font-semibold">{holidayInfo?.name || "Day Off"}</p>
+                            <p>No classes scheduled.</p>
+                        </div>
+                    ) : dailyPeriods.length > 0 ? (
+                        dailyPeriods.map((period, index) => {
+                            const status = getStatus(period.timeSlot);
+                            return (
+                                <div key={index} className="relative flex pb-12">
+                                     {index < dailyPeriods.length - 1 && (
+                                        <div className="absolute left-4 top-5 h-full w-0.5 bg-gray-700/50"></div>
+                                    )}
+                                    <div className="absolute -left-12 top-1 text-right">
+                                        <p className="text-sm font-medium text-gray-400 w-20">{period.timeSlot.split('-')[0].trim()}</p>
+                                    </div>
+                                    <div className="z-10 h-8 w-8 rounded-full border-2 border-[#34D399]/50 flex items-center justify-center bg-[#1C1C1E]">
+                                        {status === 'completed' && <Check className="h-4 w-4 text-[#34D399]" />}
+                                        {status === 'now' && <div className="absolute h-4 w-4 rounded-full bg-[#34D399] animate-ping" />}
+                                        {status === 'now' && <div className="absolute h-4 w-4 rounded-full bg-[#34D399]" />}
+                                    </div>
+                                    
+                                    <div className="ml-6 w-full">
+                                        <div className="flex items-center gap-3">
+                                            <h3 className="font-bold text-lg text-white">{period.subject}</h3>
+                                            {status === 'now' && <div className="px-2 py-0.5 text-xs font-bold bg-[#34D399] text-black rounded-md">Now</div>}
+                                        </div>
+                                        <div className="text-gray-400 mt-2 text-sm space-y-1">
+                                            <p className="flex items-center gap-2">
+                                                <MapPin className="h-4 w-4 text-[#34D399]" />
+                                                <span>{period.className}</span>
+                                            </p>
+                                            <p className="flex items-center gap-2">
+                                                <User className="h-4 w-4 text-[#34D399]" />
+                                                <span>{teacher?.name}</span>
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="absolute -left-[5px] top-2 z-10 h-2 w-2 rounded-full bg-primary" />
-                                
-                                <div className="ml-4 w-full -mt-1">
-                                    <Card className={cn(
-                                        "rounded-2xl shadow-md hover:shadow-lg transition-all hover:bg-accent border-l-4",
-                                        color
-                                    )}>
-                                        <CardHeader className="flex flex-row items-center gap-4 p-4">
-                                            <div className="text-2xl">{icon}</div>
-                                            <div className="flex-1">
-                                                <CardTitle className="text-base">{period.subject}</CardTitle>
-                                                <CardDescription>Class: {period.className}</CardDescription>
-                                            </div>
-                                        </CardHeader>
-                                    </Card>
-                                </div>
-                            </div>
-                        )
-                    })
-                ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-center py-20 text-muted-foreground">
-                        <p>No classes scheduled for you on this day.</p>
-                    </div>
-                )}
+                            )
+                        })
+                    ) : (
+                        <div className="flex flex-col items-center justify-center min-h-[200px] text-center text-gray-500">
+                            <p>No classes scheduled for you on this day.</p>
+                        </div>
+                    )}
                 </div>
             </CardContent>
         </Card>

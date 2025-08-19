@@ -24,7 +24,7 @@ export default function HolidaysPage() {
     }));
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 p-4 md:p-6">
             <PageHeader
                 title="Academic Calendar & Holidays"
                 description={`View the list of approved holidays for ${schoolInfo.name || 'the school'}.`}

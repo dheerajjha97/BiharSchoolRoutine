@@ -30,7 +30,6 @@ export default function InvigilationDutyChart({ dutyChart, teachers, pdfHeader =
     const printWrapper = document.createElement('div');
     printWrapper.id = 'printable';
 
-    // Add header if available
     if (pdfHeader && pdfHeader.trim()) {
       const headerDiv = document.createElement('div');
       headerDiv.style.textAlign = 'center';
@@ -55,7 +54,6 @@ export default function InvigilationDutyChart({ dutyChart, teachers, pdfHeader =
      mainTitle.style.fontSize = '18px';
      printWrapper.appendChild(mainTitle);
 
-    // Clone the table and append it
     printWrapper.appendChild(printableElement.cloneNode(true));
     document.body.appendChild(printWrapper);
     

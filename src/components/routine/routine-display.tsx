@@ -284,14 +284,9 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
     const printableElement = document.getElementById(elementId);
     if (!printableElement) return;
 
-    const originalParent = printableElement.parentNode;
-    const body = document.body;
-
-    // Create a wrapper for printing
     const printWrapper = document.createElement('div');
     printWrapper.id = 'printable';
 
-    // Add header if available
     if (pdfHeader && pdfHeader.trim()) {
       const headerDiv = document.createElement('div');
       headerDiv.style.textAlign = 'center';
@@ -308,13 +303,12 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
       printWrapper.appendChild(headerDiv);
     }
     
-    // Clone the table and append it
     printWrapper.appendChild(printableElement.cloneNode(true));
-    body.appendChild(printWrapper);
+    document.body.appendChild(printWrapper);
     
     window.print();
     
-    body.removeChild(printWrapper);
+    document.body.removeChild(printWrapper);
   };
   
   const handleDownloadPdf = async (elementId: string, fileName: string) => {

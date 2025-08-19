@@ -35,7 +35,6 @@ export default function SubstitutionPlanDisplay({ plan, teachers, pdfHeader = ""
     const printWrapper = document.createElement('div');
     printWrapper.id = 'printable';
 
-    // Add header if available
     if (pdfHeader && pdfHeader.trim()) {
       const headerDiv = document.createElement('div');
       headerDiv.style.textAlign = 'center';
@@ -52,7 +51,6 @@ export default function SubstitutionPlanDisplay({ plan, teachers, pdfHeader = ""
       printWrapper.appendChild(headerDiv);
     }
 
-    // Add a title for the printout
     const title = `Substitution Plan - ${new Date(plan.date).toLocaleDateString('en-GB')}`;
     const mainTitle = document.createElement('h2');
     mainTitle.textContent = title;
@@ -61,7 +59,6 @@ export default function SubstitutionPlanDisplay({ plan, teachers, pdfHeader = ""
     mainTitle.style.fontSize = '18px';
     printWrapper.appendChild(mainTitle);
 
-    // Clone the table and append it
     printWrapper.appendChild(printableElement.cloneNode(true));
     document.body.appendChild(printWrapper);
     

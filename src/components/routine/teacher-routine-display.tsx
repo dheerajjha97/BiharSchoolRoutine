@@ -159,7 +159,7 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
             </div>
             
             <CardContent className="p-6 min-h-[400px] flex items-center justify-center">
-                <div className="w-full">
+                <div className="w-full flex justify-center">
                     {isTodayOff ? (
                          <div className="flex flex-col items-center justify-center text-center text-muted-foreground">
                             <NotebookText className="h-10 w-10 mb-2" />
@@ -167,7 +167,7 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
                             <p>No classes scheduled.</p>
                         </div>
                     ) : dailyPeriods.length > 0 ? (
-                        <div className="relative w-auto pl-8 mx-auto">
+                        <div className="relative w-auto pl-8">
                             {dailyPeriods.map((period, index) => {
                                 const status = getStatus(period.timeSlot);
                                 return (
@@ -230,3 +230,4 @@ style.innerHTML = `
   }
 `;
 document.head.appendChild(style);
+

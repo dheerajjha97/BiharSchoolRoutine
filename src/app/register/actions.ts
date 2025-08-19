@@ -1,3 +1,4 @@
+
 'use server';
 
 import { getFirestoreDB } from '@/lib/firebase';
@@ -39,12 +40,9 @@ export async function registerAdmin(input: RegistrationInput): Promise<Registrat
         const userRolesRef = collection(db, 'userRoles');
 
         // Check if email is already registered as an admin or teacher
-        const roleDocRef = doc(userRolesRef, lowerCaseEmail);
-        const roleDoc = await getDoc(roleDocRef);
-        
-        if (roleDoc.exists()) {
-            const role = roleDoc.data()?.role || 'user';
-            return { success: false, message: `This email is already registered as a ${role}. Please use a different email or log in.` };
+        const isUnique = await isEmailUnique(lowerCaseEmail);
+        if (!isUnique) {
+             return { success: false, message: `This email is already registered. Please use a different email or log in.` };
         }
         
         // Check if UDISE is already taken by another admin
@@ -61,7 +59,7 @@ export async function registerAdmin(input: RegistrationInput): Promise<Registrat
             createdAt: new Date().toISOString(),
         };
 
-        await setDoc(roleDocRef, newAdminRole);
+        await setDoc(doc(userRolesRef, lowerCaseEmail), newAdminRole);
 
         return {
             success: true,
@@ -85,7 +83,7 @@ export async function isEmailUnique(email: string): Promise<boolean> {
     try {
         const db = getFirestoreDB();
 
-        // 1. Check in userRoles collection (for admins and teachers)
+        // 1. Check in userRoles collection (for admins)
         const roleDocRef = doc(db, 'userRoles', lowerCaseEmail);
         const roleDoc = await getDoc(roleDocRef);
         if (roleDoc.exists()) {
@@ -93,15 +91,13 @@ export async function isEmailUnique(email: string): Promise<boolean> {
         }
         
         // 2. Check across all school documents for any teacher with that email
-        const schoolsQuery = query(collection(db, 'schoolAdmins'), where('teachers', 'array-contains', { email: lowerCaseEmail }));
+        const schoolsQuery = query(collection(db, 'schoolAdmins'));
         const schoolsSnapshot = await getDocs(schoolsQuery);
-        if (!schoolsSnapshot.empty) {
-            // A more robust check to find the teacher within the array
-            for (const schoolDoc of schoolsSnapshot.docs) {
-                const teachers = schoolDoc.data().teachers || [];
-                if (teachers.some((t: { email: string }) => t.email === lowerCaseEmail)) {
-                    return false;
-                }
+
+        for (const schoolDoc of schoolsSnapshot.docs) {
+            const teachers = schoolDoc.data().teachers || [];
+            if (teachers.some((t: { email: string }) => t.email && t.email.toLowerCase() === lowerCaseEmail)) {
+                return false; // Found a teacher with the same email in some school
             }
         }
 

@@ -14,7 +14,7 @@ export default function ConfigPage() {
     } = appState;
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 p-6">
             <PageHeader 
                 title="Configuration"
                 description="Fine-tune the logic for the routine generation to meet your school's specific needs."

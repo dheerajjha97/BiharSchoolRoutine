@@ -78,7 +78,7 @@ export default function DataManagementPage() {
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 p-6">
             <PageHeader 
                 title="Data Management"
                 description={`Manage core data for your school. You can also export your entire configuration as a secure ${backupExtension} file.`}

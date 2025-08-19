@@ -118,7 +118,7 @@ export default function AdjustmentsPage() {
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 p-6">
             <PageHeader
                 title="Daily Adjustments & Substitutions"
                 description="Manage daily teacher absences and generate substitution plans. The master routine remains unchanged."

@@ -1,26 +1,48 @@
 
 import * as admin from 'firebase-admin';
 
-const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+let adminApp: admin.app.App | null = null;
 
-if (!serviceAccountKey) {
-    throw new Error('The FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set. This is required for admin operations.');
-}
-
-try {
-    if (!admin.apps.length) {
-        admin.initializeApp({
-            credential: admin.credential.cert(JSON.parse(serviceAccountKey)),
-        });
+const initializeAdminApp = () => {
+    if (adminApp) {
+        return adminApp;
     }
-} catch (error) {
-    console.error('Firebase Admin initialization error:', error);
-    // Log a more specific error if parsing fails
-    if (error instanceof SyntaxError) {
-        console.error('Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY. Ensure it is a valid JSON string.');
-    }
-    throw error;
-}
 
-export const adminDb = admin.firestore();
-export const adminAuth = admin.auth();
+    const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+
+    if (!serviceAccountKey) {
+        throw new Error('The FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set. This is required for admin operations.');
+    }
+
+    try {
+        if (!admin.apps.length) {
+            const credential = admin.credential.cert(JSON.parse(serviceAccountKey));
+            adminApp = admin.initializeApp({ credential });
+        } else {
+            adminApp = admin.app();
+        }
+    } catch (error) {
+        console.error('Firebase Admin initialization error:', error);
+        if (error instanceof SyntaxError) {
+            console.error('Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY. Ensure it is a valid JSON string.');
+        }
+        throw error;
+    }
+    
+    return adminApp;
+};
+
+// Use getters to ensure the app is initialized before accessing db or auth
+export const getAdminDb = () => {
+    initializeAdminApp();
+    return admin.firestore();
+};
+
+export const getAdminAuth = () => {
+    initializeAdminApp();
+    return admin.auth();
+};
+
+// For backward compatibility if some files import adminDb directly
+export const adminDb = getAdminDb();
+export const adminAuth = getAdminAuth();

@@ -1,7 +1,7 @@
 
 'use server';
 
-import { adminDb } from '@/lib/firebase-admin';
+import { getAdminDb } from '@/lib/firebase-admin';
 import type { AppState } from '@/types';
 
 type RegistrationInput = {
@@ -34,6 +34,7 @@ export async function registerNewAdmin(input: RegistrationInput): Promise<Regist
     const lowerCaseEmail = email.toLowerCase();
 
     try {
+        const adminDb = getAdminDb();
         const userRolesRef = adminDb.collection('userRoles');
         const emailQuery = userRolesRef.where('email', '==', lowerCaseEmail);
         const udiseQuery = userRolesRef.where('udise', '==', udise);

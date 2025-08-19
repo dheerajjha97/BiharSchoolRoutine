@@ -130,7 +130,6 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
     const selectedDayName = allDaysOfWeek[dayIndex];
     const dailyPeriods = teacherScheduleByDay[selectedDayName] || [];
     
-    // Use UTC date for holiday check to prevent timezone issues
     const currentDateString = new Date(currentDate.getTime() - (currentDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
     const holidayInfo = holidaysByDate.get(currentDateString) || null;
     const isTodayOff = holidayInfo || !workingDays.includes(selectedDayName);
@@ -168,14 +167,14 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
                             <p>No classes scheduled.</p>
                         </div>
                     ) : dailyPeriods.length > 0 ? (
-                        <div className="relative pl-8">
+                        <div className="relative w-auto pl-8 mx-auto">
                             {dailyPeriods.map((period, index) => {
                                 const status = getStatus(period.timeSlot);
                                 return (
                                     <div key={index} className="relative flex min-h-[7.5rem]">
                                         <div className="absolute -left-0.5 top-0 h-full w-0.5 bg-border z-0"></div>
                                         <div className="absolute -left-12 top-1 text-right">
-                                            <p className="text-sm font-medium text-muted-foreground w-20">{period.timeSlot}</p>
+                                            <p className="text-sm font-medium text-muted-foreground w-auto">{period.timeSlot}</p>
                                         </div>
                                         <div className={cn(
                                             "z-10 h-8 w-8 rounded-full border-2 flex items-center justify-center bg-card flex-shrink-0 mt-1",
@@ -231,4 +230,3 @@ style.innerHTML = `
   }
 `;
 document.head.appendChild(style);
-

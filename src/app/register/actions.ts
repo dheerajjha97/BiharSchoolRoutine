@@ -1,7 +1,7 @@
 'use server';
 
-import { getAdminDb } from '@/lib/firebase-admin';
-import type { AppState } from '@/types';
+import { getFirestoreDB } from '@/lib/firebase';
+import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 
 type RegistrationInput = {
     email: string;
@@ -35,18 +35,20 @@ export async function registerAdmin(input: RegistrationInput): Promise<Registrat
     const lowerCaseEmail = email.toLowerCase();
 
     try {
-        const adminDb = getAdminDb();
-        const userRolesRef = adminDb.collection('userRoles');
+        const db = getFirestoreDB();
+        const userRolesRef = collection(db, 'userRoles');
 
         // Check if email is already registered as an admin or teacher
-        const roleDoc = await userRolesRef.doc(lowerCaseEmail).get();
+        const roleDocRef = doc(userRolesRef, lowerCaseEmail);
+        const roleDoc = await getDoc(roleDocRef);
+        
         if (roleDoc.exists()) {
             const role = roleDoc.data()?.role || 'user';
             return { success: false, message: `This email is already registered as a ${role}. Please use a different email or log in.` };
         }
         
-        // Check if UDISE is already taken
-        const udiseQuery = await userRolesRef.where('udise', '==', udise).limit(1).get();
+        // Check if UDISE is already taken by another admin
+        const udiseQuery = await getDocs(query(userRolesRef, where('udise', '==', udise), where('role', '==', 'admin')));
         if (!udiseQuery.empty) {
             return { success: false, message: `A school with UDISE code ${udise} is already registered.` };
         }
@@ -59,7 +61,7 @@ export async function registerAdmin(input: RegistrationInput): Promise<Registrat
             createdAt: new Date().toISOString(),
         };
 
-        await userRolesRef.doc(lowerCaseEmail).set(newAdminRole);
+        await setDoc(roleDocRef, newAdminRole);
 
         return {
             success: true,

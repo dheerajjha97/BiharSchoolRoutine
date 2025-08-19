@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { FileDown, Loader2 } from 'lucide-react';
+import { FileDown, Loader2, Printer } from 'lucide-react';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 
@@ -22,6 +22,47 @@ interface InvigilationDutyChartProps {
 export default function InvigilationDutyChart({ dutyChart, teachers, pdfHeader = "" }: InvigilationDutyChartProps) {
   const { toast } = useToast();
   const [isDownloading, setIsDownloading] = useState(false);
+
+  const handlePrint = () => {
+    const printableElement = document.getElementById('duty-chart-table-container');
+    if (!printableElement) return;
+
+    const printWrapper = document.createElement('div');
+    printWrapper.id = 'printable';
+
+    // Add header if available
+    if (pdfHeader && pdfHeader.trim()) {
+      const headerDiv = document.createElement('div');
+      headerDiv.style.textAlign = 'center';
+      headerDiv.style.marginBottom = '20px';
+      pdfHeader.trim().split('\n').forEach((line, index) => {
+        const p = document.createElement('p');
+        p.textContent = line;
+        p.style.fontSize = index === 0 ? '16px' : '14px';
+        p.style.fontWeight = index === 0 ? 'bold' : 'normal';
+        p.style.margin = '0';
+        p.style.padding = '0';
+        headerDiv.appendChild(p);
+      });
+      printWrapper.appendChild(headerDiv);
+    }
+    
+     const title = `Invigilation Duty Chart`;
+     const mainTitle = document.createElement('h2');
+     mainTitle.textContent = title;
+     mainTitle.style.textAlign = 'center';
+     mainTitle.style.marginBottom = '10px';
+     mainTitle.style.fontSize = '18px';
+     printWrapper.appendChild(mainTitle);
+
+    // Clone the table and append it
+    printWrapper.appendChild(printableElement.cloneNode(true));
+    document.body.appendChild(printWrapper);
+    
+    window.print();
+    
+    document.body.removeChild(printWrapper);
+  };
 
   const handleDownloadPdf = async (elementId: string, fileName: string) => {
     const originalElement = document.getElementById(elementId);
@@ -126,19 +167,24 @@ export default function InvigilationDutyChart({ dutyChart, teachers, pdfHeader =
                 The following chart shows the assigned invigilation duties for each exam slot.
               </CardDescription>
             </div>
-            <Button size="sm" variant="outline" disabled={isDownloading} onClick={() => handleDownloadPdf('duty-chart-table', 'invigilation-duty-chart.pdf')}>
-              {isDownloading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <FileDown className="mr-2 h-4 w-4" />
-              )}
-              {isDownloading ? 'Generating...' : 'Download PDF'}
-            </Button>
+            <div className="flex items-center gap-2 no-print">
+                <Button size="sm" variant="outline" onClick={handlePrint}>
+                    <Printer className="mr-2 h-4 w-4" /> Print
+                </Button>
+                <Button size="sm" variant="outline" disabled={isDownloading} onClick={() => handleDownloadPdf('duty-chart-table-container', 'invigilation-duty-chart.pdf')}>
+                  {isDownloading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <FileDown className="mr-2 h-4 w-4" />
+                  )}
+                  {isDownloading ? '...' : 'PDF'}
+                </Button>
+            </div>
         </div>
       </CardHeader>
       <CardContent>
          <div id="pdf-container-duty" className="absolute -left-[9999px] top-auto" aria-hidden="true"></div>
-         <div id="duty-chart-table" className="border rounded-lg overflow-x-auto">
+         <div id="duty-chart-table-container" className="border rounded-lg overflow-x-auto">
             <Table>
                 <TableHeader>
                     <TableRow>

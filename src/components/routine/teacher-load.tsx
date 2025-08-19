@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import type { TeacherLoad as TeacherLoadType, Teacher, DayOfWeek } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, FileDown, Loader2 } from "lucide-react";
+import { Users, FileDown, Loader2, Printer } from "lucide-react";
 import { Button } from "../ui/button";
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
@@ -52,6 +52,47 @@ export default function TeacherLoad({ teacherLoad, teachers, pdfHeader = "", wor
   }
 
   const getTeacherName = (id: string) => teachers.find(t => t.id === id)?.name || id;
+
+  const handlePrint = () => {
+    const printableElement = document.getElementById('teacher-load-table-container');
+    if (!printableElement) return;
+
+    const printWrapper = document.createElement('div');
+    printWrapper.id = 'printable';
+
+    // Add header if available
+    if (pdfHeader && pdfHeader.trim()) {
+      const headerDiv = document.createElement('div');
+      headerDiv.style.textAlign = 'center';
+      headerDiv.style.marginBottom = '20px';
+      pdfHeader.trim().split('\n').forEach((line, index) => {
+        const p = document.createElement('p');
+        p.textContent = line;
+        p.style.fontSize = index === 0 ? '16px' : '14px';
+        p.style.fontWeight = index === 0 ? 'bold' : 'normal';
+        p.style.margin = '0';
+        p.style.padding = '0';
+        headerDiv.appendChild(p);
+      });
+      printWrapper.appendChild(headerDiv);
+    }
+    
+     const title = `Teacher Workload Analysis`;
+     const mainTitle = document.createElement('h2');
+     mainTitle.textContent = title;
+     mainTitle.style.textAlign = 'center';
+     mainTitle.style.marginBottom = '10px';
+     mainTitle.style.fontSize = '18px';
+     printWrapper.appendChild(mainTitle);
+
+    // Clone the table and append it
+    printWrapper.appendChild(printableElement.cloneNode(true));
+    document.body.appendChild(printWrapper);
+    
+    window.print();
+    
+    document.body.removeChild(printWrapper);
+  };
   
   const handleDownloadPdf = async (elementId: string, fileName: string) => {
     const originalElement = document.getElementById(elementId);
@@ -158,14 +199,19 @@ export default function TeacherLoad({ teacherLoad, teachers, pdfHeader = "", wor
               </div>
               <CardDescription>Detailed breakdown of classes assigned per teacher.</CardDescription>
             </div>
-            <Button size="sm" variant="outline" disabled={isDownloading} onClick={() => handleDownloadPdf('teacher-load-table-container', 'teacher-workload.pdf')}>
-              {isDownloading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <FileDown className="mr-2 h-4 w-4" />
-              )}
-              {isDownloading ? 'Generating...' : 'Download PDF'}
-            </Button>
+            <div className="flex items-center gap-2 no-print">
+                <Button size="sm" variant="outline" onClick={handlePrint}>
+                    <Printer className="mr-2 h-4 w-4" /> Print
+                </Button>
+                <Button size="sm" variant="outline" disabled={isDownloading} onClick={() => handleDownloadPdf('teacher-load-table-container', 'teacher-workload.pdf')}>
+                  {isDownloading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <FileDown className="mr-2 h-4 w-4" />
+                  )}
+                  {isDownloading ? '...' : 'PDF'}
+                </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent id="teacher-load-table-container">

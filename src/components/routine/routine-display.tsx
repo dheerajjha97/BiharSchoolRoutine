@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash2, AlertTriangle, Copy, FileDown, Loader2 } from "lucide-react";
+import { Trash2, AlertTriangle, Copy, FileDown, Loader2, Printer } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn, sortClasses } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
@@ -279,6 +279,43 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 
     onScheduleChange([...scheduleWithoutDestination, ...newDestinationEntries]);
   };
+
+  const handlePrint = (elementId: string) => {
+    const printableElement = document.getElementById(elementId);
+    if (!printableElement) return;
+
+    const originalParent = printableElement.parentNode;
+    const body = document.body;
+
+    // Create a wrapper for printing
+    const printWrapper = document.createElement('div');
+    printWrapper.id = 'printable';
+
+    // Add header if available
+    if (pdfHeader && pdfHeader.trim()) {
+      const headerDiv = document.createElement('div');
+      headerDiv.style.textAlign = 'center';
+      headerDiv.style.marginBottom = '20px';
+      pdfHeader.trim().split('\n').forEach((line, index) => {
+        const p = document.createElement('p');
+        p.textContent = line;
+        p.style.fontSize = index === 0 ? '16px' : '14px';
+        p.style.fontWeight = index === 0 ? 'bold' : 'normal';
+        p.style.margin = '0';
+        p.style.padding = '0';
+        headerDiv.appendChild(p);
+      });
+      printWrapper.appendChild(headerDiv);
+    }
+    
+    // Clone the table and append it
+    printWrapper.appendChild(printableElement.cloneNode(true));
+    body.appendChild(printWrapper);
+    
+    window.print();
+    
+    body.removeChild(printWrapper);
+  };
   
   const handleDownloadPdf = async (elementId: string, fileName: string) => {
     const originalElement = document.getElementById(elementId);
@@ -447,7 +484,22 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   
     return (
       <div className="break-after-page" >
-        <h3 className="text-xl font-semibold mb-3 px-6 md:px-0">{title}</h3>
+        <div className="flex justify-between items-center mb-3 px-6 md:px-0">
+          <h3 className="text-xl font-semibold">{title}</h3>
+           <div className="flex gap-2 no-print">
+               <Button size="sm" variant="outline" onClick={() => handlePrint(tableId)}>
+                    <Printer className="mr-2 h-4 w-4" /> Print
+               </Button>
+               <Button size="sm" variant="outline" disabled={isDownloading} onClick={() => handleDownloadPdf(tableId, `${title.toLowerCase().replace(' ', '-')}.pdf`)}>
+                  {isDownloading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <FileDown className="mr-2 h-4 w-4" />
+                  )}
+                  {isDownloading ? '...' : 'PDF'}
+                </Button>
+           </div>
+        </div>
         <div className="border rounded-lg bg-card overflow-x-auto" id={tableId}>
           <Table>
             <TableHeader>
@@ -474,7 +526,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                               {isEditable && (
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-6 w-6">
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 no-print">
                                       <Copy className="h-3 w-3" />
                                     </Button>
                                   </DropdownMenuTrigger>
@@ -532,28 +584,12 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   return (
     <>
       <Card>
-        <CardHeader>
+        <CardHeader className="no-print">
             <div className="flex flex-wrap justify-between items-start gap-4">
                 <div>
                     <CardTitle>View Routine</CardTitle>
                     <CardDescription>View, download, or edit your routine. {isEditable && "Use the copy icon next to a day's name to paste its schedule to another day."}</CardDescription>
                 </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button size="sm" variant="outline" disabled={isDownloading}>
-                      {isDownloading ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <FileDown className="mr-2 h-4 w-4" />
-                      )}
-                      {isDownloading ? 'Generating PDF...' : 'Download PDF'}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    {secondaryClasses.length > 0 && <DropdownMenuItem onClick={() => handleDownloadPdf('routine-table-secondary', 'secondary-routine.pdf')}>Secondary Routine</DropdownMenuItem>}
-                    {seniorSecondaryClasses.length > 0 && <DropdownMenuItem onClick={() => handleDownloadPdf('routine-table-senior-secondary', 'senior-secondary-routine.pdf')}>Senior Secondary Routine</DropdownMenuItem>}
-                  </DropdownMenuContent>
-                </DropdownMenu>
             </div>
         </CardHeader>
         <CardContent className="p-0">

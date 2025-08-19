@@ -76,6 +76,9 @@ export default function AdjustmentsPage() {
     const { teachers, routineHistory, activeRoutineId, teacherLoad, pdfHeader, holidays = [] } = appState;
     const { date, absentTeacherIds, substitutionPlan } = appState.adjustments;
     const { toast } = useToast();
+    
+    // Get today's date in YYYY-MM-DD format for the min attribute
+    const today = new Date().toISOString().split('T')[0];
 
     const activeRoutine = routineHistory.find(r => r.id === activeRoutineId);
 
@@ -137,7 +140,8 @@ export default function AdjustmentsPage() {
                             <Label htmlFor="adjustment-date">Date for Adjustment</Label>
                             <Input 
                                 id="adjustment-date" 
-                                type="date" 
+                                type="date"
+                                min={today}
                                 value={date} 
                                 onChange={e => {
                                     updateAdjustments('date', e.target.value);

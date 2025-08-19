@@ -7,7 +7,6 @@ import { AppStateContext } from "@/context/app-state-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, LogIn } from "lucide-react";
-import { Logo } from "@/components/icons";
 
 export default function LoginPage() {
     const { user, handleGoogleSignIn, isAuthLoading } = useContext(AppStateContext);
@@ -24,7 +23,7 @@ export default function LoginPage() {
             <Card className="w-full max-w-sm mx-4 shadow-xl">
                 <CardHeader className="text-center">
                     <div className="flex justify-center items-center gap-3 mb-4">
-                        <Logo className="h-8 w-8 text-primary" />
+                        
                         <CardTitle className="text-3xl font-bold">School Routine</CardTitle>
                     </div>
                     <CardDescription>

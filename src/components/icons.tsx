@@ -1,5 +1,4 @@
-import { CalendarDays, type LucideProps } from "lucide-react";
+import { type LucideProps } from "lucide-react";
 
-export const Logo = (props: LucideProps) => (
-  <CalendarDays {...props} />
-);
+// The Logo component has been removed as requested.
+// If you need other icons, you can export them from here.

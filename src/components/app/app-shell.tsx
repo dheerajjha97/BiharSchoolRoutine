@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { Logo } from "@/components/icons";
 import { useTheme } from "next-themes";
 import {
   Menu,
@@ -142,7 +141,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <SheetHeader className="border-b p-4">
         <SheetTitle>
           <Link href="/" onClick={() => setIsSheetOpen(false)} className="flex items-center gap-2 font-semibold">
-            <Logo className="h-6 w-6 text-primary" />
+            
           </Link>
         </SheetTitle>
       </SheetHeader>
@@ -176,7 +175,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </Sheet>
             <div className="flex-1">
                  <Link href="/" className="flex items-center gap-2 font-semibold text-lg">
-                    <Logo className="h-6 w-6 text-primary" />
+                    
                 </Link>
             </div>
             <ThemeToggle />

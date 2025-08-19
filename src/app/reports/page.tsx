@@ -141,7 +141,7 @@ export default function ReportsPage() {
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 p-6">
             <PageHeader
                 title="Exams & Reports"
                 description="Create exam timetables and generate invigilation duty charts."

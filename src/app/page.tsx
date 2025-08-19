@@ -138,7 +138,7 @@ export default function Home() {
   const hasHistory = routineHistory && routineHistory.length > 0;
 
   const renderAdminDashboard = () => (
-    <>
+    <div className="p-4 md:p-6 space-y-6">
       <PageHeader 
         title="Admin Dashboard"
         description="Generate, view, and manage your school's class routine."
@@ -294,20 +294,22 @@ export default function Home() {
           pdfHeader={appState.schoolInfo.pdfHeader}
           workingDays={appState.config.workingDays}
       />
-    </>
+    </div>
   );
 
   const renderTeacherDashboard = () => {
     const currentTeacher = teachers.find(t => t.email === user?.email);
     
     return (
-      <>
-         <PageHeader 
-            title={`Teacher Dashboard`}
-            description={`Welcome, ${user?.displayName || 'Teacher'}. View your personal daily routine.`}
-        />
+      <div className="space-y-6">
+        <div className="p-4 md:p-6">
+            <PageHeader 
+                title={`Teacher Dashboard`}
+                description={`Welcome, ${user?.displayName || 'Teacher'}. View your personal daily routine.`}
+            />
+        </div>
         
-        <div className="flex justify-center">
+        <div className="flex justify-center px-4 md:px-6">
             <TeacherRoutineDisplay
                 scheduleData={activeRoutine?.schedule || null}
                 teacher={currentTeacher || null}
@@ -316,13 +318,13 @@ export default function Home() {
                 holidays={appState.holidays || []}
             />
         </div>
-      </>
+      </div>
     )
   }
 
   return (
-    <div className="space-y-6">
+    <>
        { isUserAdmin ? renderAdminDashboard() : renderTeacherDashboard() }
-    </div>
+    </>
   );
 }

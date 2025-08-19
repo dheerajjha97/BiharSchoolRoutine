@@ -2,11 +2,13 @@
 "use client";
 
 import { useContext, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AppStateContext } from "@/context/app-state-provider";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, LogIn } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 
 export default function LoginPage() {
     const { user, handleGoogleSignIn, isAuthLoading } = useContext(AppStateContext);
@@ -40,6 +42,14 @@ export default function LoginPage() {
                         Sign in with Google
                     </Button>
                 </CardContent>
+                <CardFooter className="flex flex-col text-sm text-center">
+                    <Separator className="my-4" />
+                    <p className="text-muted-foreground">New school? 
+                        <Link href="/register" className="font-semibold text-primary hover:underline ml-1">
+                            Register as Admin
+                        </Link>
+                    </p>
+                </CardFooter>
             </Card>
         </div>
     );

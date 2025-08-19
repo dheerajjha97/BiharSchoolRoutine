@@ -7,7 +7,7 @@ import { AppStateContext } from "@/context/app-state-provider";
 import AppShell from "./app-shell";
 import { Loader2 } from "lucide-react";
 
-const publicPaths = ['/login'];
+const publicPaths = ['/login', '/register'];
 
 function ConditionalLayout({ children }: { children: React.ReactNode }) {
     const { user, isAuthLoading } = useContext(AppStateContext);

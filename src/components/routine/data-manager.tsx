@@ -12,6 +12,8 @@ import { X, User, School, Book, Clock, DoorOpen } from "lucide-react";
 import { sortTimeSlots } from "@/lib/utils";
 import type { Teacher } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
+import { useToast } from "@/hooks/use-toast";
+import { isEmailUnique } from "@/app/register/actions";
 
 interface DataManagerProps {
   title: "Teachers" | "Classes" | "Subjects" | "Time Slots" | "Rooms / Halls";
@@ -25,19 +27,34 @@ interface DataManagerProps {
 const TeacherManager = ({ items, setItems }: { items: Teacher[], setItems: (items: Teacher[]) => void }) => {
     const [newName, setNewName] = useState("");
     const [newEmail, setNewEmail] = useState("");
+    const { toast } = useToast();
 
-    const handleAddItem = () => {
+    const handleAddItem = async () => {
         const name = newName.trim();
         const email = newEmail.trim().toLowerCase();
-        if (!name || !email) return;
-
-        if (!items.some(t => t.email === email)) {
-            const newTeacher: Teacher = { id: uuidv4(), name, email };
-            const newItemsList = [newTeacher, ...items].sort((a, b) => a.name.localeCompare(b.name));
-            setItems(newItemsList);
-            setNewName("");
-            setNewEmail("");
+        
+        if (!name || !email) {
+            toast({ variant: "destructive", title: "Missing Information", description: "Please provide both a name and an email." });
+            return;
         }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            toast({ variant: "destructive", title: "Invalid Email", description: "Please provide a valid email address." });
+            return;
+        }
+        
+        const unique = await isEmailUnique(email);
+        if (!unique) {
+            toast({ variant: "destructive", title: "Email Already Exists", description: "This email is already registered as a teacher or admin in the system." });
+            return;
+        }
+
+        const newTeacher: Teacher = { id: uuidv4(), name, email };
+        const newItemsList = [newTeacher, ...items].sort((a, b) => a.name.localeCompare(b.name));
+        setItems(newItemsList);
+        setNewName("");
+        setNewEmail("");
     };
     
     const handleRemoveItem = (idToRemove: string) => {

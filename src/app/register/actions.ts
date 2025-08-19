@@ -76,3 +76,39 @@ export async function registerAdmin(input: RegistrationInput): Promise<Registrat
         };
     }
 }
+
+
+export async function isEmailUnique(email: string): Promise<boolean> {
+    const lowerCaseEmail = email.toLowerCase();
+    if (!lowerCaseEmail) return false;
+
+    try {
+        const db = getFirestoreDB();
+
+        // 1. Check in userRoles collection (for admins and teachers)
+        const roleDocRef = doc(db, 'userRoles', lowerCaseEmail);
+        const roleDoc = await getDoc(roleDocRef);
+        if (roleDoc.exists()) {
+            return false;
+        }
+        
+        // 2. Check across all school documents for any teacher with that email
+        const schoolsQuery = query(collection(db, 'schoolAdmins'), where('teachers', 'array-contains', { email: lowerCaseEmail }));
+        const schoolsSnapshot = await getDocs(schoolsQuery);
+        if (!schoolsSnapshot.empty) {
+            // A more robust check to find the teacher within the array
+            for (const schoolDoc of schoolsSnapshot.docs) {
+                const teachers = schoolDoc.data().teachers || [];
+                if (teachers.some((t: { email: string }) => t.email === lowerCaseEmail)) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    } catch (error) {
+        console.error("Error checking email uniqueness:", error);
+        // Fail-safe: if there's an error, assume it's not unique to prevent duplicates.
+        return false; 
+    }
+}

@@ -130,6 +130,7 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
     const selectedDayName = allDaysOfWeek[dayIndex];
     const dailyPeriods = teacherScheduleByDay[selectedDayName] || [];
     
+    // Use UTC date for holiday check to prevent timezone issues
     const currentDateString = new Date(currentDate.getTime() - (currentDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
     const holidayInfo = holidaysByDate.get(currentDateString) || null;
     const isTodayOff = holidayInfo || !workingDays.includes(selectedDayName);
@@ -159,56 +160,56 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
             </div>
             
             <CardContent className="p-6 min-h-[400px] flex items-center justify-center">
-                <div className="relative pl-8 w-full">
+                <div className="w-full">
                     {isTodayOff ? (
-                         <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-muted-foreground">
+                         <div className="flex flex-col items-center justify-center text-center text-muted-foreground">
                             <NotebookText className="h-10 w-10 mb-2" />
                             <p className="font-semibold">{holidayInfo?.name || "Day Off"}</p>
                             <p>No classes scheduled.</p>
                         </div>
                     ) : dailyPeriods.length > 0 ? (
-                        dailyPeriods.map((period, index) => {
-                            const status = getStatus(period.timeSlot);
-                            return (
-                                <div key={index} className="relative flex min-h-[7.5rem]">
-                                     {index < dailyPeriods.length - 1 && (
-                                        <div className="absolute left-[calc(1rem-1px)] -top-1.5 h-full w-0.5 bg-border -z-0"></div>
-                                    )}
-                                    <div className="absolute -left-12 top-1 text-right">
-                                        <p className="text-sm font-medium text-muted-foreground w-20">{period.timeSlot}</p>
-                                    </div>
-                                    <div className={cn(
-                                        "z-10 h-8 w-8 rounded-full border-2 flex items-center justify-center bg-card flex-shrink-0 mt-1",
-                                        status === 'now' && 'border-primary',
-                                        status === 'completed' && 'border-green-500',
-                                        status === 'upcoming' && 'border-border'
-                                    )}>
-                                        {status === 'completed' && <Check className="h-4 w-4 text-green-500" />}
-                                        {status === 'now' && <div className="absolute h-3 w-3 rounded-full bg-primary animate-ping" />}
-                                        {status === 'now' && <div className="absolute h-2 w-2 rounded-full bg-primary" />}
-                                    </div>
-                                    
-                                    <div className="ml-6 w-full">
-                                        <div className="flex items-center gap-3">
-                                            <h3 className="font-bold text-lg text-card-foreground">{period.subject}</h3>
-                                            {status === 'now' && <div className="px-2 py-0.5 text-xs font-bold bg-primary text-primary-foreground rounded-md">Now</div>}
+                        <div className="relative pl-8">
+                            {dailyPeriods.map((period, index) => {
+                                const status = getStatus(period.timeSlot);
+                                return (
+                                    <div key={index} className="relative flex min-h-[7.5rem]">
+                                        <div className="absolute -left-0.5 top-0 h-full w-0.5 bg-border z-0"></div>
+                                        <div className="absolute -left-12 top-1 text-right">
+                                            <p className="text-sm font-medium text-muted-foreground w-20">{period.timeSlot}</p>
                                         </div>
-                                        <div className="text-muted-foreground mt-2 text-sm space-y-1">
-                                            <p className="flex items-center gap-2">
-                                                <MapPin className="h-4 w-4 text-primary" />
-                                                <span>{period.className}</span>
-                                            </p>
-                                            <p className="flex items-center gap-2">
-                                                <User className="h-4 w-4 text-primary" />
-                                                <span>{teacher?.name}</span>
-                                            </p>
+                                        <div className={cn(
+                                            "z-10 h-8 w-8 rounded-full border-2 flex items-center justify-center bg-card flex-shrink-0 mt-1",
+                                            status === 'now' && 'border-primary',
+                                            status === 'completed' && 'border-green-500',
+                                            status === 'upcoming' && 'border-border'
+                                        )}>
+                                            {status === 'completed' && <Check className="h-4 w-4 text-green-500" />}
+                                            {status === 'now' && <div className="absolute h-3 w-3 rounded-full bg-primary animate-ping" />}
+                                            {status === 'now' && <div className="absolute h-2 w-2 rounded-full bg-primary" />}
+                                        </div>
+                                        
+                                        <div className="ml-6 w-full">
+                                            <div className="flex items-center gap-3">
+                                                <h3 className="font-bold text-lg text-card-foreground">{period.subject}</h3>
+                                                {status === 'now' && <div className="px-2 py-0.5 text-xs font-bold bg-primary text-primary-foreground rounded-md">Now</div>}
+                                            </div>
+                                            <div className="text-muted-foreground mt-2 text-sm space-y-1">
+                                                <p className="flex items-center gap-2">
+                                                    <MapPin className="h-4 w-4 text-primary" />
+                                                    <span>{period.className}</span>
+                                                </p>
+                                                <p className="flex items-center gap-2">
+                                                    <User className="h-4 w-4 text-primary" />
+                                                    <span>{teacher?.name}</span>
+                                                </p>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            )
-                        })
+                                )
+                            })}
+                        </div>
                     ) : (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center min-h-[200px] text-center text-muted-foreground">
+                        <div className="flex flex-col items-center justify-center min-h-[200px] text-center text-muted-foreground">
                             <p>No classes scheduled for you on this day.</p>
                         </div>
                     )}

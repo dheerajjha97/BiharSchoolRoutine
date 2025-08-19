@@ -14,7 +14,7 @@
  */
 
 import 'dotenv/config';
-import { adminDb } from '../lib/firebase-admin';
+import { getAdminDb } from '../lib/firebase-admin';
 
 async function registerAdmin() {
     console.log('Starting admin registration script...');
@@ -47,6 +47,7 @@ async function registerAdmin() {
     console.log(`  UDISE: ${udise}`);
 
     try {
+        const adminDb = getAdminDb();
         // 3. Check for existing admin with the same email or UDISE
         const userRolesRef = adminDb.collection('userRoles');
         const emailQuery = userRolesRef.where('email', '==', email);

@@ -42,7 +42,3 @@ export const getAdminAuth = () => {
     initializeAdminApp();
     return admin.auth();
 };
-
-// For backward compatibility if some files import adminDb directly
-export const adminDb = getAdminDb();
-export const adminAuth = getAdminAuth();

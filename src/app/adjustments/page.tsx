@@ -73,7 +73,7 @@ function MultiSelectPopover({ options, selected, onSelectedChange, placeholder }
 
 export default function AdjustmentsPage() {
     const { appState, updateAdjustments } = useContext(AppStateContext);
-    const { teachers, routineHistory, activeRoutineId, teacherLoad, holidays = [], schoolInfo } = appState;
+    const { teachers, routineHistory, activeRoutineId, teacherLoad, schoolInfo, holidays = [] } = appState;
     const { pdfHeader } = schoolInfo;
     const { date, absentTeacherIds, substitutionPlan } = appState.adjustments;
     const { toast } = useToast();

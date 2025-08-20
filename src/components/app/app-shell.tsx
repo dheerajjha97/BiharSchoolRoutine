@@ -30,7 +30,7 @@ import { cn } from "@/lib/utils";
 
 const adminNavItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/school-routine", label: "Calendar", icon: School },
+  { href: "/school-routine", label: "Final Routine", icon: School },
   { href: "/data", label: "Data", icon: Database },
   { href: "/adjustments", label: "Adjustments", icon: Replace },
   { href: "/reports", label: "Exams", icon: ClipboardCheck },
@@ -39,7 +39,7 @@ const adminNavItems = [
 
 const teacherNavItems = [
     { href: "/", label: "My Dashboard", icon: UserCheck },
-    { href: "/school-routine", label: "School Calendar", icon: School },
+    { href: "/school-routine", label: "Final Routine", icon: School },
     { href: "/holidays", label: "Holidays", icon: NotebookText },
 ];
 

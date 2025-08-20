@@ -108,3 +108,30 @@ export async function isEmailUnique(email: string): Promise<boolean> {
         return false; 
     }
 }
+
+export async function getTotalUserCount(): Promise<number> {
+    try {
+        const db = getFirestoreDB();
+        let totalUsers = 0;
+
+        // Count admins from userRoles
+        const userRolesRef = collection(db, 'userRoles');
+        const adminQuery = query(userRolesRef, where('role', '==', 'admin'));
+        const adminSnapshot = await getDocs(adminQuery);
+        totalUsers += adminSnapshot.size;
+
+        // Count teachers from all school documents
+        const schoolsQuery = query(collection(db, 'schoolAdmins'));
+        const schoolsSnapshot = await getDocs(schoolsQuery);
+
+        schoolsSnapshot.forEach(schoolDoc => {
+            const teachers = schoolDoc.data().teachers || [];
+            totalUsers += teachers.length;
+        });
+
+        return totalUsers;
+    } catch (error) {
+        console.error("Error getting total user count:", error);
+        return 0;
+    }
+}

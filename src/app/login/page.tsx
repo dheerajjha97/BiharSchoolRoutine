@@ -1,14 +1,15 @@
 
 "use client";
 
-import { useContext, useEffect } from "react";
+import { useContext, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AppStateContext } from "@/context/app-state-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { Loader2, Users } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { getTotalUserCount } from "@/app/register/actions";
 
 const LoginIllustration = () => (
     <div className="hidden lg:flex items-center justify-center h-full bg-primary/5 p-8">
@@ -23,12 +24,21 @@ const LoginIllustration = () => (
 export default function LoginPage() {
     const { user, handleGoogleSignIn, isAuthLoading } = useContext(AppStateContext);
     const router = useRouter();
+    const [userCount, setUserCount] = useState<number | null>(null);
 
     useEffect(() => {
         if (user) {
             router.replace('/');
         }
     }, [user, router]);
+    
+    useEffect(() => {
+        const fetchCount = async () => {
+            const count = await getTotalUserCount();
+            setUserCount(count);
+        };
+        fetchCount();
+    }, []);
 
     return (
         <div className="grid lg:grid-cols-2 min-h-screen bg-background">
@@ -54,7 +64,7 @@ export default function LoginPage() {
                             Please sign in to manage or view your school's schedule.
                         </CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="space-y-4">
                         <Button onClick={handleGoogleSignIn} disabled={isAuthLoading} className="w-full" size="lg">
                             {isAuthLoading ? (
                                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -63,6 +73,12 @@ export default function LoginPage() {
                             )}
                             Sign in with Google
                         </Button>
+                         {userCount !== null && userCount > 0 && (
+                            <div className="text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
+                                <Users className="h-4 w-4" />
+                                <span>Join {userCount}+ school admins & teachers</span>
+                            </div>
+                        )}
                     </CardContent>
                     <CardFooter className="flex flex-col text-sm text-center">
                         <Separator className="my-4" />

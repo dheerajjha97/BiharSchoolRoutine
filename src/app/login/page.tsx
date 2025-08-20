@@ -24,10 +24,20 @@ export default function LoginPage() {
         <div className="flex items-center justify-center min-h-screen bg-background">
             <Card className="w-full max-w-sm mx-4 shadow-xl">
                 <CardHeader className="text-center">
-                    <div className="flex justify-center items-center gap-3 mb-4">
-                        
-                        <CardTitle className="text-3xl font-bold">School Routine</CardTitle>
+                    <div className="flex justify-center items-center mb-4">
+                        <svg 
+                            className="w-24 h-24 text-primary"
+                            viewBox="0 0 24 24" 
+                            fill="none" 
+                            xmlns="http://www.w3.org/2000/svg"
+                            aria-hidden="true"
+                        >
+                            <path d="M4 21V9.5L12 3L20 9.5V21H14V14H10V21H4Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            <path d="M12 6C12.5523 6 13 6.44772 13 7V8C13 8.55228 12.5523 9 12 9C11.4477 9 11 8.55228 11 8V7C11 6.44772 11.4477 6 12 6Z" fill="currentColor"/>
+                            <path d="M12 9L14 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
                     </div>
+                    <CardTitle className="text-3xl font-bold">School Routine</CardTitle>
                     <CardDescription>
                         Please sign in to manage or view your school's schedule.
                     </CardDescription>

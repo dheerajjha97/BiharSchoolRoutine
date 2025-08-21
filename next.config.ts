@@ -6,12 +6,7 @@ const nextConfig: NextConfig = {
   /* config options here */
   images: {
     remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'placehold.co',
-        port: '',
-        pathname: '/**',
-      },
+      // The placeholder domain has been removed as we are now using a local image for the QR code.
     ],
   },
   env: {

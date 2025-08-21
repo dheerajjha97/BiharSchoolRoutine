@@ -46,8 +46,15 @@ export default function DonatePage() {
                 </CardHeader>
                 <CardContent className="flex flex-col items-center gap-6">
                     <div className="p-4 border rounded-lg bg-white">
+                        {/* 
+                          Instructions: 
+                          1. Get your QR code image from your UPI app.
+                          2. Name it 'my-qr-code.png'.
+                          3. Place it inside the 'public' folder at the root of your project.
+                          The image will then appear here automatically.
+                        */}
                         <Image
-                            src="https://placehold.co/256x256.png"
+                            src="/my-qr-code.png"
                             alt="Donation QR Code"
                             width={256}
                             height={256}

@@ -153,7 +153,7 @@ export default function Home() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-              <div className="flex flex-col sm:flex-row flex-wrap gap-4">
+              <div className="flex flex-col sm:flex-row gap-4">
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button size="lg" disabled={isLoading} className="flex-grow">
@@ -205,8 +205,8 @@ export default function Home() {
                     <CardDescription>Select, rename, or delete a version. Your last 5 are saved.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="flex flex-col sm:flex-row flex-wrap gap-2 items-center">
-                        <div className="w-full sm:flex-grow">
+                    <div className="flex flex-col sm:flex-row gap-2">
+                        <div className="flex-grow">
                               {routineToRename && routineToRename.id === activeRoutine.id ? (
                                 <div className="flex gap-2">
                                     <Input value={renameValue} onChange={(e) => setRenameValue(e.target.value)} />
@@ -229,13 +229,13 @@ export default function Home() {
                               )}
                         </div>
                         {activeRoutine && !routineToRename && (
-                              <div className="flex gap-2 shrink-0 w-full sm:w-auto">
-                                <Button variant="outline" size="sm" onClick={() => startRename(activeRoutine)} className="flex-grow sm:flex-grow-0">
+                              <div className="flex gap-2 shrink-0">
+                                <Button variant="outline" size="sm" onClick={() => startRename(activeRoutine)} className="flex-grow">
                                     <Edit className="mr-2 h-4 w-4" /> Rename
                                 </Button>
                                   <AlertDialog>
                                     <AlertDialogTrigger asChild>
-                                        <Button variant="destructive" size="sm" disabled={routineHistory.length <= 1} className="flex-grow sm:flex-grow-0">
+                                        <Button variant="destructive" size="sm" disabled={routineHistory.length <= 1} className="flex-grow">
                                             <Trash2 className="mr-2 h-4 w-4" /> Delete
                                         </Button>
                                     </AlertDialogTrigger>

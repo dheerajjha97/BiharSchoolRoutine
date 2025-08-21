@@ -25,6 +25,7 @@ import {
   NotebookText,
   School,
   Settings,
+  Heart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -42,6 +43,10 @@ const teacherNavItems = [
     { href: "/school-routine", label: "Final Routine", icon: School },
     { href: "/holidays", label: "Holidays", icon: NotebookText },
 ];
+
+const commonNavItems = [
+    { href: "/donate", label: "Donate", icon: Heart },
+]
 
 function ThemeToggle() {
     const { setTheme, theme } = useTheme();
@@ -85,17 +90,19 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   ) : null;
 
   const renderNavItems = (isMobile: boolean) => {
+    const allNavItems = [...navItems, ...commonNavItems];
     return (
       <nav className="flex flex-col gap-1 p-4">
         <p className="px-3 py-2 text-xs font-semibold uppercase text-muted-foreground tracking-wider">Menu</p>
-        {navItems.map((item) => (
+        {allNavItems.map((item) => (
           <Link
             key={item.href}
             href={item.href}
             onClick={() => isMobile && setIsSheetOpen(false)}
             className={cn(
               "flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-primary/10",
-              pathname === item.href && "bg-primary/10 text-primary font-bold"
+              pathname === item.href && "bg-primary/10 text-primary font-bold",
+              item.label === 'Donate' && "text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10"
             )}
           >
             <item.icon className="h-5 w-5" />

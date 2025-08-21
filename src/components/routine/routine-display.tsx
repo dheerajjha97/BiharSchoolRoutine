@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import type { GenerateScheduleOutput, ScheduleEntry, Teacher, DayOfWeek } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash2, AlertTriangle, Copy, FileDown, Loader2, Printer } from "lucide-react";
+import { Trash2, AlertTriangle, Copy, Printer } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn, sortClasses } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
@@ -22,9 +22,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+} from "@/components/ui/dropdown-menu";
 
 interface RoutineDisplayProps {
   scheduleData: GenerateScheduleOutput | null;
@@ -91,7 +89,6 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   const [isCellDialogOpen, setIsCellDialogOpen] = React.useState(false);
   const [currentCell, setCurrentCell] = React.useState<CurrentCell | null>(null);
   const [cellData, setCellData] = React.useState<CellData>({ subject: "", className: "", teacher: "" });
-  const [isDownloading, setIsDownloading] = React.useState(false);
   
   const { secondaryClasses, seniorSecondaryClasses } = useMemo(() => categorizeClasses(classes), [classes]);
   const teacherNameMap = useMemo(() => new Map(teachers.map(t => [t.id, t.name])), [teachers]);
@@ -310,123 +307,6 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
     
     document.body.removeChild(printWrapper);
   };
-  
-  const handleDownloadPdf = async (elementId: string, fileName: string) => {
-    const originalElement = document.getElementById(elementId);
-    if (!originalElement) {
-        toast({ variant: 'destructive', title: "Error", description: "Could not find element to print." });
-        return;
-    }
-    setIsDownloading(true);
-
-    const pdfContainer = document.getElementById('pdf-container');
-    if (!pdfContainer) {
-        setIsDownloading(false);
-        return;
-    }
-
-    const wrapperDiv = document.createElement('div');
-    
-    if (pdfHeader && pdfHeader.trim()) {
-        const headerDiv = document.createElement('div');
-        headerDiv.style.textAlign = 'center';
-        headerDiv.style.marginBottom = '20px';
-        headerDiv.style.width = '100%';
-        pdfHeader.trim().split('\n').forEach((line, index) => {
-            const p = document.createElement('p');
-            p.textContent = line;
-            p.style.margin = '0';
-            p.style.padding = '0';
-            p.style.fontSize = index === 0 ? '16px' : '14px';
-            p.style.fontWeight = index === 0 ? 'bold' : 'normal';
-            headerDiv.appendChild(p);
-        });
-        wrapperDiv.appendChild(headerDiv);
-    }
-    
-    const clonedElement = originalElement.cloneNode(true) as HTMLElement;
-    const table = clonedElement.querySelector('table');
-    if(table) {
-        table.style.borderCollapse = 'collapse';
-        table.style.width = '100%';
-        clonedElement.querySelectorAll('th, td').forEach(cell => {
-            const el = cell as HTMLElement;
-            el.style.border = '1px solid black';
-            el.style.padding = '2px';
-            el.style.textAlign = 'center';
-            el.style.verticalAlign = 'middle';
-            
-            if(el.tagName === 'TD') {
-                const contentWrapper = el.querySelector('div > div');
-                if (contentWrapper) {
-                    const subjectDiv = contentWrapper.querySelector('div:first-child');
-                    const teacherDiv = contentWrapper.querySelector('div:nth-child(2)');
-                    const noteDiv = contentWrapper.querySelector('div:nth-child(3)');
-                    const subjectText = subjectDiv?.textContent || '';
-                    const teacherText = teacherDiv?.textContent || '';
-                    const noteText = noteDiv?.textContent || '';
-                    
-                    contentWrapper.innerHTML = '';
-                    contentWrapper.className = '';
-                    
-                    contentWrapper.innerHTML = `
-                        <div style="font-weight: bold; font-size: 12px;">${subjectText}</div>
-                        <div style="font-size: 10px;">${teacherText}</div>
-                        ${noteText ? `<div style="font-size: 9px; font-style: italic;">${noteText}</div>` : ''}
-                    `;
-                }
-            }
-        });
-        table.querySelectorAll('th').forEach(th => {
-            const el = th as HTMLElement;
-            el.style.backgroundColor = 'hsl(217, 33%, 54%)';
-            el.style.color = 'hsl(210, 40%, 98%)';
-        });
-    }
-
-    clonedElement.querySelectorAll('th, td').forEach(el => {
-        (el as HTMLElement).style.position = 'static';
-    });
-    
-    wrapperDiv.appendChild(clonedElement);
-    pdfContainer.appendChild(wrapperDiv);
-
-    try {
-        const canvas = await html2canvas(wrapperDiv, {
-            scale: 2,
-            useCORS: true,
-        });
-
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('l', 'mm', 'a4');
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
-        const imgWidth = canvas.width;
-        const imgHeight = canvas.height;
-        const ratio = imgWidth / imgHeight;
-
-        let finalImgWidth = pdfWidth - 20;
-        let finalImgHeight = finalImgWidth / ratio;
-
-        if (finalImgHeight > pdfHeight - 20) {
-            finalImgHeight = pdfHeight - 20;
-            finalImgWidth = finalImgHeight * ratio;
-        }
-        
-        const x = (pdfWidth - finalImgWidth) / 2;
-        const y = (pdfHeight - finalImgHeight) / 2;
-        
-        pdf.addImage(imgData, 'PNG', x, y, finalImgWidth, finalImgHeight);
-        pdf.save(fileName);
-
-    } catch (error) {
-        console.error(error);
-        toast({ variant: 'destructive', title: "PDF Download Failed" });
-    } finally {
-        pdfContainer.innerHTML = '';
-        setIsDownloading(false);
-    }
-  }
 
   const renderCellContent = (day: DayOfWeek, className: string, timeSlot: string) => {
     const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
@@ -484,14 +364,6 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                <Button size="sm" variant="outline" onClick={() => handlePrint(tableId)}>
                     <Printer className="mr-2 h-4 w-4" /> Print
                </Button>
-               <Button size="sm" variant="outline" disabled={isDownloading} onClick={() => handleDownloadPdf(tableId, `${title.toLowerCase().replace(' ', '-')}.pdf`)}>
-                  {isDownloading ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <FileDown className="mr-2 h-4 w-4" />
-                  )}
-                  {isDownloading ? '...' : 'PDF'}
-                </Button>
            </div>
         </div>
         <div className="border rounded-lg bg-card overflow-x-auto" id={tableId}>
@@ -587,7 +459,6 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
             </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div id="pdf-container" className="absolute -left-[9999px] top-auto" aria-hidden="true"></div>
           <div className="p-4 md:p-6 space-y-6">
                 {renderScheduleTable("Secondary", secondaryClasses, "routine-table-secondary")}
                 {renderScheduleTable("Senior Secondary", seniorSecondaryClasses, "routine-table-senior-secondary")}

@@ -367,26 +367,26 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
            </div>
         </div>
         <div className="border rounded-lg bg-card overflow-x-auto" id={tableId}>
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-card">
-                <TableHead className="font-bold min-w-[100px] sticky left-0 bg-card z-10">Day</TableHead>
-                <TableHead className="font-bold min-w-[120px] sticky left-[100px] bg-card z-10">Class</TableHead>
+          <table className="min-w-full w-full border-collapse">
+            <thead className="bg-card">
+              <tr>
+                <th className="font-bold min-w-[100px] sticky left-0 bg-card z-20 p-2 text-left">Day</th>
+                <th className="font-bold min-w-[120px] sticky left-[100px] bg-card z-20 p-2 text-left">Class</th>
                 {timeSlots.map(slot => (
-                  <TableHead key={slot} className="text-center font-bold text-xs min-w-[90px] p-1">
+                  <th key={slot} className="text-center font-bold text-xs min-w-[90px] p-1 align-bottom">
                       <div>{slot}</div>
                       <div className="font-normal text-muted-foreground">{instructionalSlotMap[slot] ? toRoman(instructionalSlotMap[slot]) : '-'}</div>
-                  </TableHead>
+                  </th>
                 ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+              </tr>
+            </thead>
+            <tbody>
               {workingDays.map((day) => (
                 <React.Fragment key={day}>
                   {displayClasses.map((className, classIndex) => (
-                    <TableRow key={`${day}-${className}`}>
+                    <tr key={`${day}-${className}`} className="border-t">
                       {classIndex === 0 && (
-                        <TableCell className="font-semibold align-top sticky left-0 bg-card z-10" rowSpan={displayClasses.length}>
+                        <td className="font-semibold align-top sticky left-0 bg-card z-10 p-2" rowSpan={displayClasses.length}>
                           <div className="flex items-center gap-2">
                              <span>{day}</span>
                               {isEditable && (
@@ -413,19 +413,19 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                                 </DropdownMenu>
                               )}
                           </div>
-                        </TableCell>
+                        </td>
                       )}
-                      <TableCell className="font-medium align-top sticky left-[100px] bg-card z-10">{className}</TableCell>
+                      <td className="font-medium align-top sticky left-[100px] bg-card z-10 p-2">{className}</td>
                       {timeSlots.map(timeSlot => (
-                        <TableCell key={`${day}-${className}-${timeSlot}`} className="p-0 align-top">{renderCellContent(day, className, timeSlot)}</TableCell>
+                        <td key={`${day}-${className}-${timeSlot}`} className="p-0 align-top border-l">{renderCellContent(day, className, timeSlot)}</td>
                       ))}
-                    </TableRow>
+                    </tr>
                   ))}
-                  {day !== workingDays[workingDays.length - 1] && <TableRow className="bg-background hover:bg-background"><TableCell colSpan={timeSlots.length + 2} className="p-1"></TableCell></TableRow>}
+                  {day !== workingDays[workingDays.length - 1] && <tr className="bg-background hover:bg-background h-2"><td colSpan={timeSlots.length + 2} className="p-1"></td></tr>}
                 </React.Fragment>
               ))}
-            </TableBody>
-          </Table>
+            </tbody>
+          </table>
         </div>
       </div>
     );
@@ -509,3 +509,4 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 };
 
 export default RoutineDisplay;
+

@@ -24,7 +24,8 @@ export const AppStateContext = createContext<AppStateContextType>({} as AppState
 
 interface AppStateContextType {
   appState: AppState;
-  updateState: <K extends keyof AppState | 'fullState'>(key: K, value: K extends 'fullState' ? Partial<AppState> : AppState[K]) => void;
+  setAppState: React.Dispatch<React.SetStateAction<AppState>>;
+  updateState: <K extends keyof AppState>(key: K, value: AppState[K]) => void;
   updateSchoolInfo: <K extends keyof SchoolInfo>(key: K, value: SchoolInfo[K]) => void;
   updateConfig: <K extends keyof SchoolConfig>(key: K, value: SchoolConfig[K]) => void;
   updateAdjustments: <K extends keyof AppState['adjustments']>(key: K, value: AppState['adjustments'][K]) => void;
@@ -170,31 +171,8 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     return load;
   }, [activeRoutine, appState.teachers, appState.config.subjectCategories, appState.config.workingDays]);
   
-  useEffect(() => {
-    if (!isLoading) {
-        updateState('teacherLoad', calculatedTeacherLoad);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [calculatedTeacherLoad, isLoading]);
-  
-  const updateState = useCallback(<K extends keyof AppState | 'fullState'>(key: K, value: K extends 'fullState' ? Partial<AppState> : AppState[K]) => {
+  const updateState = useCallback(<K extends keyof AppState>(key: K, value: AppState[K]) => {
     setAppState(prevState => {
-      if (key === 'fullState') {
-        const newState = value as Partial<AppState>;
-        const mergedState: AppState = {
-            ...DEFAULT_APP_STATE,
-            ...prevState,
-            ...newState,
-            schoolInfo: { ...DEFAULT_APP_STATE.schoolInfo, ...prevState.schoolInfo, ...(newState.schoolInfo || {})},
-            config: { ...DEFAULT_APP_STATE.config, ...prevState.config, ...(newState.config || {}) },
-            adjustments: { ...(newState.adjustments || DEFAULT_ADJUSTMENTS_STATE) },
-        };
-        if (newState.timeSlots && Array.isArray(newState.timeSlots)) {
-            mergedState.timeSlots = sortTimeSlots(newState.timeSlots);
-        }
-        return mergedState;
-      }
-
       const newState = { ...prevState, [key]: value };
       if (key === 'timeSlots' && Array.isArray(value)) {
         newState.timeSlots = sortTimeSlots(value as string[]);
@@ -209,6 +187,13 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
       return newState;
     });
   }, []);
+
+  useEffect(() => {
+    if (!isLoading && appState.teachers.length > 0) { // Only update if not loading and state is initialized
+        updateState('teacherLoad', calculatedTeacherLoad);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [calculatedTeacherLoad, isLoading]);
   
   const updateSchoolInfo = useCallback(<K extends keyof SchoolInfo>(key: K, value: SchoolInfo[K]) => {
      setAppState(prevState => ({
@@ -316,6 +301,23 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     }
   }, [toast]);
 
+  const loadAndMergeState = (newState: Partial<AppState>) => {
+    setAppState(prevState => {
+        const mergedState: AppState = {
+            ...DEFAULT_APP_STATE,
+            ...prevState,
+            ...newState,
+            schoolInfo: { ...DEFAULT_APP_STATE.schoolInfo, ...prevState.schoolInfo, ...(newState.schoolInfo || {})},
+            config: { ...DEFAULT_APP_STATE.config, ...prevState.config, ...(newState.config || {}) },
+            adjustments: { ...(newState.adjustments || DEFAULT_ADJUSTMENTS_STATE) },
+        };
+         if (newState.timeSlots && Array.isArray(newState.timeSlots)) {
+            mergedState.timeSlots = sortTimeSlots(newState.timeSlots);
+        }
+        return mergedState;
+    });
+  };
+
   // Auth state listener
   useEffect(() => {
     const auth = getFirebaseAuth();
@@ -343,13 +345,12 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
                     
                     firestoreUnsubscribeRef.current = onSnapshot(schoolDocRef, (dataSnap) => {
                         if (dataSnap.exists()) {
-                            const schoolData = dataSnap.data() as AppState;
-                            updateState('fullState', schoolData);
+                            loadAndMergeState(dataSnap.data() as Partial<AppState>);
                         } else {
                             // Admin's school doc doesn't exist, create it
                             const newSchoolData: AppState = { ...DEFAULT_APP_STATE, schoolInfo: { name: "", udise, pdfHeader: "" } };
                             setDoc(schoolDocRef, newSchoolData);
-                            updateState('fullState', newSchoolData);
+                            setAppState(newSchoolData);
                         }
                         setIsLoading(false);
                         setIsAuthLoading(false);
@@ -383,7 +384,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
                     const schoolDocRef = doc(db, "schoolAdmins", schoolDoc.id);
                     firestoreUnsubscribeRef.current = onSnapshot(schoolDocRef, (dataSnap) => {
                         if (dataSnap.exists()) {
-                            updateState('fullState', dataSnap.data() as AppState);
+                             loadAndMergeState(dataSnap.data() as Partial<AppState>);
                         }
                         setIsLoading(false);
                         setIsAuthLoading(false);
@@ -461,6 +462,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   return (
     <AppStateContext.Provider value={{ 
         appState, 
+        setAppState,
         updateState,
         updateSchoolInfo,
         updateConfig,
@@ -484,5 +486,3 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     </AppStateContext.Provider>
   );
 };
-
-    

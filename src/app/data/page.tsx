@@ -14,9 +14,49 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { AppState } from "@/types";
+import { sortTimeSlots } from "@/lib/utils";
+
+const DEFAULT_ADJUSTMENTS_STATE = {
+    date: new Date().toISOString().split('T')[0], // Today's date
+    absentTeacherIds: [],
+    substitutionPlan: null
+};
+
+const DEFAULT_APP_STATE: AppState = {
+  schoolInfo: { name: "", udise: "", pdfHeader: ""},
+  teachers: [],
+  classes: [],
+  subjects: [],
+  timeSlots: [],
+  rooms: [],
+  holidays: [],
+  config: {
+    workingDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+    teacherSubjects: {},
+    teacherClasses: {},
+    classRequirements: {},
+    classTeachers: {},
+    subjectCategories: {},
+    subjectPriorities: {},
+    unavailability: [],
+    prayerTimeSlot: "",
+    lunchTimeSlot: "",
+    preventConsecutiveClasses: true,
+    dailyPeriodQuota: 5,
+    combinedClasses: [],
+    splitClasses: [],
+  },
+  routineHistory: [],
+  activeRoutineId: null,
+  teacherLoad: {},
+  examTimetable: [],
+  adjustments: DEFAULT_ADJUSTMENTS_STATE,
+};
+
 
 export default function DataManagementPage() {
-    const { appState, updateState, updateSchoolInfo } = useContext(AppStateContext);
+    const { appState, updateState, updateSchoolInfo, setAppState } = useContext(AppStateContext);
     const { teachers, classes, subjects, timeSlots, rooms, schoolInfo, holidays = [] } = appState;
     const { toast } = useToast();
     const jsonInputRef = useRef<HTMLInputElement>(null);
@@ -52,7 +92,20 @@ export default function DataManagementPage() {
                 throw new Error("The backup file belongs to a different school (UDISE code mismatch).");
             }
             
-            updateState('fullState', importedData);
+            setAppState(prevState => {
+                const mergedState: AppState = {
+                    ...DEFAULT_APP_STATE,
+                    ...prevState,
+                    ...importedData,
+                    schoolInfo: { ...DEFAULT_APP_STATE.schoolInfo, ...prevState.schoolInfo, ...(importedData.schoolInfo || {})},
+                    config: { ...DEFAULT_APP_STATE.config, ...prevState.config, ...(importedData.config || {}) },
+                    adjustments: { ...(importedData.adjustments || DEFAULT_ADJUSTMENTS_STATE) },
+                };
+                 if (importedData.timeSlots && Array.isArray(importedData.timeSlots)) {
+                    mergedState.timeSlots = sortTimeSlots(importedData.timeSlots);
+                }
+                return mergedState;
+            });
             toast({ title: "Data imported successfully!", description: "Your entire school data and configuration has been restored." });
         } catch (error) {
             toast({ variant: "destructive", title: "Import failed", description: error instanceof Error ? error.message : "Could not parse the backup file." });

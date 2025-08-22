@@ -153,7 +153,7 @@ export default function Home() {
                     </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="flex flex-wrap gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <AlertDialog>
                             <AlertDialogTrigger asChild>
                                 <Button size="lg" disabled={isLoading}>
@@ -259,7 +259,7 @@ export default function Home() {
             </div>
         </div>
 
-        <div className="flex-1 p-4 md:p-6 space-y-6 overflow-x-auto">
+        <div className="flex-1 p-4 md:p-6 space-y-6 w-full overflow-x-auto">
             <RoutineDisplay 
                 scheduleData={activeRoutine?.schedule || null}
                 onScheduleChange={(newSchedule) => {
@@ -319,7 +319,3 @@ export default function Home() {
     </>
   );
 }
-
-    
-
-    

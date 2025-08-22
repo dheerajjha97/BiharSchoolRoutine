@@ -71,7 +71,8 @@ function MultiSelectPopover({ options, selected, onSelectedChange, placeholder }
 
 export default function ReportsPage() {
     const { appState, updateState } = useContext(AppStateContext);
-    const { teachers, classes, subjects, rooms, examTimetable = [], pdfHeader } = appState;
+    const { teachers, classes, subjects, rooms, examTimetable = [], schoolInfo } = appState;
+    const { pdfHeader } = schoolInfo;
     const [dutyChart, setDutyChart] = useState<DutyChart | null>(null);
     const { toast } = useToast();
 

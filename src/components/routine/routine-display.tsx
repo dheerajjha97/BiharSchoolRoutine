@@ -326,7 +326,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
     if (displayClasses.length === 0) return null;
   
     return (
-      <div id={tableId} className="printable-area">
+      <div id={tableId} className="printable-area print-section">
         <div className="flex justify-between items-center mb-3 px-6 md:px-0 no-print">
           <h3 className="text-xl font-semibold">{title}</h3>
         </div>

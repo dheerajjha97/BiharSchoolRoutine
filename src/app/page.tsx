@@ -156,7 +156,7 @@ export default function Home() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <AlertDialog>
                             <AlertDialogTrigger asChild>
-                                <Button size="lg" disabled={isLoading}>
+                                <Button size="lg" disabled={isLoading} className="flex-grow-0">
                                 {isLoading ? (<Loader2 className="mr-2 h-5 w-5 animate-spin" />) : (<Wand2 className="mr-2 h-5 w-5" />)}
                                 Generate Routine
                                 </Button>
@@ -176,7 +176,7 @@ export default function Home() {
                             </AlertDialog>
                             <AlertDialog>
                             <AlertDialogTrigger asChild>
-                                <Button size="lg" variant="outline" disabled={isLoading}>
+                                <Button size="lg" variant="outline" disabled={isLoading} className="flex-grow-0">
                                 <PlusSquare className="mr-2 h-5 w-5" />
                                 Create Blank Routine
                                 </Button>
@@ -228,12 +228,12 @@ export default function Home() {
                                 )}
                                 {activeRoutine && !routineToRename && (
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                    <Button variant="outline" onClick={() => startRename(activeRoutine)}>
+                                    <Button variant="outline" onClick={() => startRename(activeRoutine)} className="flex-grow-0">
                                         <Edit className="mr-2 h-4 w-4" /> Rename
                                     </Button>
                                         <AlertDialog>
                                         <AlertDialogTrigger asChild>
-                                            <Button variant="destructive" disabled={routineHistory.length <= 1}>
+                                            <Button variant="destructive" disabled={routineHistory.length <= 1} className="flex-grow-0">
                                                 <Trash2 className="mr-2 h-4 w-4" /> Delete
                                             </Button>
                                         </AlertDialogTrigger>
@@ -319,5 +319,7 @@ export default function Home() {
     </>
   );
 }
+
+    
 
     

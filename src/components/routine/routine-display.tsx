@@ -53,7 +53,6 @@ type CurrentCell = {
     entry: ScheduleEntry | null;
 };
 
-
 const getGradeFromClassName = (className: string): string | null => {
     if (typeof className !== 'string') return null;
     const match = className.match(/\d+/);
@@ -342,7 +341,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
     if (displayClasses.length === 0) return null;
   
     return (
-      <div id={tableId} className="printable-area print-section">
+      <div id={tableId} className="print-section">
         <div className="flex justify-between items-center mb-3 px-6 md:px-0 no-print">
           <h3 className="text-xl font-semibold">{title}</h3>
         </div>
@@ -500,3 +499,5 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 };
 
 export default RoutineDisplay;
+
+    

@@ -277,7 +277,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
     onScheduleChange([...scheduleWithoutDestination, ...newDestinationEntries]);
   };
 
-  const handlePrint = (title: string, elementId: string) => {
+  const handlePrint = () => {
     window.print();
   };
 
@@ -334,7 +334,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
         <div className="flex justify-between items-center mb-3 px-6 md:px-0 no-print">
           <h3 className="text-xl font-semibold">{title}</h3>
            <div className="flex gap-2">
-               <Button size="sm" variant="outline" onClick={() => handlePrint(title, tableId)}>
+               <Button size="sm" variant="outline" onClick={handlePrint}>
                     <Printer className="mr-2 h-4 w-4" /> Print
                </Button>
            </div>

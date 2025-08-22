@@ -28,6 +28,7 @@ import {
   Heart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Logo } from "../icons";
 
 const adminNavItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -77,6 +78,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   const navItems = isUserAdmin ? adminNavItems : teacherNavItems;
   const displayName = user?.displayName;
+
+  const Brand = () => (
+      <Link href="/" className="flex items-center gap-2 font-semibold text-lg" onClick={() => setIsSheetOpen(false)}>
+        <Logo className="h-7 w-7 text-primary" />
+        <span className="hidden lg:block">Bihar School Routine</span>
+      </Link>
+  );
 
   const userProfileSection = user ? (
     <div className="p-4 text-center">
@@ -134,8 +142,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </div>
   )
 
+  const sidebarHeader = (
+    <div className="flex h-16 items-center border-b px-6">
+        <Brand />
+    </div>
+  );
+
   const sidebarContent = (
     <>
+      {sidebarHeader}
       {userProfileSection}
       <Separator />
       {renderNavItems(false)}
@@ -148,7 +163,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <SheetHeader className="border-b p-4">
         <SheetTitle>
           <Link href="/" onClick={() => setIsSheetOpen(false)} className="flex items-center gap-2 font-semibold">
-            
+            <Logo className="h-7 w-7 text-primary" />
+            <span>Bihar School Routine</span>
           </Link>
         </SheetTitle>
       </SheetHeader>
@@ -182,12 +198,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </Sheet>
             <div className="flex-1">
                  <Link href="/" className="flex items-center gap-2 font-semibold text-lg">
-                    
+                    <Logo className="h-7 w-7" />
                 </Link>
             </div>
             <ThemeToggle />
          </header>
-         <main className="flex-1 flex flex-col overflow-auto">
+         <main className="flex-1 flex flex-col overflow-auto bg-muted/40">
             {children}
         </main>
       </div>

@@ -48,27 +48,6 @@ export default function TeacherLoad({ teacherLoad, teachers, pdfHeader = "", wor
 
   const getTeacherName = (id: string) => teachers.find(t => t.id === id)?.name || id;
 
-  const handlePrint = () => {
-    const printContent = document.getElementById('printable-teacher-load');
-    const mainContent = document.querySelector('main');
-    if (printContent && mainContent) {
-        mainContent.childNodes.forEach(node => {
-            if (node !== printContent && node instanceof HTMLElement) {
-                node.classList.add('no-print');
-            }
-        });
-        printContent.classList.remove('no-print');
-        window.print();
-        mainContent.childNodes.forEach(node => {
-            if (node instanceof HTMLElement) {
-                node.classList.remove('no-print');
-            }
-        });
-    } else {
-       window.print();
-    }
-  };
-
   return (
     <div className="px-0 md:px-0">
       <Card id="printable-teacher-load">
@@ -82,7 +61,7 @@ export default function TeacherLoad({ teacherLoad, teachers, pdfHeader = "", wor
               <CardDescription>Detailed breakdown of classes assigned per teacher.</CardDescription>
             </div>
             <div className="flex items-center gap-2 no-print">
-                <Button size="sm" variant="outline" onClick={handlePrint}>
+                <Button size="sm" variant="outline" onClick={() => window.print()}>
                     <Printer className="mr-2 h-4 w-4" /> Print
                 </Button>
             </div>

@@ -1,7 +1,6 @@
 
 "use client";
 
-import { useState } from 'react';
 import type { DutyChart, Teacher } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -17,27 +16,6 @@ interface InvigilationDutyChartProps {
 
 export default function InvigilationDutyChart({ dutyChart, teachers, pdfHeader = "" }: InvigilationDutyChartProps) {
   
-  const handlePrint = () => {
-    const printContent = document.getElementById('printable-duty-chart');
-    const mainContent = document.querySelector('main');
-    if (printContent && mainContent) {
-        mainContent.childNodes.forEach(node => {
-            if (node !== printContent && node instanceof HTMLElement) {
-                node.classList.add('no-print');
-            }
-        });
-        printContent.classList.remove('no-print');
-        window.print();
-        mainContent.childNodes.forEach(node => {
-            if (node instanceof HTMLElement) {
-                node.classList.remove('no-print');
-            }
-        });
-    } else {
-       window.print();
-    }
-  };
-  
   const getTeacherName = (id: string) => teachers.find(t => t.id === id)?.name || id;
 
   return (
@@ -51,7 +29,7 @@ export default function InvigilationDutyChart({ dutyChart, teachers, pdfHeader =
               </CardDescription>
             </div>
             <div className="flex items-center gap-2 no-print">
-                <Button size="sm" variant="outline" onClick={handlePrint}>
+                <Button size="sm" variant="outline" onClick={() => window.print()}>
                     <Printer className="mr-2 h-4 w-4" /> Print
                 </Button>
             </div>

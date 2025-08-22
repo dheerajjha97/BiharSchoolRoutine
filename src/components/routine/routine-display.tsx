@@ -277,10 +277,6 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
     onScheduleChange([...scheduleWithoutDestination, ...newDestinationEntries]);
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   const renderCellContent = (day: DayOfWeek, className: string, timeSlot: string) => {
     const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
     const isClashed = entries.some(entry => 
@@ -429,7 +425,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                     <CardDescription>View, download, or edit your routine. {isEditable && "Use the copy icon next to a day's name to paste its schedule to another day."}</CardDescription>
                 </div>
                  <div className="flex items-center gap-2">
-                    <Button size="sm" variant="outline" onClick={handlePrint}>
+                    <Button size="sm" variant="outline" onClick={() => window.print()}>
                         <Printer className="mr-2 h-4 w-4" /> Print All
                     </Button>
                 </div>

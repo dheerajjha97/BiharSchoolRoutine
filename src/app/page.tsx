@@ -153,10 +153,10 @@ export default function Home() {
                     </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="flex flex-wrap gap-4">
                             <AlertDialog>
                             <AlertDialogTrigger asChild>
-                                <Button size="lg" disabled={isLoading} className="flex-grow-0">
+                                <Button size="lg" disabled={isLoading}>
                                 {isLoading ? (<Loader2 className="mr-2 h-5 w-5 animate-spin" />) : (<Wand2 className="mr-2 h-5 w-5" />)}
                                 Generate Routine
                                 </Button>
@@ -176,7 +176,7 @@ export default function Home() {
                             </AlertDialog>
                             <AlertDialog>
                             <AlertDialogTrigger asChild>
-                                <Button size="lg" variant="outline" disabled={isLoading} className="flex-grow-0">
+                                <Button size="lg" variant="outline" disabled={isLoading}>
                                 <PlusSquare className="mr-2 h-5 w-5" />
                                 Create Blank Routine
                                 </Button>
@@ -227,13 +227,13 @@ export default function Home() {
                                 </Select>
                                 )}
                                 {activeRoutine && !routineToRename && (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                    <Button variant="outline" onClick={() => startRename(activeRoutine)} className="flex-grow-0">
+                                    <div className="flex flex-wrap gap-2">
+                                    <Button variant="outline" onClick={() => startRename(activeRoutine)}>
                                         <Edit className="mr-2 h-4 w-4" /> Rename
                                     </Button>
                                         <AlertDialog>
                                         <AlertDialogTrigger asChild>
-                                            <Button variant="destructive" disabled={routineHistory.length <= 1} className="flex-grow-0">
+                                            <Button variant="destructive" disabled={routineHistory.length <= 1}>
                                                 <Trash2 className="mr-2 h-4 w-4" /> Delete
                                             </Button>
                                         </AlertDialogTrigger>

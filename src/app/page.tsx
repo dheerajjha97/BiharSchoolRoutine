@@ -229,7 +229,7 @@ export default function Home() {
                               )}
                         </div>
                         {activeRoutine && !routineToRename && (
-                              <div className="flex gap-2 shrink-0">
+                              <div className="flex gap-2 shrink-0 mt-2 sm:mt-0">
                                 <Button variant="outline" size="sm" onClick={() => startRename(activeRoutine)} className="flex-grow">
                                     <Edit className="mr-2 h-4 w-4" /> Rename
                                 </Button>
@@ -319,5 +319,3 @@ export default function Home() {
     </>
   );
 }
-
-    

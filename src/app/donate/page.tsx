@@ -3,30 +3,10 @@
 
 import PageHeader from "@/components/app/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { Copy, QrCode } from "lucide-react";
+import { QrCode } from "lucide-react";
 import Image from 'next/image';
 
 export default function DonatePage() {
-    const { toast } = useToast();
-    const upiId = "your-upi-id@okhdfcbank"; // Replace with your actual UPI ID
-
-    const handleCopy = () => {
-        navigator.clipboard.writeText(upiId).then(() => {
-            toast({
-                title: "UPI ID Copied!",
-                description: "You can now paste it in your payment app.",
-            });
-        }).catch(err => {
-            toast({
-                variant: "destructive",
-                title: "Failed to copy",
-                description: "Could not copy UPI ID to clipboard.",
-            });
-        });
-    };
-
     return (
         <div className="space-y-6 p-4 md:p-6">
             <PageHeader
@@ -60,15 +40,6 @@ export default function DonatePage() {
                             height={256}
                             data-ai-hint="qr code"
                         />
-                    </div>
-                    <div className="text-center">
-                        <p className="text-sm text-muted-foreground mb-2">Or use our UPI ID</p>
-                        <div className="flex items-center gap-2 p-2 border rounded-md bg-secondary">
-                            <span className="font-mono text-secondary-foreground">{upiId}</span>
-                            <Button variant="ghost" size="icon" onClick={handleCopy} className="h-8 w-8">
-                                <Copy className="h-4 w-4" />
-                            </Button>
-                        </div>
                     </div>
                 </CardContent>
             </Card>

@@ -5,48 +5,48 @@
 
 @layer base {
   :root {
-    --background: 240 20% 98%;
-    --foreground: 240 10% 3.9%;
-    --card: 240 20% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --popover: 240 20% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 221 83% 53%;
+    --background: 220 40% 98%;
+    --foreground: 220 40% 5%;
+    --card: 220 40% 98%;
+    --card-foreground: 220 40% 5%;
+    --popover: 220 40% 98%;
+    --popover-foreground: 220 40% 5%;
+    --primary: 262.1 83.3% 57.8%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
+    --secondary: 220 10% 93%;
+    --secondary-foreground: 220 20% 10%;
+    --muted: 220 10% 93%;
+    --muted-foreground: 220 10% 45%;
+    --accent: 220 10% 93%;
+    --accent-foreground: 220 20% 10%;
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 221 83% 53%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 10% 85%;
+    --input: 220 10% 85%;
+    --ring: 262.1 83.3% 57.8%;
     --radius: 0.5rem;
   }
 
   .dark {
-    --background: 240 10% 3.9%;
+    --background: 220 20% 7%;
     --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
+    --card: 220 20% 7%;
     --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
+    --popover: 220 20% 7%;
     --popover-foreground: 0 0% 98%;
-    --primary: 221 83% 53%;
+    --primary: 262.1 83.3% 57.8%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 240 3.7% 15.9%;
+    --secondary: 220 10% 15%;
     --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
+    --muted: 220 10% 15%;
+    --muted-foreground: 220 5% 65%;
+    --accent: 220 10% 15%;
     --accent-foreground: 0 0% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 221 83% 53%;
+    --border: 220 10% 25%;
+    --input: 220 10% 25%;
+    --ring: 262.1 83.3% 57.8%;
   }
 }
 
@@ -56,23 +56,38 @@
   }
   body {
     @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
 @media print {
-    body * {
-        visibility: hidden;
+    body {
+        background-color: white !important;
+        color: black !important;
     }
-    #printable, #printable * {
-        visibility: visible;
+    .no-print, .no-print * {
+        display: none !important;
     }
-    #printable {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
+    .printable-area {
+      display: block;
+      width: 100%;
+      position: absolute;
+      left: 0;
+      top: 0;
+      float: none;
     }
-    .no-print {
-        display: none;
+    .print-header {
+      display: block !important;
+    }
+    main > * {
+      display: none;
+    }
+    main > .printable-area {
+      display: block;
+    }
+    @page {
+        size: A4;
+        margin: 0.5in;
     }
 }

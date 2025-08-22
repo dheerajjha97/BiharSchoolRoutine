@@ -1,12 +1,15 @@
 
-import type {NextConfig} from 'next';
-import 'dotenv/config';
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   /* config options here */
   images: {
     remotePatterns: [
-      // The placeholder domain has been removed as we are now using a local image for the QR code.
+      {
+        protocol: 'https',
+        hostname: 'placehold.co',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
   env: {

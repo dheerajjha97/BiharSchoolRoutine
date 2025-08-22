@@ -277,37 +277,6 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
     onScheduleChange([...scheduleWithoutDestination, ...newDestinationEntries]);
   };
 
-  const handlePrint = (elementId: string) => {
-    const printableElement = document.getElementById(elementId);
-    if (!printableElement) return;
-
-    const printWrapper = document.createElement('div');
-    printWrapper.id = 'printable';
-
-    if (pdfHeader && pdfHeader.trim()) {
-      const headerDiv = document.createElement('div');
-      headerDiv.style.textAlign = 'center';
-      headerDiv.style.marginBottom = '20px';
-      pdfHeader.trim().split('\n').forEach((line, index) => {
-        const p = document.createElement('p');
-        p.textContent = line;
-        p.style.fontSize = index === 0 ? '16px' : '14px';
-        p.style.fontWeight = index === 0 ? 'bold' : 'normal';
-        p.style.margin = '0';
-        p.style.padding = '0';
-        headerDiv.appendChild(p);
-      });
-      printWrapper.appendChild(headerDiv);
-    }
-    
-    printWrapper.appendChild(printableElement.cloneNode(true));
-    document.body.appendChild(printWrapper);
-    
-    window.print();
-    
-    document.body.removeChild(printWrapper);
-  };
-
   const renderCellContent = (day: DayOfWeek, className: string, timeSlot: string) => {
     const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
     const isClashed = entries.some(entry => 
@@ -357,16 +326,15 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
     if (displayClasses.length === 0) return null;
   
     return (
-      <div className="break-after-page" >
-        <div className="flex justify-between items-center mb-3 px-6 md:px-0">
+      <div id={tableId} className="printable-area">
+        <div className="flex justify-between items-center mb-3 px-6 md:px-0 no-print">
           <h3 className="text-xl font-semibold">{title}</h3>
-           <div className="flex gap-2 no-print">
-               <Button size="sm" variant="outline" onClick={() => handlePrint(tableId)}>
-                    <Printer className="mr-2 h-4 w-4" /> Print
-               </Button>
-           </div>
         </div>
-        <div className="border rounded-lg bg-card overflow-x-auto" id={tableId}>
+         <div className="print-header hidden text-center mb-4">
+            {pdfHeader && pdfHeader.trim().split('\n').map((line, index) => <p key={index} className={cn(index === 0 && 'font-bold')}>{line}</p>)}
+            <h2 className="text-lg font-bold mt-2">{title} Routine</h2>
+        </div>
+        <div className="border rounded-lg bg-card overflow-x-auto">
           <table className="min-w-full w-full border-collapse">
             <thead className="bg-card">
               <tr>
@@ -456,6 +424,11 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                     <CardTitle>View Routine</CardTitle>
                     <CardDescription>View, download, or edit your routine. {isEditable && "Use the copy icon next to a day's name to paste its schedule to another day."}</CardDescription>
                 </div>
+                 <div className="flex items-center gap-2">
+                    <Button size="sm" variant="outline" onClick={() => window.print()}>
+                        <Printer className="mr-2 h-4 w-4" /> Print All
+                    </Button>
+                </div>
             </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -509,4 +482,3 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 };
 
 export default RoutineDisplay;
-

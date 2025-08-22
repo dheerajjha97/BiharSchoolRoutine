@@ -3,19 +3,13 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { AppStateProvider } from '@/context/app-state-provider';
-import { Inter } from 'next/font/google';
 import { ThemeProvider } from '@/components/app/theme-provider';
 import MainLayout from '@/components/app/main-layout';
 
-const inter = Inter({ 
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'] 
-});
-
-const APP_NAME = "BiharSchoolRoutine";
-const APP_DEFAULT_TITLE = "BiharSchoolRoutine";
-const APP_TITLE_TEMPLATE = "%s - BiharSchoolRoutine";
-const APP_DESCRIPTION = "AI-Powered School Routine Generator for Bihar";
+const APP_NAME = "Bihar School Routine";
+const APP_DEFAULT_TITLE = "Bihar School Routine";
+const APP_TITLE_TEMPLATE = "%s - Bihar School Routine";
+const APP_DESCRIPTION = "AI-Powered School Routine & Timetable Generator for Bihar";
 
 export const metadata: Metadata = {
   applicationName: APP_NAME,
@@ -41,6 +35,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#FFFFFF",
+  // You can add more viewport settings here, like initial-scale, etc.
 };
 
 
@@ -51,7 +46,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className="bg-background font-sans antialiased">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

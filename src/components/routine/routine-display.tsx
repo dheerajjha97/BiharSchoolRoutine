@@ -333,11 +333,6 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
       <div id={tableId} className="printable-area">
         <div className="flex justify-between items-center mb-3 px-6 md:px-0 no-print">
           <h3 className="text-xl font-semibold">{title}</h3>
-           <div className="flex gap-2">
-               <Button size="sm" variant="outline" onClick={handlePrint}>
-                    <Printer className="mr-2 h-4 w-4" /> Print
-               </Button>
-           </div>
         </div>
          <div className="print-header hidden text-center mb-4">
             {pdfHeader && pdfHeader.trim().split('\n').map((line, index) => <p key={index} className={cn(index === 0 && 'font-bold')}>{line}</p>)}
@@ -433,10 +428,15 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                     <CardTitle>View Routine</CardTitle>
                     <CardDescription>View, download, or edit your routine. {isEditable && "Use the copy icon next to a day's name to paste its schedule to another day."}</CardDescription>
                 </div>
+                 <div className="flex items-center gap-2">
+                    <Button size="sm" variant="outline" onClick={handlePrint}>
+                        <Printer className="mr-2 h-4 w-4" /> Print All
+                    </Button>
+                </div>
             </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div id="printable" className="p-4 md:p-6 space-y-6">
+          <div className="p-4 md:p-6 space-y-6">
                 {renderScheduleTable("Secondary", secondaryClasses, "routine-table-secondary")}
                 {renderScheduleTable("Senior Secondary", seniorSecondaryClasses, "routine-table-senior-secondary")}
             </div>

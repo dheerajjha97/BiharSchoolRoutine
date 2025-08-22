@@ -18,13 +18,30 @@ interface InvigilationDutyChartProps {
 export default function InvigilationDutyChart({ dutyChart, teachers, pdfHeader = "" }: InvigilationDutyChartProps) {
   
   const handlePrint = () => {
-    window.print();
+    const printContent = document.getElementById('printable-duty-chart');
+    const mainContent = document.querySelector('main');
+    if (printContent && mainContent) {
+        mainContent.childNodes.forEach(node => {
+            if (node !== printContent && node instanceof HTMLElement) {
+                node.classList.add('no-print');
+            }
+        });
+        printContent.classList.remove('no-print');
+        window.print();
+        mainContent.childNodes.forEach(node => {
+            if (node instanceof HTMLElement) {
+                node.classList.remove('no-print');
+            }
+        });
+    } else {
+       window.print();
+    }
   };
   
   const getTeacherName = (id: string) => teachers.find(t => t.id === id)?.name || id;
 
   return (
-    <Card>
+    <Card id="printable-duty-chart">
       <CardHeader>
         <div className="flex flex-wrap justify-between items-start gap-4">
             <div>
@@ -41,7 +58,7 @@ export default function InvigilationDutyChart({ dutyChart, teachers, pdfHeader =
         </div>
       </CardHeader>
       <CardContent>
-         <div id="printable" className="printable-area">
+         <div className="printable-area">
             <div className="print-header hidden text-center mb-4">
                 {pdfHeader && pdfHeader.trim().split('\n').map((line, index) => <p key={index} className={cn(index === 0 && 'font-bold')}>{line}</p>)}
                 <h2 className="text-lg font-bold mt-2">Invigilation Duty Chart</h2>

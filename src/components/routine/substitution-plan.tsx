@@ -22,13 +22,30 @@ export default function SubstitutionPlanDisplay({ plan, teachers, pdfHeader = ""
   };
 
   const handlePrint = () => {
-    window.print();
+    const printContent = document.getElementById('printable-substitution');
+    const mainContent = document.querySelector('main');
+    if (printContent && mainContent) {
+        mainContent.childNodes.forEach(node => {
+            if (node !== printContent && node instanceof HTMLElement) {
+                node.classList.add('no-print');
+            }
+        });
+        printContent.classList.remove('no-print');
+        window.print();
+        mainContent.childNodes.forEach(node => {
+            if (node instanceof HTMLElement) {
+                node.classList.remove('no-print');
+            }
+        });
+    } else {
+        window.print();
+    }
   };
 
   const dayOfWeek = new Date(plan.date).toLocaleDateString('en-US', { weekday: 'long' });
 
   return (
-    <Card>
+    <Card id="printable-substitution">
       <CardHeader>
         <div className="flex flex-wrap justify-between items-start gap-4">
             <div>
@@ -45,7 +62,7 @@ export default function SubstitutionPlanDisplay({ plan, teachers, pdfHeader = ""
         </div>
       </CardHeader>
       <CardContent>
-         <div id="printable" className="printable-area">
+         <div className="printable-area">
              <div className="print-header hidden text-center mb-4">
                 {pdfHeader && pdfHeader.trim().split('\n').map((line, index) => <p key={index} className={cn(index === 0 && 'font-bold')}>{line}</p>)}
                 <h2 className="text-lg font-bold mt-2">Substitution Plan - {new Date(plan.date).toLocaleDateString('en-GB')}</h2>

@@ -141,7 +141,7 @@ export default function Home() {
     <div className="flex-1 flex flex-col">
         <div className="p-4 md:p-6">
             <PageHeader 
-                title="Admin Dashboard"
+                title="Dashboard"
                 description="Generate, view, and manage your school's class routine."
             />
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -153,12 +153,12 @@ export default function Home() {
                     </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="flex flex-col sm:flex-row flex-wrap gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <AlertDialog>
                             <AlertDialogTrigger asChild>
-                                <Button size="lg" disabled={isLoading} className="flex-grow">
+                                <Button size="lg" disabled={isLoading}>
                                 {isLoading ? (<Loader2 className="mr-2 h-5 w-5 animate-spin" />) : (<Wand2 className="mr-2 h-5 w-5" />)}
-                                Generate New Routine
+                                Generate Routine
                                 </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
@@ -176,9 +176,9 @@ export default function Home() {
                             </AlertDialog>
                             <AlertDialog>
                             <AlertDialogTrigger asChild>
-                                <Button size="lg" variant="outline" disabled={isLoading} className="flex-grow">
+                                <Button size="lg" variant="outline" disabled={isLoading}>
                                 <PlusSquare className="mr-2 h-5 w-5" />
-                                Create New Blank Routine
+                                Create Blank Routine
                                 </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
@@ -202,57 +202,55 @@ export default function Home() {
                     <Card>
                         <CardHeader>
                             <CardTitle>Manage Active Routine</CardTitle>
-                            <CardDescription>Select, rename, or delete a version. Your last 5 are saved.</CardDescription>
+                            <CardDescription>Select a routine version to view, edit, or download. Your last 5 versions are saved.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="flex flex-col sm:flex-row gap-2">
-                                <div className="flex-grow">
-                                        {routineToRename && routineToRename.id === activeRoutine.id ? (
-                                        <div className="flex gap-2">
-                                            <Input value={renameValue} onChange={(e) => setRenameValue(e.target.value)} />
-                                            <Button size="icon" onClick={confirmRename}><Check className="h-4 w-4" /></Button>
-                                            <Button size="icon" variant="ghost" onClick={cancelRename}><X className="h-4 w-4" /></Button>
-                                        </div>
-                                        ) : (
-                                        <Select value={activeRoutine.id || ""} onValueChange={setActiveRoutineId}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select a routine version..." />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {routineHistory.map(version => (
-                                                    <SelectItem key={version.id} value={version.id}>
-                                                        {version.name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        )}
+                            <div className="space-y-4">
+                                {routineToRename && routineToRename.id === activeRoutine.id ? (
+                                <div className="flex gap-2">
+                                    <Input value={renameValue} onChange={(e) => setRenameValue(e.target.value)} />
+                                    <Button size="icon" onClick={confirmRename}><Check className="h-4 w-4" /></Button>
+                                    <Button size="icon" variant="ghost" onClick={cancelRename}><X className="h-4 w-4" /></Button>
                                 </div>
+                                ) : (
+                                <Select value={activeRoutine.id || ""} onValueChange={setActiveRoutineId}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a routine version..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {routineHistory.map(version => (
+                                            <SelectItem key={version.id} value={version.id}>
+                                                {version.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                )}
                                 {activeRoutine && !routineToRename && (
-                                        <div className="flex gap-2 shrink-0 mt-2 sm:mt-0">
-                                        <Button variant="outline" size="sm" onClick={() => startRename(activeRoutine)} className="flex-grow">
-                                            <Edit className="mr-2 h-4 w-4" /> Rename
-                                        </Button>
-                                            <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                                <Button variant="destructive" size="sm" disabled={routineHistory.length <= 1} className="flex-grow">
-                                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                                </Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                    <AlertDialogTitle>Delete Routine Version?</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                        Are you sure you want to delete "{activeRoutine.name}"? This action cannot be undone.
-                                                    </AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => deleteRoutineVersion(activeRoutine.id)}>Delete</AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                            </AlertDialog>
-                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    <Button variant="outline" onClick={() => startRename(activeRoutine)}>
+                                        <Edit className="mr-2 h-4 w-4" /> Rename
+                                    </Button>
+                                        <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="destructive" disabled={routineHistory.length <= 1}>
+                                                <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Delete Routine Version?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    Are you sure you want to delete "{activeRoutine.name}"? This action cannot be undone.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => deleteRoutineVersion(activeRoutine.id)}>Delete</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                        </AlertDialog>
+                                </div>
                                 )}
                             </div>
                         </CardContent>
@@ -321,3 +319,5 @@ export default function Home() {
     </>
   );
 }
+
+    

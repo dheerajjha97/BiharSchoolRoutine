@@ -62,11 +62,27 @@ const getGradeFromClassName = (className: string): string | null => {
 
 const categorizeClasses = (classes: string[]) => {
     const sorted = [...classes].sort(sortClasses);
-    const secondary = sorted.filter(c => ['9', '10'].includes(getGradeFromClassName(c) || ''));
-    const seniorSecondary = sorted.filter(c => ['11', '12'].includes(getGradeFromClassName(c) || ''));
-    return { 
-        secondaryClasses: secondary, 
-        seniorSecondaryClasses: seniorSecondary 
+    const primary = sorted.filter(c => {
+        const grade = parseInt(getGradeFromClassName(c) || '0', 10);
+        return grade >= 1 && grade <= 5;
+    });
+    const middle = sorted.filter(c => {
+        const grade = parseInt(getGradeFromClassName(c) || '0', 10);
+        return grade >= 6 && grade <= 8;
+    });
+    const secondary = sorted.filter(c => {
+        const grade = parseInt(getGradeFromClassName(c) || '0', 10);
+        return grade >= 9 && grade <= 10;
+    });
+    const seniorSecondary = sorted.filter(c => {
+        const grade = parseInt(getGradeFromClassName(c) || '0', 10);
+        return grade >= 11 && grade <= 12;
+    });
+    return {
+        primaryClasses: primary,
+        middleClasses: middle,
+        secondaryClasses: secondary,
+        seniorSecondaryClasses: seniorSecondary
     };
 };
 
@@ -90,7 +106,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   const [currentCell, setCurrentCell] = React.useState<CurrentCell | null>(null);
   const [cellData, setCellData] = React.useState<CellData>({ subject: "", className: "", teacher: "" });
   
-  const { secondaryClasses, seniorSecondaryClasses } = useMemo(() => categorizeClasses(classes), [classes]);
+  const { primaryClasses, middleClasses, secondaryClasses, seniorSecondaryClasses } = useMemo(() => categorizeClasses(classes), [classes]);
   const teacherNameMap = useMemo(() => new Map(teachers.map(t => [t.id, t.name])), [teachers]);
   
   const getTeacherName = (id: string) => teacherNameMap.get(id) || id;
@@ -433,8 +449,10 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
         </CardHeader>
         <CardContent className="p-0">
           <div className="p-4 md:p-6 space-y-6">
-                {renderScheduleTable("Secondary", secondaryClasses, "routine-table-secondary")}
-                {renderScheduleTable("Senior Secondary", seniorSecondaryClasses, "routine-table-senior-secondary")}
+                {renderScheduleTable("Primary (1-5)", primaryClasses, "routine-table-primary")}
+                {renderScheduleTable("Middle (6-8)", middleClasses, "routine-table-middle")}
+                {renderScheduleTable("Secondary (9-10)", secondaryClasses, "routine-table-secondary")}
+                {renderScheduleTable("Senior Secondary (11-12)", seniorSecondaryClasses, "routine-table-senior-secondary")}
             </div>
         </CardContent>
       </Card>

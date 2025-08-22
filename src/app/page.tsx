@@ -153,7 +153,7 @@ export default function Home() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex flex-col sm:flex-row flex-wrap gap-4">
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button size="lg" disabled={isLoading} className="flex-grow">
@@ -319,3 +319,5 @@ export default function Home() {
     </>
   );
 }
+
+    

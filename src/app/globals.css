@@ -62,19 +62,24 @@
 }
 
 @media print {
-    body * {
-        visibility: hidden;
+    body {
+        background-color: white !important;
+        color: black !important;
     }
-    #printable, #printable * {
-        visibility: visible;
+    .no-print, .no-print * {
+        display: none !important;
     }
     #printable {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
+        display: block !important;
     }
-    .no-print {
-        display: none;
+    .printable-area {
+        break-inside: avoid;
+    }
+    .print-header {
+        display: block !important;
+    }
+    @page {
+        size: A4;
+        margin: 0.5in;
     }
 }

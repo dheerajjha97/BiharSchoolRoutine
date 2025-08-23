@@ -2,15 +2,14 @@
 "use client";
 
 import { useContext, useMemo, useState } from "react";
-import { useRouter } from 'next/navigation';
 import { AppStateContext } from "@/context/app-state-provider";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Wand2, PlusSquare, Trash2, Edit, Check, X, School } from "lucide-react";
+import { Loader2, Wand2, PlusSquare, Trash2, Edit, Check, X } from "lucide-react";
 import RoutineDisplay from "@/components/routine/routine-display";
 import { generateScheduleLogic } from "@/lib/schedule-generator";
-import type { GenerateScheduleLogicInput, ScheduleEntry, RoutineVersion } from "@/types";
+import type { GenerateScheduleLogicInput, RoutineVersion } from "@/types";
 import PageHeader from "@/components/app/page-header";
 import TeacherLoad from "@/components/routine/teacher-load";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -20,7 +19,6 @@ import TeacherRoutineDisplay from "@/components/routine/teacher-routine-display"
 
 
 export default function Home() {
-  const router = useRouter();
   const { 
       appState, 
       isLoading, 
@@ -87,7 +85,7 @@ export default function Home() {
         throw new Error("Please define classes and time slots in Data Management first.");
       }
 
-      const blankSchedule: ScheduleEntry[] = [];
+      const blankSchedule = [];
       const instructionalSlots = timeSlots.filter(
         slot => slot !== config.prayerTimeSlot && slot !== config.lunchTimeSlot
       );
@@ -138,10 +136,9 @@ export default function Home() {
   const hasHistory = routineHistory && routineHistory.length > 0;
 
   const renderAdminDashboard = () => (
-    // Outer container restricted to screen width to prevent body scrolling
-    <div className="w-full max-w-full overflow-x-hidden">
+    <div className="flex flex-col h-full w-full overflow-x-hidden">
       {/* ===== Top Section (Non-scrolling) ===== */}
-      <div className="p-4 md:p-6 w-full">
+      <div className="p-4 md:p-6">
         <PageHeader 
           title="Dashboard"
           description="Generate, view, and manage your school's class routine."
@@ -158,7 +155,7 @@ export default function Home() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button size="lg" disabled={isLoading} className="w-full sm:w-auto">
+                    <Button size="lg" disabled={isLoading} className="w-full">
                       {isLoading ? (<Loader2 className="mr-2 h-5 w-5 animate-spin" />) : (<Wand2 className="mr-2 h-5 w-5" />)}
                       Generate Routine
                     </Button>
@@ -178,7 +175,7 @@ export default function Home() {
                 </AlertDialog>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button size="lg" variant="outline" disabled={isLoading} className="w-full sm:w-auto">
+                    <Button size="lg" variant="outline" disabled={isLoading} className="w-full">
                       <PlusSquare className="mr-2 h-5 w-5" />
                       Create Blank Routine
                     </Button>
@@ -324,3 +321,4 @@ export default function Home() {
     </>
   );
 }
+ 

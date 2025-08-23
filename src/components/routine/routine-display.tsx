@@ -343,7 +343,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                     {pdfHeader && pdfHeader.trim().split('\n').map((line, index) => <p key={index} className={cn(index === 0 && 'font-bold')}>{line}</p>)}
                     <h2 className="text-lg font-bold mt-2">Class Routine</h2>
                 </div>
-                <div className="border rounded-lg bg-card">
+                <div className="border rounded-lg bg-card overflow-x-auto">
                 <table className="min-w-full w-full border-collapse">
                     <thead className="bg-card">
                     <tr>

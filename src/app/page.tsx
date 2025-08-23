@@ -259,7 +259,7 @@ export default function Home() {
             </div>
         </div>
 
-        <div className="flex-1 p-4 md:p-6 space-y-6 w-full overflow-x-auto">
+        <div className="flex-1 p-4 md:p-6 space-y-6">
             <RoutineDisplay 
                 scheduleData={activeRoutine?.schedule || null}
                 onScheduleChange={(newSchedule) => {

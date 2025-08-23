@@ -446,7 +446,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                 </div>
             </div>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-0 md:p-0">
           <div className="p-4 md:p-6 space-y-6">
                 {renderScheduleTable("Primary (1-5)", primaryClasses, "routine-table-primary")}
                 {renderScheduleTable("Middle (6-8)", middleClasses, "routine-table-middle")}
@@ -499,6 +499,8 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 };
 
 export default RoutineDisplay;
+
+    
 
     
 

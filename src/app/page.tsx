@@ -139,7 +139,7 @@ export default function Home() {
 
   const renderAdminDashboard = () => (
     <div className="flex-1 flex flex-col h-full">
-        <div className="p-4 md:p-6">
+        <div className="p-4 md:p-6 w-full">
             <PageHeader 
                 title="Dashboard"
                 description="Generate, view, and manage your school's class routine."
@@ -259,7 +259,7 @@ export default function Home() {
             </div>
         </div>
 
-        <div className="flex-1 p-4 md:p-6 space-y-6">
+        <div className="flex-1 p-4 md:p-6 space-y-6 w-full overflow-x-auto">
             <RoutineDisplay 
                 scheduleData={activeRoutine?.schedule || null}
                 onScheduleChange={(newSchedule) => {
@@ -319,5 +319,3 @@ export default function Home() {
     </>
   );
 }
-
-    

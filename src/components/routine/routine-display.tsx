@@ -343,12 +343,12 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                     {pdfHeader && pdfHeader.trim().split('\n').map((line, index) => <p key={index} className={cn(index === 0 && 'font-bold')}>{line}</p>)}
                     <h2 className="text-lg font-bold mt-2">Class Routine</h2>
                 </div>
-                <div className="border rounded-lg bg-card overflow-x-auto">
+                <div className="border rounded-lg bg-card">
                 <table className="min-w-full w-full border-collapse">
                     <thead className="bg-card">
                     <tr>
-                        <th className="font-bold min-w-[100px] sticky left-0 bg-card z-20 p-2 text-left">Day</th>
-                        <th className="font-bold min-w-[120px] sticky left-[100px] bg-card z-20 p-2 text-left">Class</th>
+                        <th className="font-bold w-[100px] min-w-[100px] sticky left-0 bg-card z-20 p-2 text-left">Day</th>
+                        <th className="font-bold w-[120px] min-w-[120px] sticky left-[100px] bg-card z-20 p-2 text-left">Class</th>
                         {timeSlots.map(slot => (
                         <th key={slot} className="text-center font-bold text-xs min-w-[90px] p-1 align-bottom">
                             <div>{slot}</div>
@@ -451,3 +451,5 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 };
 
 export default RoutineDisplay;
+
+    

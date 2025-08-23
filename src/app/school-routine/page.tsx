@@ -195,3 +195,5 @@ export default function SchoolRoutinePage() {
         </div>
     );
 }
+
+    

@@ -322,8 +322,8 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   }
 
   return (
-    <div className="print-section">
-      <Card id="printable-routine">
+    <>
+      <Card className="print-section" id="printable-routine">
         <CardHeader className="no-print">
             <div className="flex flex-wrap justify-between items-start gap-4">
                 <div>
@@ -446,7 +446,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
           </DialogContent>
         </Dialog>
       )}
-    </div>
+    </>
   );
 };
 

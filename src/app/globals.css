@@ -67,34 +67,36 @@
         color: black !important;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
-        height: auto;
     }
     .no-print, .no-print * {
         display: none !important;
     }
 
-    body > div > .lg\:grid-cols-\[280px_1fr\] > .flex.flex-col > main {
-        display: block !important;
-        padding: 0 !important;
-    }
-    
-    .print-section {
-        display: none;
-        page-break-after: always;
-    }
-    
-    main .print-section {
-        display: block;
+    /* Hide everything in the body by default */
+    body * {
+        visibility: hidden;
     }
 
+    /* Make only the printable area and its children visible */
+    .printable-area, .printable-area * {
+        visibility: visible;
+    }
+
+    /* Position the printable area at the top of the page */
     .printable-area {
-        display: block;
-        padding: 0;
-        margin: 0;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
     }
 
     .print-header {
       display: block !important;
+      visibility: visible;
+    }
+
+    .print-section {
+        page-break-after: always;
     }
     
     @page {

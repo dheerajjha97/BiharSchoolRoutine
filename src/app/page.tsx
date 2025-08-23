@@ -138,7 +138,7 @@ export default function Home() {
   const hasHistory = routineHistory && routineHistory.length > 0;
 
   const renderAdminDashboard = () => (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col h-full">
         <div className="p-4 md:p-6">
             <PageHeader 
                 title="Dashboard"
@@ -278,12 +278,12 @@ export default function Home() {
                 workingDays={appState.config.workingDays}
                 />
                 
-                <TeacherLoad 
-                    teacherLoad={appState.teacherLoad}
-                    teachers={teachers}
-                    pdfHeader={appState.schoolInfo.pdfHeader}
-                    workingDays={appState.config.workingDays}
-                />
+            <TeacherLoad 
+                teacherLoad={appState.teacherLoad}
+                teachers={teachers}
+                pdfHeader={appState.schoolInfo.pdfHeader}
+                workingDays={appState.config.workingDays}
+            />
         </div>
     </div>
   );
@@ -319,5 +319,3 @@ export default function Home() {
     </>
   );
 }
-
-    

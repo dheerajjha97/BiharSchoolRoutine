@@ -53,38 +53,6 @@ type CurrentCell = {
     entry: ScheduleEntry | null;
 };
 
-const getGradeFromClassName = (className: string): string | null => {
-    if (typeof className !== 'string') return null;
-    const match = className.match(/\d+/);
-    return match ? match[0] : null;
-};
-
-const categorizeClasses = (classes: string[]) => {
-    const sorted = [...classes].sort(sortClasses);
-    const primary = sorted.filter(c => {
-        const grade = parseInt(getGradeFromClassName(c) || '0', 10);
-        return grade >= 1 && grade <= 5;
-    });
-    const middle = sorted.filter(c => {
-        const grade = parseInt(getGradeFromClassName(c) || '0', 10);
-        return grade >= 6 && grade <= 8;
-    });
-    const secondary = sorted.filter(c => {
-        const grade = parseInt(getGradeFromClassName(c) || '0', 10);
-        return grade >= 9 && grade <= 10;
-    });
-    const seniorSecondary = sorted.filter(c => {
-        const grade = parseInt(getGradeFromClassName(c) || '0', 10);
-        return grade >= 11 && grade <= 12;
-    });
-    return {
-        primaryClasses: primary,
-        middleClasses: middle,
-        secondaryClasses: secondary,
-        seniorSecondaryClasses: seniorSecondary
-    };
-};
-
 const toRoman = (num: number): string => {
     if (num < 1) return "";
     const romanMap: Record<number, string> = { 10: 'X', 9: 'IX', 5: 'V', 4: 'IV', 1: 'I' };
@@ -105,7 +73,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   const [currentCell, setCurrentCell] = React.useState<CurrentCell | null>(null);
   const [cellData, setCellData] = React.useState<CellData>({ subject: "", className: "", teacher: "" });
   
-  const { primaryClasses, middleClasses, secondaryClasses, seniorSecondaryClasses } = useMemo(() => categorizeClasses(classes), [classes]);
+  const sortedClasses = useMemo(() => [...classes].sort(sortClasses), [classes]);
   const teacherNameMap = useMemo(() => new Map(teachers.map(t => [t.id, t.name])), [teachers]);
   
   const getTeacherName = (id: string) => teacherNameMap.get(id) || id;
@@ -336,83 +304,6 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
         </div>
     );
   };
-
-  const renderScheduleTable = (title: string, displayClasses: string[], tableId: string) => {
-    if (displayClasses.length === 0) return null;
-  
-    return (
-      <div id={tableId} className="print-section">
-        <div className="flex justify-between items-center mb-3 px-6 md:px-0 no-print">
-          <h3 className="text-xl font-semibold">{title}</h3>
-        </div>
-         <div className="print-header hidden text-center mb-4">
-            {pdfHeader && pdfHeader.trim().split('\n').map((line, index) => <p key={index} className={cn(index === 0 && 'font-bold')}>{line}</p>)}
-            <h2 className="text-lg font-bold mt-2">{title} Routine</h2>
-        </div>
-        <div className="border rounded-lg bg-card overflow-x-auto">
-          <table className="min-w-full w-full border-collapse">
-            <thead className="bg-card">
-              <tr>
-                <th className="font-bold min-w-[100px] sticky left-0 bg-card z-20 p-2 text-left">Day</th>
-                <th className="font-bold min-w-[120px] sticky left-[100px] bg-card z-20 p-2 text-left">Class</th>
-                {timeSlots.map(slot => (
-                  <th key={slot} className="text-center font-bold text-xs min-w-[90px] p-1 align-bottom">
-                      <div>{slot}</div>
-                      <div className="font-normal text-muted-foreground">{instructionalSlotMap[slot] ? toRoman(instructionalSlotMap[slot]) : '-'}</div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {workingDays.map((day) => (
-                <React.Fragment key={day}>
-                  {displayClasses.map((className, classIndex) => (
-                    <tr key={`${day}-${className}`} className="border-t">
-                      {classIndex === 0 && (
-                        <td className="font-semibold align-top sticky left-0 bg-card z-10 p-2" rowSpan={displayClasses.length}>
-                          <div className="flex items-center gap-2">
-                             <span>{day}</span>
-                              {isEditable && (
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-6 w-6 no-print">
-                                      <Copy className="h-3 w-3" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent>
-                                      <DropdownMenuSub>
-                                        <DropdownMenuSubTrigger>Paste to...</DropdownMenuSubTrigger>
-                                        <DropdownMenuPortal>
-                                          <DropdownMenuSubContent>
-                                            {workingDays.filter(d => d !== day).map(destinationDay => (
-                                              <DropdownMenuItem key={destinationDay} onClick={() => handleCopyDay(day, destinationDay)}>
-                                                {destinationDay}
-                                              </DropdownMenuItem>
-                                            ))}
-                                          </DropdownMenuSubContent>
-                                        </DropdownMenuPortal>
-                                      </DropdownMenuSub>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              )}
-                          </div>
-                        </td>
-                      )}
-                      <td className="font-medium align-top sticky left-[100px] bg-card z-10 p-2">{className}</td>
-                      {timeSlots.map(timeSlot => (
-                        <td key={`${day}-${className}-${timeSlot}`} className="p-0 align-top border-l">{renderCellContent(day, className, timeSlot)}</td>
-                      ))}
-                    </tr>
-                  ))}
-                  {day !== workingDays[workingDays.length - 1] && <tr className="bg-background hover:bg-background h-2"><td colSpan={timeSlots.length + 2} className="p-1"></td></tr>}
-                </React.Fragment>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
-  };
   
   if (!scheduleData || !scheduleData.schedule || scheduleData.schedule.length === 0) {
     return (
@@ -431,8 +322,8 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   }
 
   return (
-    <>
-      <Card>
+    <div className="print-section">
+      <Card id="printable-routine">
         <CardHeader className="no-print">
             <div className="flex flex-wrap justify-between items-start gap-4">
                 <div>
@@ -441,17 +332,78 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                 </div>
                  <div className="flex items-center gap-2">
                     <Button size="sm" variant="outline" onClick={() => window.print()}>
-                        <Printer className="mr-2 h-4 w-4" /> Print All
+                        <Printer className="mr-2 h-4 w-4" /> Print
                     </Button>
                 </div>
             </div>
         </CardHeader>
         <CardContent className="p-0 md:p-0">
-          <div className="p-4 md:p-6 space-y-6">
-                {renderScheduleTable("Primary (1-5)", primaryClasses, "routine-table-primary")}
-                {renderScheduleTable("Middle (6-8)", middleClasses, "routine-table-middle")}
-                {renderScheduleTable("Secondary (9-10)", secondaryClasses, "routine-table-secondary")}
-                {renderScheduleTable("Senior Secondary (11-12)", seniorSecondaryClasses, "routine-table-senior-secondary")}
+             <div className="printable-area">
+                <div className="print-header hidden text-center mb-4">
+                    {pdfHeader && pdfHeader.trim().split('\n').map((line, index) => <p key={index} className={cn(index === 0 && 'font-bold')}>{line}</p>)}
+                    <h2 className="text-lg font-bold mt-2">Class Routine</h2>
+                </div>
+                <div className="border rounded-lg bg-card overflow-x-auto">
+                <table className="min-w-full w-full border-collapse">
+                    <thead className="bg-card">
+                    <tr>
+                        <th className="font-bold min-w-[100px] sticky left-0 bg-card z-20 p-2 text-left">Day</th>
+                        <th className="font-bold min-w-[120px] sticky left-[100px] bg-card z-20 p-2 text-left">Class</th>
+                        {timeSlots.map(slot => (
+                        <th key={slot} className="text-center font-bold text-xs min-w-[90px] p-1 align-bottom">
+                            <div>{slot}</div>
+                            <div className="font-normal text-muted-foreground">{instructionalSlotMap[slot] ? toRoman(instructionalSlotMap[slot]) : '-'}</div>
+                        </th>
+                        ))}
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {workingDays.map((day) => (
+                        <React.Fragment key={day}>
+                        {sortedClasses.map((className, classIndex) => (
+                            <tr key={`${day}-${className}`} className="border-t">
+                            {classIndex === 0 && (
+                                <td className="font-semibold align-top sticky left-0 bg-card z-10 p-2" rowSpan={sortedClasses.length}>
+                                <div className="flex items-center gap-2">
+                                    <span>{day}</span>
+                                    {isEditable && (
+                                        <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-6 w-6 no-print">
+                                            <Copy className="h-3 w-3" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent>
+                                            <DropdownMenuSub>
+                                                <DropdownMenuSubTrigger>Paste to...</DropdownMenuSubTrigger>
+                                                <DropdownMenuPortal>
+                                                <DropdownMenuSubContent>
+                                                    {workingDays.filter(d => d !== day).map(destinationDay => (
+                                                    <DropdownMenuItem key={destinationDay} onClick={() => handleCopyDay(day, destinationDay)}>
+                                                        {destinationDay}
+                                                    </DropdownMenuItem>
+                                                    ))}
+                                                </DropdownMenuSubContent>
+                                                </DropdownMenuPortal>
+                                            </DropdownMenuSub>
+                                        </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    )}
+                                </div>
+                                </td>
+                            )}
+                            <td className="font-medium align-top sticky left-[100px] bg-card z-10 p-2">{className}</td>
+                            {timeSlots.map(timeSlot => (
+                                <td key={`${day}-${className}-${timeSlot}`} className="p-0 align-top border-l">{renderCellContent(day, className, timeSlot)}</td>
+                            ))}
+                            </tr>
+                        ))}
+                        {day !== workingDays[workingDays.length - 1] && <tr className="bg-background hover:bg-background h-2"><td colSpan={timeSlots.length + 2} className="p-1"></td></tr>}
+                        </React.Fragment>
+                    ))}
+                    </tbody>
+                </table>
+                </div>
             </div>
         </CardContent>
       </Card>
@@ -494,14 +446,8 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
           </DialogContent>
         </Dialog>
       )}
-    </>
+    </div>
   );
 };
 
 export default RoutineDisplay;
-
-    
-
-    
-
-    

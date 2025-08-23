@@ -28,7 +28,7 @@ export default function LoginPage() {
 
     useEffect(() => {
         if (user) {
-            router.replace('/');
+            router.replace('/school-routine');
         }
     }, [user, router]);
     

@@ -12,7 +12,6 @@ import { Separator } from "@/components/ui/separator";
 import { useTheme } from "next-themes";
 import {
   Menu,
-  LayoutDashboard,
   Database,
   SlidersHorizontal,
   LogOut,
@@ -31,7 +30,6 @@ import { cn } from "@/lib/utils";
 import { Logo } from "../icons";
 
 const adminNavItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/school-routine", label: "Final Routine", icon: School },
   { href: "/data", label: "Data", icon: Database },
   { href: "/adjustments", label: "Adjustments", icon: Replace },
@@ -40,7 +38,6 @@ const adminNavItems = [
 ];
 
 const teacherNavItems = [
-    { href: "/", label: "My Dashboard", icon: UserCheck },
     { href: "/school-routine", label: "Final Routine", icon: School },
     { href: "/holidays", label: "Holidays", icon: NotebookText },
 ];

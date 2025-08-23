@@ -138,7 +138,8 @@ export default function Home() {
   const hasHistory = routineHistory && routineHistory.length > 0;
 
   const renderAdminDashboard = () => (
-    <>
+    // Outer container restricted to screen width to prevent body scrolling
+    <div className="w-full max-w-full overflow-x-hidden">
       {/* ===== Top Section (Non-scrolling) ===== */}
       <div className="p-4 md:p-6 w-full">
         <PageHeader 
@@ -157,7 +158,7 @@ export default function Home() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button size="lg" disabled={isLoading}>
+                    <Button size="lg" disabled={isLoading} className="w-full sm:w-auto">
                       {isLoading ? (<Loader2 className="mr-2 h-5 w-5 animate-spin" />) : (<Wand2 className="mr-2 h-5 w-5" />)}
                       Generate Routine
                     </Button>
@@ -177,7 +178,7 @@ export default function Home() {
                 </AlertDialog>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button size="lg" variant="outline" disabled={isLoading}>
+                    <Button size="lg" variant="outline" disabled={isLoading} className="w-full sm:w-auto">
                       <PlusSquare className="mr-2 h-5 w-5" />
                       Create Blank Routine
                     </Button>
@@ -260,7 +261,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ===== Bottom Section (Horizontally Scrolling) ===== */}
+      {/* ===== Bottom Section (Horizontally Scrolling Wrapper for Tables) ===== */}
       <div className="w-full overflow-x-auto">
         <div className="p-4 md:p-6 space-y-6">
           <RoutineDisplay 
@@ -289,7 +290,7 @@ export default function Home() {
           />
         </div>
       </div>
-    </>
+    </div>
   );
 
   const renderTeacherDashboard = () => {

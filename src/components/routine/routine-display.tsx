@@ -344,65 +344,65 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                     <h2 className="text-lg font-bold mt-2">Class Routine</h2>
                 </div>
                 <div className="border rounded-lg bg-card">
-                <table className="min-w-full w-full border-collapse">
-                    <thead className="bg-card">
-                    <tr>
-                        <th className="font-bold w-[100px] min-w-[100px] sticky left-0 bg-card z-20 p-2 text-left">Day</th>
-                        <th className="font-bold w-[120px] min-w-[120px] sticky left-[100px] bg-card z-20 p-2 text-left">Class</th>
-                        {timeSlots.map(slot => (
-                        <th key={slot} className="text-center font-bold text-xs min-w-[90px] p-1 align-bottom">
-                            <div>{slot}</div>
-                            <div className="font-normal text-muted-foreground">{instructionalSlotMap[slot] ? toRoman(instructionalSlotMap[slot]) : '-'}</div>
-                        </th>
-                        ))}
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {workingDays.map((day) => (
-                        <React.Fragment key={day}>
-                        {sortedClasses.map((className, classIndex) => (
-                            <tr key={`${day}-${className}`} className="border-t">
-                            {classIndex === 0 && (
-                                <td className="font-semibold align-top sticky left-0 bg-card z-10 p-2" rowSpan={sortedClasses.length}>
-                                <div className="flex items-center gap-2">
-                                    <span>{day}</span>
-                                    {isEditable && (
-                                        <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-6 w-6 no-print">
-                                            <Copy className="h-3 w-3" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent>
-                                            <DropdownMenuSub>
-                                                <DropdownMenuSubTrigger>Paste to...</DropdownMenuSubTrigger>
-                                                <DropdownMenuPortal>
-                                                <DropdownMenuSubContent>
-                                                    {workingDays.filter(d => d !== day).map(destinationDay => (
-                                                    <DropdownMenuItem key={destinationDay} onClick={() => handleCopyDay(day, destinationDay)}>
-                                                        {destinationDay}
-                                                    </DropdownMenuItem>
-                                                    ))}
-                                                </DropdownMenuSubContent>
-                                                </DropdownMenuPortal>
-                                            </DropdownMenuSub>
-                                        </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    )}
-                                </div>
-                                </td>
-                            )}
-                            <td className="font-medium align-top sticky left-[100px] bg-card z-10 p-2">{className}</td>
-                            {timeSlots.map(timeSlot => (
-                                <td key={`${day}-${className}-${timeSlot}`} className="p-0 align-top border-l">{renderCellContent(day, className, timeSlot)}</td>
-                            ))}
-                            </tr>
-                        ))}
-                        {day !== workingDays[workingDays.length - 1] && <tr className="bg-background hover:bg-background h-2"><td colSpan={timeSlots.length + 2} className="p-1"></td></tr>}
-                        </React.Fragment>
-                    ))}
-                    </tbody>
-                </table>
+                  <table className="min-w-full w-full border-collapse">
+                      <thead className="bg-card">
+                      <tr>
+                          <th className="font-bold w-[100px] min-w-[100px] sticky left-0 bg-card z-20 p-2 text-left">Day</th>
+                          <th className="font-bold w-[120px] min-w-[120px] sticky left-[100px] bg-card z-20 p-2 text-left">Class</th>
+                          {timeSlots.map(slot => (
+                          <th key={slot} className="text-center font-bold text-xs min-w-[90px] p-1 align-bottom">
+                              <div>{slot}</div>
+                              <div className="font-normal text-muted-foreground">{instructionalSlotMap[slot] ? toRoman(instructionalSlotMap[slot]) : '-'}</div>
+                          </th>
+                          ))}
+                      </tr>
+                      </thead>
+                      <tbody>
+                      {workingDays.map((day) => (
+                          <React.Fragment key={day}>
+                          {sortedClasses.map((className, classIndex) => (
+                              <tr key={`${day}-${className}`} className="border-t">
+                              {classIndex === 0 && (
+                                  <td className="font-semibold align-top sticky left-0 bg-card z-10 p-2" rowSpan={sortedClasses.length}>
+                                  <div className="flex items-center gap-2">
+                                      <span>{day}</span>
+                                      {isEditable && (
+                                          <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
+                                              <Button variant="ghost" size="icon" className="h-6 w-6 no-print">
+                                              <Copy className="h-3 w-3" />
+                                              </Button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent>
+                                              <DropdownMenuSub>
+                                                  <DropdownMenuSubTrigger>Paste to...</DropdownMenuSubTrigger>
+                                                  <DropdownMenuPortal>
+                                                  <DropdownMenuSubContent>
+                                                      {workingDays.filter(d => d !== day).map(destinationDay => (
+                                                      <DropdownMenuItem key={destinationDay} onClick={() => handleCopyDay(day, destinationDay)}>
+                                                          {destinationDay}
+                                                      </DropdownMenuItem>
+                                                      ))}
+                                                  </DropdownMenuSubContent>
+                                                  </DropdownMenuPortal>
+                                              </DropdownMenuSub>
+                                          </DropdownMenuContent>
+                                          </DropdownMenu>
+                                      )}
+                                  </div>
+                                  </td>
+                              )}
+                              <td className="font-medium align-top sticky left-[100px] bg-card z-10 p-2">{className}</td>
+                              {timeSlots.map(timeSlot => (
+                                  <td key={`${day}-${className}-${timeSlot}`} className="p-0 align-top border-l">{renderCellContent(day, className, timeSlot)}</td>
+                              ))}
+                              </tr>
+                          ))}
+                          {day !== workingDays[workingDays.length - 1] && <tr className="bg-background hover:bg-background h-2"><td colSpan={timeSlots.length + 2} className="p-1"></td></tr>}
+                          </React.Fragment>
+                      ))}
+                      </tbody>
+                  </table>
                 </div>
             </div>
         </CardContent>

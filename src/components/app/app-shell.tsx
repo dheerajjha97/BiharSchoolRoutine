@@ -25,11 +25,13 @@ import {
   School,
   Settings,
   Heart,
+  LayoutDashboard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "../icons";
 
 const adminNavItems = [
+  { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/school-routine", label: "Final Routine", icon: School },
   { href: "/data", label: "Data", icon: Database },
   { href: "/adjustments", label: "Adjustments", icon: Replace },

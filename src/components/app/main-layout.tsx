@@ -20,12 +20,11 @@ function ConditionalLayout({ children }: { children: React.ReactNode }) {
         }
 
         const isPublicPath = publicPaths.includes(pathname);
-        const isRootPath = pathname === '/';
 
         if (!user && !isPublicPath) {
             router.replace('/login');
-        } else if (user && (isPublicPath || isRootPath)) {
-            router.replace('/school-routine');
+        } else if (user && isPublicPath) {
+            router.replace('/');
         }
     }, [user, isAuthLoading, pathname, router]);
 
@@ -39,7 +38,7 @@ function ConditionalLayout({ children }: { children: React.ReactNode }) {
     }
     
     // If we are on a public path (like /login), don't wrap it in the AppShell
-    if (publicPaths.includes(pathname) || pathname === '/') {
+    if (publicPaths.includes(pathname)) {
         return <div className="h-screen">{children}</div>;
     }
 

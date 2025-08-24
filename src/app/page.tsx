@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { generateScheduleLogic } from "@/lib/schedule-generator";
 import { useToast } from "@/hooks/use-toast";
-import { BrainCircuit, FilePlus, Trash2, Pencil } from "lucide-react";
+import { BrainCircuit, FilePlus, Trash2, Pencil, MoreVertical, Loader2, Wand2, PlusSquare, Edit, Check, X } from "lucide-react";
 import type { GenerateScheduleOutput, RoutineVersion } from "@/types";
 import {
   Dialog,
@@ -44,6 +44,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 
 const RoutineDisplayWrapper = () => {
     const { appState, updateRoutineVersion } = useContext(AppStateContext);
@@ -86,21 +88,19 @@ const RoutineDisplayWrapper = () => {
     }
 
     return (
-        <>
-            <RoutineDisplay
-                scheduleData={activeRoutine.schedule}
-                timeSlots={timeSlots}
-                classes={classes}
-                subjects={subjects}
-                teachers={teachers}
-                teacherSubjects={teacherSubjects}
-                onScheduleChange={handleScheduleChange}
-                dailyPeriodQuota={dailyPeriodQuota}
-                pdfHeader={pdfHeader}
-                isEditable={true}
-                workingDays={workingDays}
-            />
-        </>
+        <RoutineDisplay
+            scheduleData={activeRoutine.schedule}
+            timeSlots={timeSlots}
+            classes={classes}
+            subjects={subjects}
+            teachers={teachers}
+            teacherSubjects={teacherSubjects}
+            onScheduleChange={handleScheduleChange}
+            dailyPeriodQuota={dailyPeriodQuota}
+            pdfHeader={pdfHeader}
+            isEditable={true}
+            workingDays={workingDays}
+        />
     );
 };
 
@@ -163,19 +163,24 @@ export default function Home() {
     addRoutineVersion(blankSchedule, `Blank Routine - ${new Date().toLocaleString()}`);
     toast({ title: "Blank Routine Created", description: "You can now manually edit the new routine." });
   };
-
-  const handleRename = () => {
-    if (routineToRename && renameValue) {
-        updateRoutineVersion(routineToRename.id, { name: renameValue });
-        setRoutineToRename(null);
-        setRenameValue("");
-    }
-  };
-
-  const openRenameDialog = (routine: RoutineVersion) => {
+  
+  const startRename = (routine: RoutineVersion) => {
     setRoutineToRename(routine);
     setRenameValue(routine.name);
   };
+  
+  const confirmRename = () => {
+    if (routineToRename && renameValue) {
+        updateRoutineVersion(routineToRename.id, { name: renameValue });
+        cancelRename();
+    }
+  };
+
+  const cancelRename = () => {
+    setRoutineToRename(null);
+    setRenameValue("");
+  };
+
   
   const renderTeacherView = () => (
     <div className="flex-1 p-4 md:p-6 space-y-6 flex justify-center items-start">
@@ -190,189 +195,138 @@ export default function Home() {
   );
 
   const renderAdminDashboard = () => (
-    <div className="p-4 md:p-6 space-y-6">
-      <PageHeader 
-        title="Admin Dashboard"
-        description="Generate, view, and manage your school's class routine."
-      />
+    <div className="flex flex-col h-full">
+      <div className="p-4 md:p-6">
+          <PageHeader 
+            title="Admin Dashboard"
+            description="Generate, view, and manage your school's class routine."
+          />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Generate New Routine</CardTitle>
-            <CardDescription>
-              Use the generator or create a blank template. This creates a new version.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-              <div className="flex flex-col sm:flex-row gap-4">
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button size="lg" disabled={isLoading} className="flex-grow">
-                        {isLoading ? (<Loader2 className="mr-2 h-5 w-5 animate-spin" />) : (<Wand2 className="mr-2 h-5 w-5" />)}
-                        Generate New Routine
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This will create a new version of the routine, leaving your current active routine untouched in the history. Do you want to continue?
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleGenerateRoutine}>Continue</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button size="lg" variant="outline" disabled={isLoading} className="flex-grow">
-                        <PlusSquare className="mr-2 h-5 w-5" />
-                        Create New Blank Routine
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This will create a new version of the routine, leaving your current active routine untouched in the history. Do you want to continue?
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleCreateBlankRoutine}>Continue</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-              </div>
-          </CardContent>
-        </Card>
+          <Card className="max-w-xl">
+            <CardHeader>
+              <CardTitle>Generate New Routine</CardTitle>
+              <CardDescription>
+                Use the generator or create a blank template. This creates a new version.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col sm:flex-row gap-4">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button size="lg" disabled={isLoading} className="flex-grow">
+                    {isLoading ? (<Loader2 className="mr-2 h-5 w-5 animate-spin" />) : (<Wand2 className="mr-2 h-5 w-5" />)}
+                    Generate New Routine
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will create a new version of the routine, leaving your current active routine untouched in the history. Do you want to continue?
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleGenerateRoutine}>Continue</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button size="lg" variant="outline" disabled={isLoading} className="flex-grow">
+                    <PlusSquare className="mr-2 h-5 w-5" />
+                    Create New Blank Routine
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will create a new version of the routine, leaving your current active routine untouched in the history. Do you want to continue?
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleCreateBlankRoutine}>Continue</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
 
-        {hasHistory && activeRoutine && (
-            <Card>
-                <CardHeader>
-                    <CardTitle>Manage Active Routine</CardTitle>
-                    <CardDescription>Select, rename, or delete a version. Your last 5 are saved.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex flex-col sm:flex-row gap-2">
-                        <div className="flex-grow">
-                              {routineToRename && routineToRename.id === activeRoutine.id ? (
-                                <div className="flex gap-2">
-                                    <Input value={renameValue} onChange={(e) => setRenameValue(e.target.value)} />
-                                    <Button size="icon" onClick={confirmRename}><Check className="h-4 w-4" /></Button>
-                                    <Button size="icon" variant="ghost" onClick={cancelRename}><X className="h-4 w-4" /></Button>
-                                </div>
-                              ) : (
-                                <Select value={activeRoutine.id || ""} onValueChange={setActiveRoutineId}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select a routine version..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {routineHistory.map(version => (
-                                            <SelectItem key={version.id} value={version.id}>
-                                                {version.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                              )}
-                        </div>
-                        {activeRoutine && !routineToRename && (
-                              <div className="flex gap-2 shrink-0">
-                                <Button variant="outline" size="sm" onClick={() => startRename(activeRoutine)} className="flex-grow">
-                                    <Edit className="mr-2 h-4 w-4" /> Rename
-                                </Button>
-                                  <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="destructive" size="sm" disabled={routineHistory.length <= 1} className="flex-grow">
-                                            <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Delete Routine Version?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                Are you sure you want to delete "{activeRoutine.name}"? This action cannot be undone.
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => deleteRoutineVersion(activeRoutine.id)}>Delete</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                  </AlertDialog>
-                            </div>
-                        )}
-                    </div>
-                </CardContent>
-            </Card>
-        )}
+             {hasHistory && activeRoutine && (
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="lg">Manage Routines</Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Switch Active Routine</DropdownMenuLabel>
+                        <DropdownMenuRadioGroup value={activeRoutine.id} onValueChange={setActiveRoutineId}>
+                            {routineHistory.map(version => (
+                                <DropdownMenuRadioItem key={version.id} value={version.id}>
+                                    {version.name}
+                                </DropdownMenuRadioItem>
+                            ))}
+                        </DropdownMenuRadioGroup>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onSelect={() => startRename(activeRoutine)}>
+                            <Edit className="mr-2 h-4 w-4" /> Rename Active
+                        </DropdownMenuItem>
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} disabled={routineHistory.length <= 1}>
+                                    <Trash2 className="mr-2 h-4 w-4" /> Delete Active
+                                </DropdownMenuItem>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Routine Version?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Are you sure you want to delete "{activeRoutine.name}"? This action cannot be undone.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => deleteRoutineVersion(activeRoutine.id)}>Delete</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </CardContent>
+          </Card>
       </div>
 
-    
-      <RoutineDisplay 
-        scheduleData={activeRoutine?.schedule || null}
-        onScheduleChange={(newSchedule) => {
-          if (activeRoutine) {
-            updateRoutineVersion(activeRoutine.id, { schedule: { schedule: newSchedule } });
-          }
-        }}
-        isEditable={true}
-        timeSlots={appState.timeSlots} 
-        classes={appState.classes}
-        subjects={appState.subjects}
-        teachers={appState.teachers}
-        teacherSubjects={config.teacherSubjects}
-        dailyPeriodQuota={appState.config.dailyPeriodQuota}
-        pdfHeader={appState.schoolInfo.pdfHeader}
-        workingDays={appState.config.workingDays}
-      />
-      
-      <TeacherLoad 
-          teacherLoad={appState.teacherLoad}
-          teachers={teachers}
-          pdfHeader={appState.schoolInfo.pdfHeader}
-          workingDays={appState.config.workingDays}
-      />
-    </div>
-  );
+      <div className="flex-1 w-full overflow-y-auto space-y-6 p-4 md:p-6 pt-0">
+        <RoutineDisplayWrapper />
+        <TeacherLoad 
+            teacherLoad={appState.teacherLoad}
+            teachers={teachers}
+            pdfHeader={appState.schoolInfo.pdfHeader}
+            workingDays={appState.config.workingDays}
+        />
+      </div>
 
-  const renderTeacherDashboard = () => {
-    const currentTeacher = teachers.find(t => t.email === user?.email);
-    
-    return (
-      <div className="space-y-6">
-        <div className="p-4 md:p-6">
-            <PageHeader 
-                title={`Teacher Dashboard`}
-                description={`Welcome, ${user?.displayName || 'Teacher'}. View your personal daily routine.`}
+      <Dialog open={!!routineToRename} onOpenChange={(isOpen) => !isOpen && cancelRename()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename Routine Version</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-2">
+            <Label htmlFor="routine-name">New Name</Label>
+            <Input 
+              id="routine-name" 
+              value={renameValue} 
+              onChange={(e) => setRenameValue(e.target.value)} 
+              onKeyDown={(e) => e.key === 'Enter' && confirmRename()}
             />
-        </div>
-        
-        <Dialog open={!!routineToRename} onOpenChange={(isOpen) => !isOpen && setRoutineToRename(null)}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Rename Routine</DialogTitle>
-                </DialogHeader>
-                <div className="py-4">
-                    <Label htmlFor="routine-name">New Name</Label>
-                    <Input id="routine-name" value={renameValue} onChange={(e) => setRenameValue(e.target.value)} />
-                </div>
-                <DialogFooter>
-                    <DialogClose asChild><Button variant="secondary">Cancel</Button></DialogClose>
-                    <Button onClick={handleRename}>Save</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={cancelRename}>Cancel</Button>
+            <Button onClick={confirmRename}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 
   return isUserAdmin ? renderAdminDashboard() : renderTeacherView();
 }
-
-    
-
-    

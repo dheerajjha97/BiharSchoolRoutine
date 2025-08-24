@@ -146,7 +146,7 @@ export default function SchoolRoutinePage() {
                                                     return (
                                                         <tr key={slot}>
                                                             <td className="sticky left-0 z-20 p-2 text-sm font-semibold text-foreground align-top min-w-[100px] bg-card">{slot}</td>
-                                                            <td colSpan={sortedClasses.length} className="p-1.5 align-middle">
+                                                            <td colSpan={sortedClasses.length} className="p-2 align-middle">
                                                                 <div className="h-full flex items-center justify-center p-2 text-center bg-secondary text-secondary-foreground font-semibold rounded-md">
                                                                     {firstEntry.subject}
                                                                 </div>
@@ -164,13 +164,13 @@ export default function SchoolRoutinePage() {
                                                             const teacherNames = (entry?.teacher || '').split(' & ').map(tId => teacherNameMap.get(tId.trim()) || tId).join(' & ');
                                                             
                                                             if (isEmpty) {
-                                                                return <td key={`${c}-${slot}`} className="p-1.5"></td>;
+                                                                return <td key={`${c}-${slot}`} className="p-2"></td>;
                                                             }
                                                             
                                                             const colorClass = getSubjectColor(entry.subject, subjectColorMap);
 
                                                             return (
-                                                                <td key={`${c}-${slot}`} className="p-1.5 align-top">
+                                                                <td key={`${c}-${slot}`} className="p-2 align-top">
                                                                     <div className={cn("text-left p-2 space-y-1 bg-card rounded-md shadow-sm border-l-4 h-full", colorClass)}>
                                                                         <p className="font-bold text-sm text-foreground flex items-center">
                                                                             {getSubjectIcon(entry.subject)}
@@ -195,5 +195,3 @@ export default function SchoolRoutinePage() {
         </div>
     );
 }
-
-    

@@ -202,7 +202,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </div>
             <ThemeToggle />
          </header>
-         <main className="flex-1 bg-muted/40">
+         <main className="flex-1 bg-muted/40 overflow-auto">
             {children}
         </main>
       </div>

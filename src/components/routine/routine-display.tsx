@@ -70,13 +70,13 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   const [isCellDialogOpen, setIsCellDialogOpen] = useState(false);
   const [currentCell, setCurrentCell] = useState<CurrentCell | null>(null);
   const [cellData, setCellData] = useState<CellData>({ subject: "", className: "", teacher: "" });
-  const [selectedClass, setSelectedClass] = useState<string>('');
+  const [selectedClass, setSelectedClass] = useState<string>(sortedClasses[0] || '');
   
   useEffect(() => {
-    if (sortedClasses.length > 0) {
+    if (sortedClasses.length > 0 && !selectedClass) {
       setSelectedClass(sortedClasses[0]);
     }
-  }, [sortedClasses]);
+  }, [sortedClasses, selectedClass]);
 
   const teacherNameMap = useMemo(() => new Map(teachers.map(t => [t.id, t.name])), [teachers]);
   
@@ -427,7 +427,7 @@ const renderMobileView = (day: DayOfWeek) => {
                 </div>
                 <Tabs defaultValue={workingDays.includes(defaultDay) ? defaultDay : (workingDays[0] || "Monday")} className="w-full">
                     <ScrollArea className="w-full whitespace-nowrap no-print">
-                        <TabsList>
+                        <TabsList className="w-max">
                             {workingDays.map(day => <TabsTrigger key={day} value={day}>{day}</TabsTrigger>)}
                         </TabsList>
                       <ScrollBar orientation="horizontal" />

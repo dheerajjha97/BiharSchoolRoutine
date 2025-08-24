@@ -223,45 +223,51 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
         {sortedClasses.map(className => {
             const periodsForClass = timeSlots.map(timeSlot => {
                 const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
-                return { timeSlot, entry: entries[0] };
-            }).filter(p => p.entry && p.entry.subject !== '---');
+                // Only consider the first entry for simplicity in mobile view
+                return { timeSlot, entry: entries[0] }; 
+            }).filter(({entry}) => entry && entry.subject !== '---');
+
+            if (periodsForClass.length === 0) return null;
 
             return (
-                <Card key={className}>
-                    <CardHeader className="p-4">
+                <Card key={className} className="shadow-md">
+                    <CardHeader className="p-4 bg-muted/30">
                         <CardTitle className="text-lg">{className}</CardTitle>
                     </CardHeader>
-                    <CardContent className="p-4 pt-0">
-                        {periodsForClass.length > 0 ? (
-                            <div className="space-y-3">
-                                {periodsForClass.map(({ timeSlot, entry }) => (
+                    <CardContent className="p-2 sm:p-4">
+                        <div className="space-y-2">
+                            {periodsForClass.map(({ timeSlot, entry }) => {
+                                if (!entry) return null;
+                                const isSpecial = entry.subject === 'Prayer' || entry.subject === 'Lunch';
+                                return (
                                     <div 
                                         key={timeSlot} 
                                         className={cn(
                                             "flex items-center justify-between p-3 rounded-lg border",
-                                            entry.subject === 'Prayer' || entry.subject === 'Lunch' ? 'bg-secondary' : 'bg-background'
+                                            isSpecial ? 'bg-secondary font-semibold' : 'bg-background',
+                                            isEditable && !isSpecial && 'cursor-pointer hover:bg-accent'
                                         )}
-                                        onClick={() => handleCellClick(day, timeSlot, className, entry)}
+                                        onClick={() => isEditable && !isSpecial && handleCellClick(day, timeSlot, className, entry)}
                                     >
-                                        <div className="flex-1">
+                                        <div className="flex-1 pr-2">
                                             <p className="font-bold">{entry.subject}</p>
-                                            <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
-                                                <User className="h-4 w-4" />
-                                                {getTeacherName(entry.teacher)}
-                                            </p>
+                                            {!isSpecial && (
+                                                <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
+                                                    <User className="h-3.5 w-3.5" />
+                                                    {getTeacherName(entry.teacher)}
+                                                </p>
+                                            )}
                                         </div>
                                         <div className="text-right">
                                             <p className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
-                                                <Clock className="h-4 w-4" />
+                                                <Clock className="h-3.5 w-3.5" />
                                                 {timeSlot}
                                             </p>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <p className="text-sm text-muted-foreground text-center py-4">No periods scheduled for this class.</p>
-                        )}
+                                );
+                            })}
+                        </div>
                     </CardContent>
                 </Card>
             )
@@ -271,12 +277,12 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 
   const renderDesktopView = (day: DayOfWeek) => (
       <div className="overflow-x-auto border rounded-lg">
-          <Table className='min-w-full'>
+          <Table>
               <TableHeader>
                   <TableRow className="bg-muted/50">
-                      <TableHead className="font-semibold p-2 sticky left-0 bg-muted/50 z-10 min-w-[100px]">Class</TableHead>
+                      <TableHead className="font-semibold p-2 sticky left-0 bg-card z-10 min-w-[120px]">Class</TableHead>
                       {timeSlots.map(slot => (
-                          <TableHead key={slot} className="text-center font-semibold text-xs p-1 align-bottom min-w-[90px]">
+                          <TableHead key={slot} className="text-center font-semibold text-xs p-1 align-bottom min-w-[100px]">
                               <div>{slot}</div>
                               <div className="font-normal text-muted-foreground">{instructionalSlotMap[slot] ? toRoman(instructionalSlotMap[slot]) : '-'}</div>
                           </TableHead>
@@ -320,7 +326,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
             <div className="flex flex-wrap justify-between items-start gap-4">
                 <div>
                     <CardTitle>View Routine</CardTitle>
-                    <CardDescription>View, download, or edit your routine.</CardDescription>
+                    <CardDescription>View, print, or edit your routine. The view is optimized for your device.</CardDescription>
                 </div>
                  <div className="flex items-center gap-2">
                     <Button size="sm" variant="outline" onClick={() => window.print()}>
@@ -336,16 +342,27 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                     <h2 className="text-lg font-bold mt-2">Class Routine</h2>
                 </div>
                 <Tabs defaultValue={workingDays.includes(defaultDay) ? defaultDay : workingDays[0]} className="w-full">
-                    <div className="overflow-x-auto p-4 sm:p-0">
+                    <div className="overflow-x-auto p-4 sm:p-0 no-print">
                         <TabsList className="mb-4">
                             {workingDays.map(day => <TabsTrigger key={day} value={day}>{day}</TabsTrigger>)}
                         </TabsList>
                     </div>
+
                     {workingDays.map(day => (
-                        <TabsContent key={day} value={day} className="p-4 pt-0 sm:p-0">
+                        <TabsContent key={day} value={day} className="p-2 sm:p-0">
                              {isMobile ? renderMobileView(day) : renderDesktopView(day)}
                         </TabsContent>
                     ))}
+
+                    {/* Print-only view */}
+                    <div className="hidden print-block">
+                        {workingDays.map(day => (
+                            <div key={`print-${day}`} className="page-break-before">
+                                <h3 className="text-xl font-bold text-center my-4">{day}</h3>
+                                {renderDesktopView(day)}
+                            </div>
+                        ))}
+                    </div>
                 </Tabs>
             </div>
         </CardContent>
@@ -397,5 +414,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 };
 
 export default RoutineDisplay;
+
+    
 
     

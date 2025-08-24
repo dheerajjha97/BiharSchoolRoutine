@@ -69,13 +69,12 @@
     .no-print, .no-print * {
         display: none !important;
     }
+    .print-block {
+        display: block !important;
+    }
     .printable-area {
       display: block;
       width: 100%;
-      position: absolute;
-      left: 0;
-      top: 0;
-      float: none;
     }
     .print-header {
       display: block !important;
@@ -86,8 +85,13 @@
     main > .printable-area {
       display: block;
     }
+    .page-break-before {
+        page-break-before: always;
+    }
     @page {
         size: A4;
         margin: 0.5in;
     }
 }
+
+    

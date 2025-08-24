@@ -4,13 +4,11 @@
 import { useContext, useState, useMemo } from "react";
 import PageHeader from "@/components/app/page-header";
 import { AppStateContext } from "@/context/app-state-provider";
-import RoutineDisplay from "@/components/routine/routine-display";
-import TeacherLoad from "@/components/routine/teacher-load";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { generateScheduleLogic } from "@/lib/schedule-generator";
 import { useToast } from "@/hooks/use-toast";
-import { BrainCircuit, FilePlus, ListCollapse, Trash2, Pencil, Check, X } from "lucide-react";
+import { BrainCircuit, FilePlus, ListCollapse, Trash2, Pencil } from "lucide-react";
 import type { GenerateScheduleOutput, RoutineVersion } from "@/types";
 import {
   Dialog,
@@ -106,7 +104,6 @@ export default function Home() {
             title="My Dashboard"
             description={`Welcome, ${appState.teachers.find(t => t.email === appState.schoolInfo.udise)?.name || 'Teacher'}. View your schedule below.`}
         />
-        {/* Potentially a TeacherRoutineDisplay component here in the future */}
          <Card>
             <CardHeader>
                 <CardTitle>Teacher View</CardTitle>
@@ -119,9 +116,9 @@ export default function Home() {
   );
 
   const renderAdminDashboard = () => (
-    <div className="flex-1 flex flex-col h-full">
+    <div className="flex-1 flex flex-col h-full w-full overflow-x-hidden">
         {/* --- Top Section (non-scrolling) --- */}
-        <div className="p-4 md:p-6">
+        <div className="p-4 md:p-6 w-full">
             <PageHeader 
                 title="Dashboard"
                 description="Generate, view, and manage your school's class routine."
@@ -199,30 +196,7 @@ export default function Home() {
 
         {/* --- Bottom Section (scrolling) --- */}
         <div className="w-full overflow-x-auto flex-1 p-4 md:p-6 space-y-6">
-             <RoutineDisplay 
-                scheduleData={activeRoutine?.schedule || null}
-                onScheduleChange={(newSchedule) => {
-                    if (activeRoutine) {
-                    updateRoutineVersion(activeRoutine.id, { schedule: { schedule: newSchedule } });
-                    }
-                }}
-                isEditable={true}
-                timeSlots={appState.timeSlots} 
-                classes={appState.classes}
-                subjects={appState.subjects}
-                teachers={appState.teachers}
-                teacherSubjects={config.teacherSubjects}
-                dailyPeriodQuota={appState.config.dailyPeriodQuota}
-                pdfHeader={appState.schoolInfo.pdfHeader}
-                workingDays={appState.config.workingDays}
-                />
-                
-            <TeacherLoad 
-                teacherLoad={appState.teacherLoad}
-                teachers={teachers}
-                pdfHeader={appState.schoolInfo.pdfHeader}
-                workingDays={appState.config.workingDays}
-            />
+            {/* RoutineDisplay and TeacherLoad components were here and are now removed. */}
         </div>
 
          <Dialog open={!!routineToRename} onOpenChange={(isOpen) => !isOpen && setRoutineToRename(null)}>

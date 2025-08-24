@@ -69,15 +69,14 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   const [isCellDialogOpen, setIsCellDialogOpen] = useState(false);
   const [currentCell, setCurrentCell] = useState<CurrentCell | null>(null);
   const [cellData, setCellData] = useState<CellData>({ subject: "", className: "", teacher: "" });
-  const [selectedClass, setSelectedClass] = useState<string | null>(null);
+  const [selectedClass, setSelectedClass] = useState<string>('');
   
   useEffect(() => {
-    if (isMobile && sortedClasses.length > 0) {
+    // Select the first class by default when classes are loaded or view changes
+    if (sortedClasses.length > 0) {
       setSelectedClass(sortedClasses[0]);
-    } else {
-      setSelectedClass(null);
     }
-  }, [isMobile, sortedClasses]);
+  }, [sortedClasses]);
 
   const teacherNameMap = useMemo(() => new Map(teachers.map(t => [t.id, t.name])), [teachers]);
   
@@ -230,98 +229,96 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   };
   
   const renderMobileView = (day: DayOfWeek) => {
-    const classesToShow = selectedClass ? sortedClasses.filter(c => c === selectedClass) : sortedClasses;
+    const classesToShow = sortedClasses.filter(c => c === selectedClass);
     
     return (
-        <div className="space-y-4">
-            <div className="px-1">
-                 <div className="overflow-x-auto pb-2">
-                    <div className="flex space-x-2">
-                        {sortedClasses.map(className => (
-                            <Badge 
-                                key={className}
-                                onClick={() => setSelectedClass(className)}
-                                variant={selectedClass === className ? 'default' : 'secondary'}
-                                className="cursor-pointer transition-all flex-shrink-0"
-                            >
-                                {className}
-                            </Badge>
-                        ))}
-                    </div>
-                </div>
+      <div className="space-y-4">
+        <div className="w-full overflow-x-auto pb-2">
+            <div className="flex w-max space-x-2">
+                {sortedClasses.map(className => (
+                    <Badge 
+                        key={className}
+                        onClick={() => setSelectedClass(className)}
+                        variant={selectedClass === className ? 'default' : 'secondary'}
+                        className="cursor-pointer transition-all flex-shrink-0"
+                    >
+                        {className}
+                    </Badge>
+                ))}
             </div>
-            {classesToShow.map(className => {
-                const periodsForClass = timeSlots.map(timeSlot => {
-                    const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
-                    return { timeSlot, entry: entries[0] }; 
-                }).filter(({entry}) => entry && entry.subject !== '---');
+        </div>
+        {classesToShow.map(className => {
+            const periodsForClass = timeSlots.map(timeSlot => {
+                const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
+                return { timeSlot, entry: entries[0] }; 
+            }).filter(({entry}) => entry && entry.subject !== '---');
 
-                if (periodsForClass.length === 0) return (
-                    <Card key={className} className="shadow-lg overflow-hidden">
-                        <CardHeader className="p-4 bg-muted/30">
-                            <CardTitle className="text-base font-bold">{className}</CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-4 h-48 flex items-center justify-center">
-                            <p className="text-muted-foreground">No periods scheduled for {className} on {day}.</p>
-                        </CardContent>
-                    </Card>
-                );
+            if (periodsForClass.length === 0) return (
+                <Card key={className} className="shadow-lg overflow-hidden">
+                    <CardHeader className="p-4 bg-muted/30">
+                        <CardTitle className="text-base font-bold">{className}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 h-48 flex items-center justify-center">
+                        <p className="text-muted-foreground">No periods scheduled for {className} on {day}.</p>
+                    </CardContent>
+                </Card>
+            );
 
-                return (
-                    <Card key={className} className="shadow-lg overflow-hidden">
-                        <CardHeader className="p-4 bg-muted/30">
-                            <CardTitle className="text-base font-bold">{className}</CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-4">
-                            <div className="relative pl-6">
-                                <div className="absolute left-2.5 top-0 h-full w-0.5 bg-border"></div>
-                                
-                                <div className="space-y-8">
-                                    {periodsForClass.map(({ timeSlot, entry }) => {
-                                        if (!entry) return null;
-                                        const isSpecial = entry.subject === 'Prayer' || entry.subject === 'Lunch';
-                                        const SpecialIcon = entry.subject === 'Prayer' ? Sun : Sandwich;
-                                        
-                                        return (
-                                            <div 
-                                                key={timeSlot} 
-                                                className={cn(
-                                                    "relative flex gap-4 items-start",
-                                                    isEditable && !isSpecial && 'cursor-pointer'
+            return (
+                <Card key={className} className="shadow-lg overflow-hidden">
+                    <CardHeader className="p-4 bg-muted/30">
+                        <CardTitle className="text-base font-bold">{className}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4">
+                        <div className="relative pl-6">
+                            <div className="absolute left-2.5 top-0 h-full w-0.5 bg-border"></div>
+                            
+                            <div className="space-y-8">
+                                {periodsForClass.map(({ timeSlot, entry }) => {
+                                    if (!entry) return null;
+                                    const isSpecial = entry.subject === 'Prayer' || entry.subject === 'Lunch';
+                                    const SpecialIcon = entry.subject === 'Prayer' ? Sun : Sandwich;
+                                    
+                                    return (
+                                        <div 
+                                            key={timeSlot} 
+                                            className={cn(
+                                                "relative flex gap-4 items-start",
+                                                isEditable && !isSpecial && 'cursor-pointer'
+                                            )}
+                                            onClick={() => isEditable && !isSpecial && handleCellClick(day, timeSlot, className, entry)}
+                                        >
+                                            <div className="absolute left-[-24px] top-1.5 h-5 w-5 rounded-full bg-primary border-4 border-background z-10"></div>
+                                            
+                                            <div className="text-xs font-semibold text-muted-foreground w-20 shrink-0 pt-2">{timeSlot}</div>
+                                            
+                                            <div className="flex-grow">
+                                                {isSpecial ? (
+                                                    <div className="flex items-center gap-2 font-bold text-base text-primary pt-1">
+                                                        <SpecialIcon className="h-5 w-5" />
+                                                        <span>{entry.subject}</span>
+                                                    </div>
+                                                ) : (
+                                                    <div>
+                                                        <h4 className="font-bold text-sm leading-tight">{entry.subject}</h4>
+                                                        <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
+                                                            <User className="h-3 w-3" />
+                                                            {getTeacherName(entry.teacher) || <span className='italic'>N/A</span>}
+                                                        </p>
+                                                    </div>
                                                 )}
-                                                onClick={() => isEditable && !isSpecial && handleCellClick(day, timeSlot, className, entry)}
-                                            >
-                                                <div className="absolute left-[-24px] top-1.5 h-5 w-5 rounded-full bg-primary border-4 border-background z-10"></div>
-                                                
-                                                <div className="text-xs font-semibold text-muted-foreground w-20 shrink-0 pt-2">{timeSlot}</div>
-                                                
-                                                <div className="flex-grow">
-                                                    {isSpecial ? (
-                                                        <div className="flex items-center gap-2 font-bold text-base text-primary pt-1">
-                                                            <SpecialIcon className="h-5 w-5" />
-                                                            <span>{entry.subject}</span>
-                                                        </div>
-                                                    ) : (
-                                                        <div>
-                                                            <h4 className="font-bold text-sm leading-tight">{entry.subject}</h4>
-                                                            <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
-                                                                <User className="h-3 w-3" />
-                                                                {getTeacherName(entry.teacher) || <span className='italic'>N/A</span>}
-                                                            </p>
-                                                        </div>
-                                                    )}
-                                                </div>
                                             </div>
-                                        );
-                                    })}
-                                </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
-                        </CardContent>
-                    </Card>
-                )
-        })}
-    </div>
-  );
+                        </div>
+                    </CardContent>
+                </Card>
+            )
+    })}
+</div>
+);
   }
 
   const renderDesktopView = (day: DayOfWeek) => (
@@ -423,12 +420,10 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                     <h2 className="text-lg font-bold mt-2">Class Routine</h2>
                 </div>
                 <Tabs defaultValue={workingDays.includes(defaultDay) ? defaultDay : (workingDays[0] || "Monday")} className="w-full">
-                    <div className="overflow-x-auto no-print px-1 sm:px-0">
-                        <div className="overflow-x-auto pb-2">
-                           <TabsList className="flex-nowrap justify-start">
-                                {workingDays.map(day => <TabsTrigger key={day} value={day}>{day}</TabsTrigger>)}
-                            </TabsList>
-                        </div>
+                    <div className="w-full overflow-x-auto no-print px-1 sm:px-0">
+                        <TabsList className="flex-nowrap justify-start">
+                            {workingDays.map(day => <TabsTrigger key={day} value={day}>{day}</TabsTrigger>)}
+                        </TabsList>
                     </div>
 
                     {workingDays.map(day => (

@@ -33,7 +33,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import TeacherRoutineDisplay from "@/components/routine/teacher-routine-display";
 import RoutineDisplay from "@/components/routine/routine-display";
-import TeacherLoad from "@/components/routine/teacher-load";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -299,14 +298,6 @@ export default function Home() {
 
       <div className="flex-1 w-full overflow-y-auto space-y-6 p-4 md:p-6 pt-6">
         <RoutineDisplayWrapper />
-        <div className="mt-6">
-            <TeacherLoad 
-                teacherLoad={appState.teacherLoad}
-                teachers={teachers}
-                pdfHeader={appState.schoolInfo.pdfHeader}
-                workingDays={appState.config.workingDays}
-            />
-        </div>
       </div>
 
       <Dialog open={!!routineToRename} onOpenChange={(isOpen) => !isOpen && cancelRename()}>

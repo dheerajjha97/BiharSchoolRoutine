@@ -124,11 +124,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <div className="mt-auto p-4 space-y-2 border-t">
           {isUserAdmin && (
             <Link
-              href="/config"
+              href="/config/general"
               onClick={() => setIsSheetOpen(false)}
               className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:text-primary hover:bg-primary/10",
-                  pathname === "/config" && "bg-primary/10 text-primary font-bold"
+                  pathname.startsWith("/config") && "bg-primary/10 text-primary font-bold"
               )}
             >
               <Settings className="h-5 w-5" />

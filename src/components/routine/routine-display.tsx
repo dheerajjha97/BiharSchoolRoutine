@@ -77,6 +77,7 @@ const toRoman = (num: number): string => {
 const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, teacherSubjects, onScheduleChange, dailyPeriodQuota, pdfHeader = "", isEditable, workingDays }: RoutineDisplayProps) => {
   const { toast } = useToast();
   const isMobile = useMediaQuery("(max-width: 768px)");
+  const defaultDay = new Date().toLocaleString('en-US', { weekday: 'long' }) as DayOfWeek;
   
   const [isCellDialogOpen, setIsCellDialogOpen] = useState(false);
   const [isMobileClassDialogOpen, setIsMobileClassDialogOpen] = useState(false);
@@ -352,84 +353,68 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
         </div>
     );
   };
-
-  const renderScheduleTable = (title: string, displayClasses: string[], tableId: string) => {
-    if (displayClasses.length === 0) return null;
   
-    return (
-      <div className="break-after-page" >
-        <div className="flex justify-between items-center mb-3 px-6 md:px-0">
-          <h3 className="text-xl font-semibold">{title}</h3>
-           <div className="flex gap-2 no-print">
-               <Button size="sm" variant="outline" onClick={() => handlePrint(tableId)}>
-                    <Printer className="mr-2 h-4 w-4" /> Print
-               </Button>
-           </div>
-        </div>
-        <div className="border rounded-lg bg-card overflow-x-auto" id={tableId}>
-          <table className="min-w-full w-full border-collapse">
-            <thead className="bg-card">
-              <tr>
-                <th className="font-bold min-w-[100px] sticky left-0 bg-card z-20 p-2 text-left">Day</th>
-                <th className="font-bold min-w-[120px] sticky left-[100px] bg-card z-20 p-2 text-left">Class</th>
-                {timeSlots.map(slot => (
-                  <th key={slot} className="text-center font-bold text-xs min-w-[90px] p-1 align-bottom">
-                      <div>{slot}</div>
-                      <div className="font-normal text-muted-foreground">{instructionalSlotMap[slot] ? toRoman(instructionalSlotMap[slot]) : '-'}</div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {workingDays.map((day) => (
-                <React.Fragment key={day}>
-                  {displayClasses.map((className, classIndex) => (
-                    <tr key={`${day}-${className}`} className="border-t">
-                      {classIndex === 0 && (
-                        <td className="font-semibold align-top sticky left-0 bg-card z-10 p-2" rowSpan={displayClasses.length}>
-                          <div className="flex items-center gap-2">
-                             <span>{day}</span>
-                              {isEditable && (
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-6 w-6 no-print">
-                                      <Copy className="h-3 w-3" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent>
-                                      <DropdownMenuSub>
-                                        <DropdownMenuSubTrigger>Paste to...</DropdownMenuSubTrigger>
-                                        <DropdownMenuPortal>
-                                          <DropdownMenuSubContent>
-                                            {workingDays.filter(d => d !== day).map(destinationDay => (
-                                              <DropdownMenuItem key={destinationDay} onClick={() => handleCopyDay(day, destinationDay)}>
-                                                {destinationDay}
-                                              </DropdownMenuItem>
-                                            ))}
-                                          </DropdownMenuSubContent>
-                                        </DropdownMenuPortal>
-                                      </DropdownMenuSub>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              )}
-                          </div>
-                        </td>
-                      )}
-                      <td className="font-medium align-top sticky left-[100px] bg-card z-10 p-2">{className}</td>
-                      {timeSlots.map(timeSlot => (
-                        <td key={`${day}-${className}-${timeSlot}`} className="p-0 align-top border-l">{renderCellContent(day, className, timeSlot)}</td>
-                      ))}
-                    </tr>
-                  ))}
-                  {day !== workingDays[workingDays.length - 1] && <tr className="bg-background hover:bg-background h-2"><td colSpan={timeSlots.length + 2} className="p-1"></td></tr>}
-                </React.Fragment>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
-  };
+  const renderDesktopView = () => (
+    <Tabs defaultValue={workingDays.includes(defaultDay) ? defaultDay : workingDays[0]} className="w-full">
+        <TabsList className="mb-4">
+            {workingDays.map(day => <TabsTrigger key={day} value={day}>{day}</TabsTrigger>)}
+        </TabsList>
+        {workingDays.map(day => (
+            <TabsContent key={day} value={day}>
+                <div className="border rounded-lg bg-card overflow-x-auto" id={`table-${day}`}>
+                    <table className="min-w-full w-full border-collapse">
+                        <thead className="bg-card">
+                        <tr>
+                            <th className="font-bold min-w-[120px] sticky left-0 bg-card z-20 p-2 text-left">Class</th>
+                            {timeSlots.map(slot => (
+                            <th key={slot} className="text-center font-bold text-xs min-w-[90px] p-1 align-bottom">
+                                <div>{slot}</div>
+                                <div className="font-normal text-muted-foreground">{instructionalSlotMap[slot] ? toRoman(instructionalSlotMap[slot]) : '-'}</div>
+                            </th>
+                            ))}
+                        </tr>
+                        </thead>
+                        <tbody>
+                            {sortedClasses.map((className) => (
+                                <tr key={`${day}-${className}`} className="border-t">
+                                    <td className="font-medium align-top sticky left-0 bg-card z-10 p-2">{className}</td>
+                                    {timeSlots.map(timeSlot => (
+                                    <td key={`${day}-${className}-${timeSlot}`} className="p-0 align-top border-l">{renderCellContent(day, className, timeSlot)}</td>
+                                    ))}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </TabsContent>
+        ))}
+    </Tabs>
+  );
+
+  const renderMobileView = () => (
+    <Tabs defaultValue={workingDays.includes(defaultDay) ? defaultDay : (workingDays[0] || "Monday")} className="w-full">
+        <TabsList className="mb-6 flex-nowrap overflow-x-auto justify-start">
+            {workingDays.map(day => (
+                <TabsTrigger key={day} value={day}>{day}</TabsTrigger>
+            ))}
+        </TabsList>
+        {workingDays.map(day => (
+            <TabsContent key={day} value={day}>
+                <div className="space-y-4">
+                    {sortedClasses.map(className => (
+                        <Card key={className} className="cursor-pointer hover:bg-accent" onClick={() => handleMobileClassClick(day, className)}>
+                            <CardContent className="p-4 flex justify-between items-center">
+                                <span className="font-semibold">{className}</span>
+                                <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            </TabsContent>
+        ))}
+    </Tabs>
+  );
+
 
   if (!scheduleData || !scheduleData.schedule || scheduleData.schedule.length === 0) {
     return (
@@ -458,17 +443,12 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                 </div>
                  <div className="flex items-center gap-2">
                     <Button size="sm" variant="outline" onClick={() => window.print()}>
-                        <Printer className="mr-2 h-4 w-4" /> Print
-                    </Button>
-                </div>
-                 <div className="flex items-center gap-2">
-                    <Button size="sm" variant="outline" onClick={() => window.print()}>
                         <Printer className="mr-2 h-4 w-4" /> Print All
                     </Button>
                 </div>
             </div>
         </CardHeader>
-        <CardContent className="md:p-0">
+        <CardContent className="p-4 md:p-6">
              <div className="printable-area">
                 <div className="print-header hidden text-center mb-4">
                     {pdfHeader && pdfHeader.trim().split('\n').map((line, index) => <p key={index} className={cn(index === 0 && 'font-bold')}>{line}</p>)}

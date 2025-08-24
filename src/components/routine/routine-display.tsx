@@ -4,12 +4,12 @@
 import React, { useMemo, useState } from 'react';
 import type { GenerateScheduleOutput, ScheduleEntry, Teacher, DayOfWeek } from "@/types";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogDescription } from "@/components/ui/dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash2, AlertTriangle, Copy, Printer, Pencil } from "lucide-react";
+import { Trash2, AlertTriangle, Copy, Printer, Pencil, ArrowRight } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn, sortClasses } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
@@ -23,6 +23,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import useMediaQuery from '@/hooks/use-media-query';
 
 interface RoutineDisplayProps {
@@ -367,30 +368,34 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
     </div>
   );
 
-  const renderMobileView = () => (
-    <div className="border rounded-lg bg-card p-2">
-      <table className="w-full">
-        <thead>
-          <tr>
-            <th className="p-2 text-left font-semibold">Day</th>
-            <th className="p-2 text-left font-semibold">Class</th>
-          </tr>
-        </thead>
-        <tbody>
-          {workingDays.map(day => (
-            sortedClasses.map((className, classIndex) => (
-              <tr key={`${day}-${className}`} className="border-t" onClick={() => handleMobileClassClick(day, className)}>
-                {classIndex === 0 ? (
-                  <td rowSpan={sortedClasses.length} className="p-2 align-top font-semibold">{day}</td>
-                ) : null}
-                <td className="p-2 cursor-pointer hover:bg-accent">{className}</td>
-              </tr>
-            ))
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
+  const renderMobileView = () => {
+    const defaultDay = new Date().toLocaleString('en-US', { weekday: 'long' }) as DayOfWeek;
+
+    return (
+        <Tabs defaultValue={workingDays.includes(defaultDay) ? defaultDay : (workingDays[0] || "Monday")} className="w-full">
+            <TabsList className="mb-4 grid w-full grid-cols-3 sm:grid-cols-6 h-auto">
+                {workingDays.map(day => (
+                    <TabsTrigger key={day} value={day} className="text-xs">{day.substring(0,3)}</TabsTrigger>
+                ))}
+            </TabsList>
+            
+            {workingDays.map(day => (
+                <TabsContent key={day} value={day} className="space-y-2">
+                    {sortedClasses.map(className => (
+                        <button
+                            key={`${day}-${className}`}
+                            onClick={() => handleMobileClassClick(day, className)}
+                            className="w-full text-left p-4 rounded-lg bg-card border flex justify-between items-center transition-colors hover:bg-accent"
+                        >
+                            <span className="font-semibold text-card-foreground">{className}</span>
+                            <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                    ))}
+                </TabsContent>
+            ))}
+        </Tabs>
+    )
+  };
 
   if (!scheduleData || !scheduleData.schedule || scheduleData.schedule.length === 0) {
     return (
@@ -424,7 +429,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                 </div>
             </div>
         </CardHeader>
-        <CardContent className="p-0 md:p-0">
+        <CardContent className="md:p-0">
              <div className="printable-area">
                 <div className="print-header hidden text-center mb-4">
                     {pdfHeader && pdfHeader.trim().split('\n').map((line, index) => <p key={index} className={cn(index === 0 && 'font-bold')}>{line}</p>)}
@@ -479,7 +484,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
               <DialogContent>
                   <DialogHeader>
                       <DialogTitle>Routine for {mobileDialogData.className}</DialogTitle>
-                      <CardDescription>{mobileDialogData.day}</CardDescription>
+                      <DialogDescription>{mobileDialogData.day}</DialogDescription>
                   </DialogHeader>
                   <div className="py-4 max-h-[60vh] overflow-y-auto">
                       <Table>
@@ -488,7 +493,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                                   <TableHead>Time</TableHead>
                                   <TableHead>Subject</TableHead>
                                   <TableHead>Teacher</TableHead>
-                                  <TableHead className="text-right">Edit</TableHead>
+                                  {isEditable && <TableHead className="text-right">Edit</TableHead>}
                               </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -499,13 +504,15 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                                         <TableCell>{slot}</TableCell>
                                         <TableCell>{entry?.subject === '---' ? '-' : entry?.subject || '-'}</TableCell>
                                         <TableCell>{getTeacherName(entry?.teacher || '') || '-'}</TableCell>
-                                        <TableCell className="text-right">
-                                            {isEditable && entry?.subject !== 'Prayer' && entry?.subject !== 'Lunch' && (
-                                                <Button variant="ghost" size="icon" onClick={() => handleCellClick(mobileDialogData.day, slot, mobileDialogData.className, entry || null)}>
-                                                    <Pencil className="h-4 w-4" />
-                                                </Button>
-                                            )}
-                                        </TableCell>
+                                        {isEditable && (
+                                            <TableCell className="text-right">
+                                                {entry?.subject !== 'Prayer' && entry?.subject !== 'Lunch' && (
+                                                    <Button variant="ghost" size="icon" onClick={() => handleCellClick(mobileDialogData.day, slot, mobileDialogData.className, entry || null)}>
+                                                        <Pencil className="h-4 w-4" />
+                                                    </Button>
+                                                )}
+                                            </TableCell>
+                                        )}
                                     </TableRow>
                                   )
                               })}
@@ -525,3 +532,4 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 };
 
 export default RoutineDisplay;
+

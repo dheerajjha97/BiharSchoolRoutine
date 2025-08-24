@@ -202,7 +202,7 @@ export default function Home() {
             description="Generate, view, and manage your school's class routine."
           />
 
-          <Card className="max-w-xl">
+          <Card>
             <CardHeader>
               <CardTitle>Generate New Routine</CardTitle>
               <CardDescription>

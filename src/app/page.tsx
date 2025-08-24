@@ -323,7 +323,3 @@ export default function Home() {
 
   return isUserAdmin ? renderAdminDashboard() : renderTeacherView();
 }
-
-    
-
-    

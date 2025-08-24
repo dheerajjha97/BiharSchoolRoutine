@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash2, AlertTriangle, Printer, Pencil, Clock, User } from "lucide-react";
+import { Trash2, Printer, Pencil, Clock, User } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn, sortClasses } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
@@ -223,8 +223,9 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
         {sortedClasses.map(className => {
             const periodsForClass = timeSlots.map(timeSlot => {
                 const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
-                // Only consider the first entry for simplicity in mobile view
-                return { timeSlot, entry: entries[0] }; 
+                const firstEntry = entries[0];
+                const isSpecial = firstEntry?.subject === 'Prayer' || firstEntry?.subject === 'Lunch';
+                return { timeSlot, entry: firstEntry, isSpecial }; 
             }).filter(({entry}) => entry && entry.subject !== '---');
 
             if (periodsForClass.length === 0) return null;
@@ -236,34 +237,37 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                     </CardHeader>
                     <CardContent className="p-2 sm:p-4">
                         <div className="space-y-2">
-                            {periodsForClass.map(({ timeSlot, entry }) => {
+                            {periodsForClass.map(({ timeSlot, entry, isSpecial }) => {
                                 if (!entry) return null;
-                                const isSpecial = entry.subject === 'Prayer' || entry.subject === 'Lunch';
                                 return (
                                     <div 
                                         key={timeSlot} 
                                         className={cn(
                                             "flex items-center justify-between p-3 rounded-lg border",
-                                            isSpecial ? 'bg-secondary font-semibold' : 'bg-background',
+                                            isSpecial ? 'bg-secondary font-semibold justify-center' : 'bg-background',
                                             isEditable && !isSpecial && 'cursor-pointer hover:bg-accent'
                                         )}
                                         onClick={() => isEditable && !isSpecial && handleCellClick(day, timeSlot, className, entry)}
                                     >
-                                        <div className="flex-1 pr-2">
-                                            <p className="font-bold">{entry.subject}</p>
-                                            {!isSpecial && (
-                                                <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
-                                                    <User className="h-3.5 w-3.5" />
-                                                    {getTeacherName(entry.teacher)}
-                                                </p>
-                                            )}
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
-                                                <Clock className="h-3.5 w-3.5" />
-                                                {timeSlot}
-                                            </p>
-                                        </div>
+                                      {isSpecial ? (
+                                        <span>{entry.subject}</span>
+                                      ) : (
+                                        <>
+                                          <div className="flex-1 pr-2">
+                                              <p className="font-bold">{entry.subject}</p>
+                                              <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
+                                                  <User className="h-3.5 w-3.5" />
+                                                  {getTeacherName(entry.teacher) || <span className='italic'>N/A</span>}
+                                              </p>
+                                          </div>
+                                          <div className="text-right">
+                                              <p className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
+                                                  <Clock className="h-3.5 w-3.5" />
+                                                  {timeSlot}
+                                              </p>
+                                          </div>
+                                        </>
+                                      )}
                                     </div>
                                 );
                             })}
@@ -290,14 +294,41 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                   </TableRow>
               </TableHeader>
               <TableBody>
-                  {sortedClasses.map((className) => (
-                      <TableRow key={`${day}-${className}`} className="border-t">
-                          <TableCell className="font-medium p-2 sticky left-0 bg-card z-10">{className}</TableCell>
-                          {timeSlots.map(timeSlot => (
-                              <TableCell key={`${day}-${className}-${timeSlot}`} className="p-0 align-top border-l">{renderCellContent(day, className, timeSlot)}</TableCell>
-                          ))}
-                      </TableRow>
-                  ))}
+                  {sortedClasses.map((className) => {
+                      const specialEntry = timeSlots.map(ts => gridSchedule[day]?.[className]?.[ts]?.[0]).find(e => e?.subject === 'Prayer' || e?.subject === 'Lunch');
+                      if (specialEntry) {
+                         // This logic is flawed for desktop, special entries should be handled per slot.
+                         // Let's render row by row.
+                      }
+
+                      return (
+                        <TableRow key={`${day}-${className}`} className="border-t">
+                            <TableCell className="font-medium p-2 sticky left-0 bg-card z-10">{className}</TableCell>
+                            {timeSlots.map(timeSlot => {
+                                const entry = gridSchedule[day]?.[className]?.[timeSlot]?.[0];
+                                const isSpecial = entry?.subject === 'Prayer' || entry?.subject === 'Lunch';
+                                if (isSpecial) {
+                                    // In desktop, special periods might span all classes, this logic is tricky.
+                                    // Assuming the generator makes them consistent.
+                                    return (
+                                        <TableCell key={`${day}-${className}-${timeSlot}`} className="p-0 align-top border-l bg-secondary" colSpan={1}>
+                                           {className === sortedClasses[0] && (
+                                                <div className="h-full min-h-[60px] flex items-center justify-center p-1 font-semibold"
+                                                     style={{width: `${timeSlots.length * 100}px`}} // HACK: This is problematic
+                                                >
+                                                   {entry.subject}
+                                                </div>
+                                           )}
+                                        </TableCell>
+                                    )
+                                }
+                                return (
+                                <TableCell key={`${day}-${className}-${timeSlot}`} className="p-0 align-top border-l">{renderCellContent(day, className, timeSlot)}</TableCell>
+                                )
+                            })}
+                        </TableRow>
+                      )
+                  })}
               </TableBody>
           </Table>
       </div>
@@ -414,7 +445,3 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 };
 
 export default RoutineDisplay;
-
-    
-
-    

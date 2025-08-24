@@ -128,12 +128,12 @@ export default function SchoolRoutinePage() {
                         {config.workingDays.map(day => (
                             <TabsContent key={day} value={day}>
                                 <div className="overflow-x-auto">
-                                    <table className="min-w-full" style={{ borderCollapse: 'separate', borderSpacing: '0 4px' }}>
+                                    <table className="w-full border-collapse" style={{ borderCollapse: 'separate', borderSpacing: '0 4px' }}>
                                         <thead>
                                             <tr className="bg-transparent">
-                                                <th className="sticky left-0 z-20 p-4 text-sm font-semibold text-foreground align-bottom bg-card">Time / Class</th>
+                                                <th className="sticky left-0 z-20 p-2 text-sm font-semibold text-foreground align-bottom bg-card text-left">Time / Class</th>
                                                 {sortedClasses.map(c => (
-                                                    <th key={c} className="p-4 text-center text-sm font-semibold text-foreground min-w-[140px] bg-card">{c}</th>
+                                                    <th key={c} className="p-2 text-center text-sm font-semibold text-foreground min-w-[150px]">{c}</th>
                                                 ))}
                                             </tr>
                                         </thead>
@@ -145,9 +145,9 @@ export default function SchoolRoutinePage() {
                                                 if (isSpecial) {
                                                     return (
                                                         <tr key={slot}>
-                                                            <td className="sticky left-0 z-20 p-4 text-sm font-semibold text-foreground align-top min-w-[100px] bg-card">{slot}</td>
-                                                            <td colSpan={sortedClasses.length} className="p-4 align-middle">
-                                                                <div className="h-full flex items-center justify-center p-2 text-center bg-secondary text-secondary-foreground font-semibold rounded-md">
+                                                            <td className="sticky left-0 z-20 p-2 text-sm font-semibold text-foreground align-middle bg-card text-left">{slot}</td>
+                                                            <td colSpan={sortedClasses.length} className="p-2 align-middle">
+                                                                <div className="h-full flex items-center justify-center p-3 text-center bg-secondary text-secondary-foreground font-semibold rounded-md">
                                                                     {firstEntry.subject}
                                                                 </div>
                                                             </td>
@@ -157,21 +157,21 @@ export default function SchoolRoutinePage() {
 
                                                 return (
                                                     <tr key={slot}>
-                                                        <td className="sticky left-0 z-20 p-4 text-sm font-semibold text-foreground align-top min-w-[100px] bg-card">{slot}</td>
+                                                        <td className="sticky left-0 z-20 p-2 text-sm font-semibold text-foreground align-top bg-card text-left">{slot}</td>
                                                         {sortedClasses.map(c => {
                                                             const entry = scheduleByDayClassTime[day]?.[c]?.[slot];
                                                             const isEmpty = !entry || entry?.subject === '---';
                                                             const teacherNames = (entry?.teacher || '').split(' & ').map(tId => teacherNameMap.get(tId.trim()) || tId).join(' & ');
                                                             
                                                             if (isEmpty) {
-                                                                return <td key={`${c}-${slot}`} className="p-4"></td>;
+                                                                return <td key={`${c}-${slot}`} className="p-2 border-t border-b border-dashed"></td>;
                                                             }
                                                             
                                                             const colorClass = getSubjectColor(entry.subject, subjectColorMap);
 
                                                             return (
-                                                                <td key={`${c}-${slot}`} className="p-4 align-top">
-                                                                    <div className={cn("text-left p-2 space-y-1 bg-card rounded-md shadow-sm border-l-4 h-full", colorClass)}>
+                                                                <td key={`${c}-${slot}`} className="p-2 align-top border-t border-b">
+                                                                    <div className={cn("text-left p-3 space-y-1.5 bg-card rounded-lg shadow-sm border-l-4 h-full", colorClass)}>
                                                                         <p className="font-bold text-sm text-foreground flex items-center">
                                                                             {getSubjectIcon(entry.subject)}
                                                                             {entry.subject}

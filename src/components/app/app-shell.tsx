@@ -26,6 +26,7 @@ import {
   Settings,
   Heart,
   LayoutDashboard,
+  Beaker,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "../icons";
@@ -37,6 +38,7 @@ const adminNavItems = [
   { href: "/adjustments", label: "Adjustments", icon: Replace },
   { href: "/reports", label: "Exams", icon: ClipboardCheck },
   { href: "/holidays", label: "Holidays", icon: NotebookText },
+  { href: "/test-routine", label: "Test Routine", icon: Beaker },
 ];
 
 const teacherNavItems = [

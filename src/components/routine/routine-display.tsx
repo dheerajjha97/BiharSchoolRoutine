@@ -229,7 +229,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   };
   
 const renderMobileView = (day: DayOfWeek) => {
-    const classesToShow = selectedClass ? sortedClasses.filter(c => c === selectedClass) : [];
+    const classesToShow = sortedClasses.filter(c => c === selectedClass);
 
     return (
       <div className="space-y-4">
@@ -427,9 +427,9 @@ const renderMobileView = (day: DayOfWeek) => {
                 </div>
                 <Tabs defaultValue={workingDays.includes(defaultDay) ? defaultDay : (workingDays[0] || "Monday")} className="w-full">
                     <ScrollArea className="w-full whitespace-nowrap no-print">
-                        <TabsList className="w-max">
-                            {workingDays.map(day => <TabsTrigger key={day} value={day}>{day}</TabsTrigger>)}
-                        </TabsList>
+                      <TabsList className="w-max">
+                          {workingDays.map(day => <TabsTrigger key={day} value={day}>{day}</TabsTrigger>)}
+                      </TabsList>
                       <ScrollBar orientation="horizontal" />
                     </ScrollArea>
 

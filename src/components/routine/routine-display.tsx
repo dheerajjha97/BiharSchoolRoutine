@@ -243,56 +243,6 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
      setIsCellDialogOpen(false);
      setCurrentCell(null);
   };
-  
-  const handleCopyDay = (sourceDay: DayOfWeek, destinationDay: DayOfWeek) => {
-    if (!scheduleData?.schedule) return;
-
-    const scheduleWithoutDestination = scheduleData.schedule.filter(entry => 
-      entry.day !== destinationDay || entry.subject === 'Prayer' || entry.subject === 'Lunch'
-    );
-    
-    const sourceEntries = scheduleData.schedule.filter(entry => 
-      entry.day === sourceDay && entry.subject !== 'Prayer' && entry.subject !== 'Lunch'
-    );
-
-    const newDestinationEntries = sourceEntries.map(entry => ({
-      ...entry,
-      day: destinationDay as DayOfWeek
-    }));
-
-    onScheduleChange([...scheduleWithoutDestination, ...newDestinationEntries]);
-  };
-
-  const handlePrint = (elementId: string) => {
-    const printableElement = document.getElementById(elementId);
-    if (!printableElement) return;
-
-    const printWrapper = document.createElement('div');
-    printWrapper.id = 'printable';
-
-    if (pdfHeader && pdfHeader.trim()) {
-      const headerDiv = document.createElement('div');
-      headerDiv.style.textAlign = 'center';
-      headerDiv.style.marginBottom = '20px';
-      pdfHeader.trim().split('\n').forEach((line, index) => {
-        const p = document.createElement('p');
-        p.textContent = line;
-        p.style.fontSize = index === 0 ? '16px' : '14px';
-        p.style.fontWeight = index === 0 ? 'bold' : 'normal';
-        p.style.margin = '0';
-        p.style.padding = '0';
-        headerDiv.appendChild(p);
-      });
-      printWrapper.appendChild(headerDiv);
-    }
-    
-    printWrapper.appendChild(printableElement.cloneNode(true));
-    document.body.appendChild(printWrapper);
-    
-    window.print();
-    
-    document.body.removeChild(printWrapper);
-  };
 
   const renderCellContent = (day: DayOfWeek, className: string, timeSlot: string) => {
     const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
@@ -362,7 +312,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
             <div className="flex flex-wrap justify-between items-start gap-4">
                 <div>
                     <CardTitle>View Routine</CardTitle>
-                    <CardDescription>View, download, or edit your routine. {isEditable && "Use the copy icon next to a day's name to paste its schedule to another day."}</CardDescription>
+                    <CardDescription>View, download, or edit your routine.</CardDescription>
                 </div>
                  <div className="flex items-center gap-2">
                     <Button size="sm" variant="outline" onClick={() => window.print()}>
@@ -386,7 +336,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                     {workingDays.map(day => (
                         <TabsContent key={day} value={day}>
                             <div className="border rounded-lg bg-card overflow-x-auto" id={`table-${day}`}>
-                                <table className="border-collapse">
+                                <table className="border-collapse min-w-max">
                                     <thead className="bg-card">
                                     <tr>
                                         <th className="font-bold min-w-[120px] sticky left-0 bg-card z-20 p-2 text-left">Class</th>
@@ -460,7 +410,5 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 };
 
 export default RoutineDisplay;
-
-    
 
     

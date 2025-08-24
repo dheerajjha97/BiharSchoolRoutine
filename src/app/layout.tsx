@@ -53,11 +53,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AppStateProvider>
-            <MainLayout>
-              {children}
-            </MainLayout>
-          </AppStateProvider>
+          <MainLayout>
+            {children}
+          </MainLayout>
           <Toaster />
         </ThemeProvider>
       </body>

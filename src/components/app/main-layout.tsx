@@ -3,7 +3,7 @@
 
 import { useContext, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { AppStateContext } from "@/context/app-state-provider";
+import { AppStateContext, AppStateProvider } from "@/context/app-state-provider";
 import AppShell from "./app-shell";
 import { Loader2 } from "lucide-react";
 
@@ -24,7 +24,7 @@ function ConditionalLayout({ children }: { children: React.ReactNode }) {
         if (!user && !isPublicPath) {
             router.replace('/login');
         } else if (user && isPublicPath) {
-            router.replace('/');
+            router.replace('/school-routine');
         }
     }, [user, isAuthLoading, pathname, router]);
 
@@ -57,8 +57,10 @@ function ConditionalLayout({ children }: { children: React.ReactNode }) {
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   return (
-      <ConditionalLayout>
-          {children}
-      </ConditionalLayout>
+      <AppStateProvider>
+        <ConditionalLayout>
+            {children}
+        </ConditionalLayout>
+      </AppStateProvider>
   );
 }

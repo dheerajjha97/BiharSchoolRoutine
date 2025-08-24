@@ -203,7 +203,7 @@ export default function Home() {
           />
       </div>
 
-      <div className="p-4 md:p-6 pt-0">
+      <div className="px-4 md:px-6">
           <Card>
             <CardHeader>
               <CardTitle>Generate New Routine</CardTitle>
@@ -297,7 +297,7 @@ export default function Home() {
           </Card>
       </div>
 
-      <div className="flex-1 w-full overflow-y-auto space-y-6 p-4 md:p-6 pt-0">
+      <div className="flex-1 w-full overflow-y-auto space-y-6 p-4 md:p-6 pt-6">
         <RoutineDisplayWrapper />
         <div className="mt-6">
             <TeacherLoad 

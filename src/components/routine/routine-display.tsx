@@ -4,25 +4,15 @@
 import React, { useMemo, useState } from 'react';
 import type { GenerateScheduleOutput, ScheduleEntry, Teacher, DayOfWeek } from "@/types";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash2, AlertTriangle, Copy, Printer, Pencil, ArrowRight } from "lucide-react";
+import { Trash2, AlertTriangle, Printer, Pencil, Clock, User } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn, sortClasses } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuPortal,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import useMediaQuery from '@/hooks/use-media-query';
 
@@ -71,6 +61,7 @@ const toRoman = (num: number): string => {
 const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, teacherSubjects, onScheduleChange, dailyPeriodQuota, pdfHeader = "", isEditable, workingDays }: RoutineDisplayProps) => {
   const { toast } = useToast();
   const defaultDay = new Date().toLocaleString('en-US', { weekday: 'long' }) as DayOfWeek;
+  const isMobile = useMediaQuery("(max-width: 768px)");
   
   const [isCellDialogOpen, setIsCellDialogOpen] = useState(false);
   const [currentCell, setCurrentCell] = useState<CurrentCell | null>(null);
@@ -91,58 +82,6 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
     });
     return map;
   }, [timeSlots, scheduleData]);
-
-  const clashSet = useMemo(() => {
-    const clashes = new Set<string>();
-    if (!scheduleData?.schedule) {
-        return clashes;
-    }
-
-    const bookings: Record<string, { teachers: string[]; classes: string[] }> = {};
-
-    scheduleData.schedule.forEach(entry => {
-        if (!entry || !entry.day || !entry.timeSlot) return; 
-        const key = `${entry.day}-${entry.timeSlot}`;
-        if (!bookings[key]) {
-            bookings[key] = { teachers: [], classes: [] };
-        }
-
-        const entryTeachers = (typeof entry.teacher === 'string' && entry.teacher) ? entry.teacher.split(' & ').map(t => t.trim()).filter(Boolean) : [];
-        const entryClasses = (typeof entry.className === 'string' && entry.className) ? entry.className.split(' & ').map(c => c.trim()) : [];
-
-        entryTeachers.forEach(teacher => {
-            if (teacher !== "N/A" && bookings[key].teachers.includes(teacher)) clashes.add(`teacher-${key}-${teacher}`);
-            bookings[key].teachers.push(teacher);
-        });
-
-        entryClasses.forEach(c => {
-            if (bookings[key].classes.includes(c)) {
-                clashes.add(`class-${key}-${c}`);
-            }
-            bookings[key].classes.push(c);
-        });
-    });
-
-    scheduleData.schedule.forEach(entry => {
-        if (!entry || !entry.day || !entry.timeSlot || !entry.className) return;
-        const key = `${entry.day}-${entry.timeSlot}`;
-        const entryTeachers = (typeof entry.teacher === 'string' && entry.teacher) ? entry.teacher.split(' & ').map(t => t.trim()).filter(Boolean) : [];
-        const entryClasses = (typeof entry.className === 'string' && entry.className) ? entry.className.split(' & ').map(c => c.trim()) : [];
-        
-        entryTeachers.forEach(teacher => {
-            if (teacher !== "N/A" && clashes.has(`teacher-${key}-${teacher}`)) {
-                clashes.add(`${key}-${entry.className}-${teacher}`);
-            }
-        });
-        entryClasses.forEach(c => {
-            if (clashes.has(`class-${key}-${c}`)) {
-                clashes.add(`${key}-${c}-${entry.teacher}`);
-            }
-        });
-    });
-
-    return clashes;
-  }, [scheduleData]);
 
   const gridSchedule = useMemo<GridSchedule>(() => {
     const grid: GridSchedule = {};
@@ -246,11 +185,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 
   const renderCellContent = (day: DayOfWeek, className: string, timeSlot: string) => {
     const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
-    const isClashed = entries.some(entry => 
-        (entry.teacher || '').split(' & ').some(t => clashSet.has(`teacher-${day}-${entry.timeSlot}-${t}`)) ||
-        clashSet.has(`class-${day}-${entry.timeSlot}-${className}`)
-    );
-
+    
     return (
         <div
             className={cn(
@@ -259,24 +194,18 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
             )}
             onClick={() => handleCellClick(day, timeSlot, className, entries[0] || null)}
         >
-            {isClashed && <AlertTriangle className="h-4 w-4 text-destructive absolute top-1 right-1" />}
             {entries.length === 0 ? (
                  isEditable && <span className="text-muted-foreground text-xs hover:text-primary opacity-0 hover:opacity-100 transition-opacity">+</span>
             ) : (
                 entries.map((entry, index) => {
                     if (!entry || entry.subject === '---') return null;
                     
-                    const isClashedEntry = isClashed && (
-                        (entry.teacher || '').split(' & ').some(t => clashSet.has(`teacher-${day}-${entry.timeSlot}-${t}`)) ||
-                        clashSet.has(`class-${day}-${entry.timeSlot}-${className}`)
-                    );
                     const isCombined = (entry.className || '').includes('&');
                     const isSplit = (entry.subject || '').includes('/');
-                    
                     const teacherNames = (entry.teacher || '').split(' & ').map(tId => getTeacherName(tId.trim())).join(' & ');
 
                     return (
-                        <div key={index} className={cn("w-full text-center p-1 bg-card rounded-md border text-xs", isClashedEntry && "bg-destructive/20")}>
+                        <div key={index} className="w-full text-center p-1 bg-card rounded-md border text-xs">
                             <div className="font-semibold">{entry.subject}</div>
                             <div className="text-muted-foreground text-[10px]">{teacherNames || <span className="italic">N/A</span>}</div>
                             {isCombined && <div className="text-muted-foreground text-[9px] italic mt-1">(Combined)</div>}
@@ -288,7 +217,86 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
         </div>
     );
   };
-  
+
+  const renderMobileView = (day: DayOfWeek) => (
+    <div className="space-y-4">
+        {sortedClasses.map(className => {
+            const periodsForClass = timeSlots.map(timeSlot => {
+                const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
+                return { timeSlot, entry: entries[0] };
+            }).filter(p => p.entry && p.entry.subject !== '---');
+
+            return (
+                <Card key={className}>
+                    <CardHeader className="p-4">
+                        <CardTitle className="text-lg">{className}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0">
+                        {periodsForClass.length > 0 ? (
+                            <div className="space-y-3">
+                                {periodsForClass.map(({ timeSlot, entry }) => (
+                                    <div 
+                                        key={timeSlot} 
+                                        className={cn(
+                                            "flex items-center justify-between p-3 rounded-lg border",
+                                            entry.subject === 'Prayer' || entry.subject === 'Lunch' ? 'bg-secondary' : 'bg-background'
+                                        )}
+                                        onClick={() => handleCellClick(day, timeSlot, className, entry)}
+                                    >
+                                        <div className="flex-1">
+                                            <p className="font-bold">{entry.subject}</p>
+                                            <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
+                                                <User className="h-4 w-4" />
+                                                {getTeacherName(entry.teacher)}
+                                            </p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
+                                                <Clock className="h-4 w-4" />
+                                                {timeSlot}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-sm text-muted-foreground text-center py-4">No periods scheduled for this class.</p>
+                        )}
+                    </CardContent>
+                </Card>
+            )
+        })}
+    </div>
+  );
+
+  const renderDesktopView = (day: DayOfWeek) => (
+      <div className="overflow-x-auto border rounded-lg">
+          <Table className='min-w-full'>
+              <TableHeader>
+                  <TableRow className="bg-muted/50">
+                      <TableHead className="font-semibold p-2 sticky left-0 bg-muted/50 z-10 min-w-[100px]">Class</TableHead>
+                      {timeSlots.map(slot => (
+                          <TableHead key={slot} className="text-center font-semibold text-xs p-1 align-bottom min-w-[90px]">
+                              <div>{slot}</div>
+                              <div className="font-normal text-muted-foreground">{instructionalSlotMap[slot] ? toRoman(instructionalSlotMap[slot]) : '-'}</div>
+                          </TableHead>
+                      ))}
+                  </TableRow>
+              </TableHeader>
+              <TableBody>
+                  {sortedClasses.map((className) => (
+                      <TableRow key={`${day}-${className}`} className="border-t">
+                          <TableCell className="font-medium p-2 sticky left-0 bg-card z-10">{className}</TableCell>
+                          {timeSlots.map(timeSlot => (
+                              <TableCell key={`${day}-${className}-${timeSlot}`} className="p-0 align-top border-l">{renderCellContent(day, className, timeSlot)}</TableCell>
+                          ))}
+                      </TableRow>
+                  ))}
+              </TableBody>
+          </Table>
+      </div>
+  );
+
   if (!scheduleData || !scheduleData.schedule || scheduleData.schedule.length === 0) {
     return (
       <Card>
@@ -335,31 +343,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                     </div>
                     {workingDays.map(day => (
                         <TabsContent key={day} value={day} className="p-4 pt-0 sm:p-0">
-                             <div className="overflow-x-auto border rounded-lg">
-                                <table className="bg-card">
-                                    <thead>
-                                    <tr className="bg-muted/50">
-                                        <th className="font-semibold p-2 text-left sticky left-0 bg-muted/50 z-10 min-w-[100px]">Class</th>
-                                        {timeSlots.map(slot => (
-                                        <th key={slot} className="text-center font-semibold text-xs p-1 align-bottom min-w-[90px]">
-                                            <div>{slot}</div>
-                                            <div className="font-normal text-muted-foreground">{instructionalSlotMap[slot] ? toRoman(instructionalSlotMap[slot]) : '-'}</div>
-                                        </th>
-                                        ))}
-                                    </tr>
-                                    </thead>
-                                    <tbody>
-                                        {sortedClasses.map((className) => (
-                                            <tr key={`${day}-${className}`} className="border-t">
-                                                <td className="font-medium p-2 sticky left-0 bg-card z-10">{className}</td>
-                                                {timeSlots.map(timeSlot => (
-                                                <td key={`${day}-${className}-${timeSlot}`} className="p-0 align-top border-l">{renderCellContent(day, className, timeSlot)}</td>
-                                                ))}
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                             {isMobile ? renderMobileView(day) : renderDesktopView(day)}
                         </TabsContent>
                     ))}
                 </Tabs>
@@ -372,6 +356,9 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Edit Schedule Slot</DialogTitle>
+              <DialogDescription>
+                Day: {currentCell?.day}, Time: {currentCell?.timeSlot}, Class: {currentCell?.className}
+              </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
@@ -410,3 +397,5 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 };
 
 export default RoutineDisplay;
+
+    

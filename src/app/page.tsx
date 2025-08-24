@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { generateScheduleLogic } from "@/lib/schedule-generator";
 import { useToast } from "@/hooks/use-toast";
-import { BrainCircuit, FilePlus, Trash2, Pencil, MoreVertical, Loader2, Wand2, PlusSquare, Edit, Check, X } from "lucide-react";
+import { Wand2, PlusSquare, Edit, Trash2, Loader2 } from "lucide-react";
 import type { GenerateScheduleOutput, RoutineVersion } from "@/types";
 import {
   Dialog,
@@ -16,7 +16,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogClose,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,7 +42,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 
 const RoutineDisplayWrapper = () => {
@@ -325,3 +323,5 @@ export default function Home() {
 
   return isUserAdmin ? renderAdminDashboard() : renderTeacherView();
 }
+
+    

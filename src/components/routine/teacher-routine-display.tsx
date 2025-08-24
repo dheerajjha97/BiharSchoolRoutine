@@ -135,7 +135,7 @@ export default function TeacherRoutineDisplay({ scheduleData, teacher, timeSlots
     const isTodayOff = holidayInfo || !workingDays.includes(selectedDayName);
 
     return (
-        <Card className="w-full max-w-md mx-auto overflow-hidden shadow-lg bg-card">
+        <Card className="w-full max-w-sm mx-auto overflow-hidden shadow-lg bg-card">
             <div className="p-4 border-b">
                 <div className="text-muted-foreground text-sm font-bold tracking-wider mb-4 px-2">
                     {currentDate.toLocaleString('en-US', { month: 'long', timeZone: 'UTC' }).toUpperCase()} {currentDate.getUTCFullYear()}

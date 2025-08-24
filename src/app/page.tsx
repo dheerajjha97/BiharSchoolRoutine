@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import RoutineDisplay from "@/components/routine/routine-display";
 import TeacherRoutineDisplay from "@/components/routine/teacher-routine-display";
+import TeacherLoad from "@/components/routine/teacher-load";
 
 export default function Home() {
     const { 
@@ -198,27 +199,7 @@ export default function Home() {
             </div>
         </div>
 
-        {/* --- Bottom Section (scrolling) --- */}
-        <div className="flex-1 w-full overflow-x-auto p-4 md:p-6 space-y-6">
-           <RoutineDisplay 
-                scheduleData={activeRoutine?.schedule || null}
-                onScheduleChange={(newSchedule) => {
-                    if (activeRoutine) {
-                    updateRoutineVersion(activeRoutine.id, { schedule: { schedule: newSchedule } });
-                    }
-                }}
-                isEditable={true}
-                timeSlots={appState.timeSlots} 
-                classes={appState.classes}
-                subjects={appState.subjects}
-                teachers={appState.teachers}
-                teacherSubjects={config.teacherSubjects}
-                dailyPeriodQuota={appState.config.dailyPeriodQuota}
-                pdfHeader={appState.schoolInfo.pdfHeader}
-                workingDays={appState.config.workingDays}
-                />
-        </div>
-
+        
          <Dialog open={!!routineToRename} onOpenChange={(isOpen) => !isOpen && setRoutineToRename(null)}>
             <DialogContent>
                 <DialogHeader>

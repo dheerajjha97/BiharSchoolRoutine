@@ -100,14 +100,6 @@ const RoutineDisplayWrapper = () => {
                 isEditable={true}
                 workingDays={workingDays}
             />
-             <div className="mt-6">
-                <TeacherLoad 
-                    teacherLoad={appState.teacherLoad}
-                    teachers={teachers}
-                    pdfHeader={pdfHeader}
-                    workingDays={workingDays}
-                />
-            </div>
         </>
     );
 };
@@ -201,7 +193,7 @@ export default function Home() {
     <div className="flex flex-col h-full overflow-hidden">
         {/* === Top static part === */}
         <div className="p-4 md:p-6">
-            <div className="w-full max-w-xl mx-auto">
+            <div className="w-full max-w-xl">
                 <PageHeader 
                     title="Dashboard"
                     description="Generate, view, and manage your school's class routine."

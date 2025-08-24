@@ -194,8 +194,8 @@ export default function Home() {
   );
 
   const renderAdminDashboard = () => (
-    <div className="flex flex-col h-full overflow-x-hidden">
-      <div className="p-4 md:p-6">
+    <div className="flex flex-col h-full">
+      <div className="p-4 md:p-6 pb-0">
           <PageHeader 
             title="Admin Dashboard"
             description="Generate, view, and manage your school's class routine."
@@ -296,7 +296,7 @@ export default function Home() {
           </Card>
       </div>
 
-      <div className="flex-1 w-full overflow-y-auto space-y-6 p-4 md:p-6 pt-6">
+      <div className="flex-1 w-full overflow-y-auto space-y-6 p-4 md:p-6">
         <RoutineDisplayWrapper />
       </div>
 

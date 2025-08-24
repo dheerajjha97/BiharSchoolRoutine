@@ -378,9 +378,11 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                     <h2 className="text-lg font-bold mt-2">Class Routine</h2>
                 </div>
                 <Tabs defaultValue={workingDays.includes(defaultDay) ? defaultDay : workingDays[0]} className="w-full">
-                    <TabsList className="mb-4 flex-nowrap overflow-x-auto justify-start">
-                        {workingDays.map(day => <TabsTrigger key={day} value={day}>{day}</TabsTrigger>)}
-                    </TabsList>
+                    <div className="overflow-x-auto pb-2">
+                        <TabsList className="mb-4">
+                            {workingDays.map(day => <TabsTrigger key={day} value={day}>{day}</TabsTrigger>)}
+                        </TabsList>
+                    </div>
                     {workingDays.map(day => (
                         <TabsContent key={day} value={day}>
                             <div className="border rounded-lg bg-card overflow-x-auto" id={`table-${day}`}>
@@ -458,5 +460,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 };
 
 export default RoutineDisplay;
+
+    
 
     

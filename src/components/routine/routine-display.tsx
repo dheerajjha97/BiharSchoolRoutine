@@ -321,27 +321,27 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                 </div>
             </div>
         </CardHeader>
-        <CardContent className="p-4 md:p-6">
+        <CardContent className="p-0 sm:p-6 sm:pt-0">
              <div className="printable-area">
                 <div className="print-header hidden text-center mb-4">
                     {pdfHeader && pdfHeader.trim().split('\n').map((line, index) => <p key={index} className={cn(index === 0 && 'font-bold')}>{line}</p>)}
                     <h2 className="text-lg font-bold mt-2">Class Routine</h2>
                 </div>
                 <Tabs defaultValue={workingDays.includes(defaultDay) ? defaultDay : workingDays[0]} className="w-full">
-                    <div className="overflow-x-auto pb-2">
+                    <div className="overflow-x-auto p-4 sm:p-0">
                         <TabsList className="mb-4">
                             {workingDays.map(day => <TabsTrigger key={day} value={day}>{day}</TabsTrigger>)}
                         </TabsList>
                     </div>
                     {workingDays.map(day => (
-                        <TabsContent key={day} value={day}>
+                        <TabsContent key={day} value={day} className="p-4 pt-0 sm:p-0">
                             <div className="border rounded-lg bg-card overflow-x-auto" id={`table-${day}`}>
-                                <table className="border-collapse min-w-max">
-                                    <thead className="bg-card">
-                                    <tr>
-                                        <th className="font-bold min-w-[120px] sticky left-0 bg-card z-20 p-2 text-left">Class</th>
+                                <table className="w-full border-collapse">
+                                    <thead>
+                                    <tr className="bg-muted/50">
+                                        <th className="font-semibold p-2 text-left sticky left-0 bg-muted/50 z-10 min-w-[100px]">Class</th>
                                         {timeSlots.map(slot => (
-                                        <th key={slot} className="text-center font-bold text-xs min-w-[90px] p-1 align-bottom">
+                                        <th key={slot} className="text-center font-semibold text-xs p-1 align-bottom min-w-[90px]">
                                             <div>{slot}</div>
                                             <div className="font-normal text-muted-foreground">{instructionalSlotMap[slot] ? toRoman(instructionalSlotMap[slot]) : '-'}</div>
                                         </th>
@@ -351,7 +351,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                                     <tbody>
                                         {sortedClasses.map((className) => (
                                             <tr key={`${day}-${className}`} className="border-t">
-                                                <td className="font-medium align-top sticky left-0 bg-card z-10 p-2">{className}</td>
+                                                <td className="font-medium p-2 sticky left-0 bg-card z-10">{className}</td>
                                                 {timeSlots.map(timeSlot => (
                                                 <td key={`${day}-${className}-${timeSlot}`} className="p-0 align-top border-l">{renderCellContent(day, className, timeSlot)}</td>
                                                 ))}

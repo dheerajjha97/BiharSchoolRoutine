@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash2, Printer, Pencil, User, Sun, Sandwich } from "lucide-react";
+import { Trash2, Printer, Pencil, User, Sun, Sandwich, Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn, sortClasses } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
@@ -217,14 +217,14 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
         </div>
     );
   };
-
+  
   const renderMobileView = (day: DayOfWeek) => (
     <div className="space-y-4">
         {sortedClasses.map(className => {
             const periodsForClass = timeSlots.map(timeSlot => {
                 const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
                 return { timeSlot, entry: entries[0] }; 
-            }).filter(({entry}) => entry && entry.subject !== '---');
+            }).filter(({entry}) => entry);
 
             if (periodsForClass.length === 0) return null;
 
@@ -239,7 +239,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                             
                             <div className="space-y-8">
                                 {periodsForClass.map(({ timeSlot, entry }) => {
-                                    if (!entry) return null;
+                                    if (!entry || entry.subject === '---') return null;
                                     const isSpecial = entry.subject === 'Prayer' || entry.subject === 'Lunch';
                                     const SpecialIcon = entry.subject === 'Prayer' ? Sun : Sandwich;
                                     
@@ -286,7 +286,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 
   const renderDesktopView = (day: DayOfWeek) => (
       <div className="overflow-x-auto border rounded-lg">
-          <Table>
+          <Table className="min-w-full">
               <TableHeader>
                   <TableRow className="bg-muted/50 hover:bg-muted/50">
                       <TableHead className="font-semibold p-2 sticky left-0 bg-card z-10 min-w-[120px]">Class</TableHead>

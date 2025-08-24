@@ -119,11 +119,13 @@ export default function SchoolRoutinePage() {
             <Card>
                 <CardContent className="p-4 md:p-6">
                     <Tabs defaultValue={config.workingDays.includes(defaultDay) ? defaultDay : (config.workingDays[0] || "Monday")} className="w-full">
-                        <TabsList className="mb-6 flex-nowrap overflow-x-auto justify-start">
-                            {config.workingDays.map(day => (
-                                <TabsTrigger key={day} value={day}>{day}</TabsTrigger>
-                            ))}
-                        </TabsList>
+                        <div className="overflow-x-auto">
+                            <TabsList className="mb-6 flex-nowrap justify-start">
+                                {config.workingDays.map(day => (
+                                    <TabsTrigger key={day} value={day}>{day}</TabsTrigger>
+                                ))}
+                            </TabsList>
+                        </div>
                         
                         {config.workingDays.map(day => (
                             <TabsContent key={day} value={day}>

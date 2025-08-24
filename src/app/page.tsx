@@ -181,19 +181,22 @@ export default function Home() {
   
   const renderTeacherView = () => {
     // This view is for a logged-in teacher. We need to wait for `teachers` to be populated.
-    if (appState.teachers.length > 0 && !loggedInTeacher) {
-      return (
-        <div className="p-4 md:p-6 space-y-6 flex items-center justify-center h-full">
+    if (!loggedInTeacher && (appState.teachers.length > 0 || !user)) {
+      // Show error only if we have teachers data and user is loaded, but still no match.
+      if (user?.email && appState.teachers.length > 0) {
+        return (
+          <div className="p-4 md:p-6 space-y-6 flex items-center justify-center h-full">
             <Card className="w-full max-w-md text-center">
               <CardHeader>
                 <CardTitle>Error</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-destructive">Your email ({user?.email}) is not registered as a teacher in this school's data. Please contact the administrator.</p>
+                <p className="text-destructive">Your email ({user.email}) is not registered as a teacher in this school's data. Please contact the administrator.</p>
               </CardContent>
             </Card>
-        </div>
-      );
+          </div>
+        );
+      }
     }
     
     if (!loggedInTeacher) {
@@ -221,7 +224,7 @@ export default function Home() {
   };
 
   const renderAdminDashboard = () => (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="space-y-6 p-6">
       <PageHeader 
         title="Admin Dashboard"
         description="Generate, view, and manage your school's class routine."

@@ -386,7 +386,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                     {workingDays.map(day => (
                         <TabsContent key={day} value={day}>
                             <div className="border rounded-lg bg-card overflow-x-auto" id={`table-${day}`}>
-                                <table className="min-w-full w-full border-collapse">
+                                <table className="border-collapse">
                                     <thead className="bg-card">
                                     <tr>
                                         <th className="font-bold min-w-[120px] sticky left-0 bg-card z-20 p-2 text-left">Class</th>

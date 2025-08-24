@@ -15,6 +15,8 @@ import { cn, sortClasses } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import useMediaQuery from '@/hooks/use-media-query';
+import { Badge } from '../ui/badge';
+import { ScrollArea, ScrollBar } from '../ui/scroll-area';
 
 interface RoutineDisplayProps {
   scheduleData: GenerateScheduleOutput | null;
@@ -66,6 +68,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   const [isCellDialogOpen, setIsCellDialogOpen] = useState(false);
   const [currentCell, setCurrentCell] = useState<CurrentCell | null>(null);
   const [cellData, setCellData] = useState<CellData>({ subject: "", className: "", teacher: "" });
+  const [selectedClass, setSelectedClass] = useState<string | 'all'>('all');
   
   const sortedClasses = useMemo(() => [...classes].sort(sortClasses), [classes]);
   const teacherNameMap = useMemo(() => new Map(teachers.map(t => [t.id, t.name])), [teachers]);
@@ -220,73 +223,99 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   
   const renderMobileView = (day: DayOfWeek) => (
     <div className="space-y-4">
-        {sortedClasses.map(className => {
-            const periodsForClass = timeSlots.map(timeSlot => {
-                const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
-                return { timeSlot, entry: entries[0] }; 
-            }).filter(({entry}) => entry);
+        <div className="px-1">
+            <ScrollArea className="w-full whitespace-nowrap">
+                <div className="flex space-x-2 pb-2">
+                    <Badge 
+                        onClick={() => setSelectedClass('all')}
+                        variant={selectedClass === 'all' ? 'default' : 'secondary'}
+                        className="cursor-pointer transition-all"
+                    >
+                        All Classes
+                    </Badge>
+                    {sortedClasses.map(className => (
+                        <Badge 
+                            key={className}
+                            onClick={() => setSelectedClass(className)}
+                            variant={selectedClass === className ? 'default' : 'secondary'}
+                            className="cursor-pointer transition-all"
+                        >
+                            {className}
+                        </Badge>
+                    ))}
+                </div>
+                <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+        </div>
+        {sortedClasses
+            .filter(className => selectedClass === 'all' || selectedClass === className)
+            .map(className => {
+                const periodsForClass = timeSlots.map(timeSlot => {
+                    const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
+                    return { timeSlot, entry: entries[0] }; 
+                }).filter(({entry}) => entry);
 
-            if (periodsForClass.length === 0) return null;
+                if (periodsForClass.length === 0) return null;
 
-            return (
-                <Card key={className} className="shadow-lg overflow-hidden">
-                    <CardHeader className="p-4 bg-muted/30">
-                        <CardTitle className="text-base font-bold">{className}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-4">
-                        <div className="relative pl-6">
-                            <div className="absolute left-2.5 top-0 h-full w-0.5 bg-border"></div>
-                            
-                            <div className="space-y-8">
-                                {periodsForClass.map(({ timeSlot, entry }) => {
-                                    if (!entry || entry.subject === '---') return null;
-                                    const isSpecial = entry.subject === 'Prayer' || entry.subject === 'Lunch';
-                                    const SpecialIcon = entry.subject === 'Prayer' ? Sun : Sandwich;
-                                    
-                                    return (
-                                        <div 
-                                            key={timeSlot} 
-                                            className={cn(
-                                                "relative flex gap-4 items-start",
-                                                isEditable && !isSpecial && 'cursor-pointer'
-                                            )}
-                                            onClick={() => isEditable && !isSpecial && handleCellClick(day, timeSlot, className, entry)}
-                                        >
-                                            <div className="absolute left-[-24px] top-1.5 h-5 w-5 rounded-full bg-primary border-4 border-background z-10"></div>
-                                            
-                                            <div className="text-xs font-semibold text-muted-foreground w-20 shrink-0 pt-2">{timeSlot}</div>
-                                            
-                                            <div className="flex-grow">
-                                                {isSpecial ? (
-                                                    <div className="flex items-center gap-2 font-bold text-base text-primary pt-1">
-                                                        <SpecialIcon className="h-5 w-5" />
-                                                        <span>{entry.subject}</span>
-                                                    </div>
-                                                ) : (
-                                                    <div>
-                                                        <h4 className="font-bold text-sm leading-tight">{entry.subject}</h4>
-                                                        <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
-                                                            <User className="h-3 w-3" />
-                                                            {getTeacherName(entry.teacher) || <span className='italic'>N/A</span>}
-                                                        </p>
-                                                    </div>
+                return (
+                    <Card key={className} className="shadow-lg overflow-hidden">
+                        <CardHeader className="p-4 bg-muted/30">
+                            <CardTitle className="text-base font-bold">{className}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-4">
+                            <div className="relative pl-6">
+                                <div className="absolute left-2.5 top-0 h-full w-0.5 bg-border"></div>
+                                
+                                <div className="space-y-8">
+                                    {periodsForClass.map(({ timeSlot, entry }) => {
+                                        if (!entry || entry.subject === '---') return null;
+                                        const isSpecial = entry.subject === 'Prayer' || entry.subject === 'Lunch';
+                                        const SpecialIcon = entry.subject === 'Prayer' ? Sun : Sandwich;
+                                        
+                                        return (
+                                            <div 
+                                                key={timeSlot} 
+                                                className={cn(
+                                                    "relative flex gap-4 items-start",
+                                                    isEditable && !isSpecial && 'cursor-pointer'
                                                 )}
+                                                onClick={() => isEditable && !isSpecial && handleCellClick(day, timeSlot, className, entry)}
+                                            >
+                                                <div className="absolute left-[-24px] top-1.5 h-5 w-5 rounded-full bg-primary border-4 border-background z-10"></div>
+                                                
+                                                <div className="text-xs font-semibold text-muted-foreground w-20 shrink-0 pt-2">{timeSlot}</div>
+                                                
+                                                <div className="flex-grow">
+                                                    {isSpecial ? (
+                                                        <div className="flex items-center gap-2 font-bold text-base text-primary pt-1">
+                                                            <SpecialIcon className="h-5 w-5" />
+                                                            <span>{entry.subject}</span>
+                                                        </div>
+                                                    ) : (
+                                                        <div>
+                                                            <h4 className="font-bold text-sm leading-tight">{entry.subject}</h4>
+                                                            <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
+                                                                <User className="h-3 w-3" />
+                                                                {getTeacherName(entry.teacher) || <span className='italic'>N/A</span>}
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
-                                        </div>
-                                    );
-                                })}
+                                        );
+                                    })}
+                                </div>
                             </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            )
+                        </CardContent>
+                    </Card>
+                )
         })}
     </div>
   );
 
   const renderDesktopView = (day: DayOfWeek) => (
       <div className="overflow-x-auto border rounded-lg">
-          <Table className="min-w-full">
+          <Table>
               <TableHeader>
                   <TableRow className="bg-muted/50 hover:bg-muted/50">
                       <TableHead className="font-semibold p-2 sticky left-0 bg-card z-10 min-w-[120px]">Class</TableHead>
@@ -383,14 +412,14 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                     <h2 className="text-lg font-bold mt-2">Class Routine</h2>
                 </div>
                 <Tabs defaultValue={workingDays.includes(defaultDay) ? defaultDay : (workingDays[0] || "Monday")} className="w-full">
-                    <div className="overflow-x-auto no-print">
-                        <TabsList className="mb-4 flex-nowrap">
+                    <div className="overflow-x-auto no-print px-1 sm:px-0">
+                        <TabsList className="mb-4">
                             {workingDays.map(day => <TabsTrigger key={day} value={day}>{day}</TabsTrigger>)}
                         </TabsList>
                     </div>
 
                     {workingDays.map(day => (
-                        <TabsContent key={day} value={day} className="p-2 sm:p-0">
+                        <TabsContent key={day} value={day} className="sm:p-0">
                              {isMobile ? renderMobileView(day) : renderDesktopView(day)}
                         </TabsContent>
                     ))}

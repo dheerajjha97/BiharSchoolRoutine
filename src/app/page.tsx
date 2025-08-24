@@ -201,7 +201,9 @@ export default function Home() {
             title="Admin Dashboard"
             description="Generate, view, and manage your school's class routine."
           />
+      </div>
 
+      <div className="p-4 md:p-6 pt-0">
           <Card>
             <CardHeader>
               <CardTitle>Generate New Routine</CardTitle>
@@ -297,12 +299,14 @@ export default function Home() {
 
       <div className="flex-1 w-full overflow-y-auto space-y-6 p-4 md:p-6 pt-0">
         <RoutineDisplayWrapper />
-        <TeacherLoad 
-            teacherLoad={appState.teacherLoad}
-            teachers={teachers}
-            pdfHeader={appState.schoolInfo.pdfHeader}
-            workingDays={appState.config.workingDays}
-        />
+        <div className="mt-6">
+            <TeacherLoad 
+                teacherLoad={appState.teacherLoad}
+                teachers={teachers}
+                pdfHeader={appState.schoolInfo.pdfHeader}
+                workingDays={appState.config.workingDays}
+            />
+        </div>
       </div>
 
       <Dialog open={!!routineToRename} onOpenChange={(isOpen) => !isOpen && cancelRename()}>

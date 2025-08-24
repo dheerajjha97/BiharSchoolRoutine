@@ -32,6 +32,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import RoutineDisplay from "@/components/routine/routine-display";
+import TeacherRoutineDisplay from "@/components/routine/teacher-routine-display";
 
 export default function Home() {
     const { 
@@ -53,6 +54,8 @@ export default function Home() {
         config,
         routineHistory = [],
         activeRoutineId,
+        holidays = [],
+        user,
      } = appState;
     
   const { toast } = useToast();
@@ -66,6 +69,11 @@ export default function Home() {
   }, [routineHistory, activeRoutineId]);
 
   const hasHistory = routineHistory && routineHistory.length > 0;
+  
+  const loggedInTeacher = useMemo(() => {
+      if (!user?.email) return null;
+      return teachers.find(t => t.email === user.email) || null;
+  }, [user, teachers]);
 
   const handleGenerateRoutine = () => {
         setIsLoading(true);
@@ -100,24 +108,19 @@ export default function Home() {
   };
   
   const renderTeacherView = () => (
-    <div className="flex-1 p-4 md:p-6 space-y-6">
-        <PageHeader 
-            title="My Dashboard"
-            description={`Welcome, ${appState.teachers.find(t => t.email === appState.schoolInfo.udise)?.name || 'Teacher'}. View your schedule below.`}
+    <div className="flex-1 p-4 md:p-6 space-y-6 flex justify-center items-start">
+        <TeacherRoutineDisplay 
+            scheduleData={activeRoutine?.schedule || null}
+            teacher={loggedInTeacher}
+            timeSlots={appState.timeSlots} 
+            workingDays={appState.config.workingDays}
+            holidays={holidays}
         />
-         <Card>
-            <CardHeader>
-                <CardTitle>Teacher View</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <p>Teacher-specific dashboard content can be added here.</p>
-            </CardContent>
-        </Card>
     </div>
   );
 
   const renderAdminDashboard = () => (
-    <div className="flex-1 flex flex-col h-full w-full overflow-x-hidden">
+    <div className="flex flex-col h-full w-full overflow-hidden">
         {/* --- Top Section (non-scrolling) --- */}
         <div className="p-4 md:p-6 w-full">
             <PageHeader 
@@ -236,5 +239,3 @@ export default function Home() {
 
   return isUserAdmin ? renderAdminDashboard() : renderTeacherView();
 }
-
-    

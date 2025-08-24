@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash2, Printer, Pencil, Clock, User } from "lucide-react";
+import { Trash2, Printer, Pencil, Clock, User, Sandwich, Sun } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn, sortClasses } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
@@ -219,58 +219,65 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   };
 
   const renderMobileView = (day: DayOfWeek) => (
-    <div className="space-y-4">
+    <div className="space-y-6">
         {sortedClasses.map(className => {
             const periodsForClass = timeSlots.map(timeSlot => {
                 const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
-                const firstEntry = entries[0];
-                const isSpecial = firstEntry?.subject === 'Prayer' || firstEntry?.subject === 'Lunch';
-                return { timeSlot, entry: firstEntry, isSpecial }; 
+                return { timeSlot, entry: entries[0] }; 
             }).filter(({entry}) => entry && entry.subject !== '---');
 
             if (periodsForClass.length === 0) return null;
 
             return (
-                <Card key={className} className="shadow-md">
+                <Card key={className} className="shadow-lg border-l-4 border-primary overflow-hidden">
                     <CardHeader className="p-4 bg-muted/30">
-                        <CardTitle className="text-lg">{className}</CardTitle>
+                        <CardTitle className="text-lg font-bold">{className}</CardTitle>
                     </CardHeader>
-                    <CardContent className="p-2 sm:p-4">
-                        <div className="space-y-2">
-                            {periodsForClass.map(({ timeSlot, entry, isSpecial }) => {
-                                if (!entry) return null;
-                                return (
-                                    <div 
-                                        key={timeSlot} 
-                                        className={cn(
-                                            "flex items-center justify-between p-3 rounded-lg border",
-                                            isSpecial ? 'bg-secondary font-semibold justify-center' : 'bg-background',
-                                            isEditable && !isSpecial && 'cursor-pointer hover:bg-accent'
-                                        )}
-                                        onClick={() => isEditable && !isSpecial && handleCellClick(day, timeSlot, className, entry)}
-                                    >
-                                      {isSpecial ? (
-                                        <span>{entry.subject}</span>
-                                      ) : (
-                                        <>
-                                          <div className="flex-1 pr-2">
-                                              <p className="font-bold">{entry.subject}</p>
-                                              <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
-                                                  <User className="h-3.5 w-3.5" />
-                                                  {getTeacherName(entry.teacher) || <span className='italic'>N/A</span>}
-                                              </p>
-                                          </div>
-                                          <div className="text-right">
-                                              <p className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
-                                                  <Clock className="h-3.5 w-3.5" />
-                                                  {timeSlot}
-                                              </p>
-                                          </div>
-                                        </>
-                                      )}
-                                    </div>
-                                );
-                            })}
+                    <CardContent className="p-4">
+                        <div className="relative pl-6">
+                            {/* Vertical timeline bar */}
+                            <div className="absolute left-2 top-0 h-full w-0.5 bg-border"></div>
+                            
+                            <div className="space-y-8">
+                                {periodsForClass.map(({ timeSlot, entry }) => {
+                                    if (!entry) return null;
+                                    const isSpecial = entry.subject === 'Prayer' || entry.subject === 'Lunch';
+                                    const SpecialIcon = entry.subject === 'Prayer' ? Sun : Sandwich;
+                                    
+                                    return (
+                                        <div 
+                                            key={timeSlot} 
+                                            className={cn(
+                                                "relative flex gap-4 items-start",
+                                                isEditable && !isSpecial && 'cursor-pointer'
+                                            )}
+                                            onClick={() => isEditable && !isSpecial && handleCellClick(day, timeSlot, className, entry)}
+                                        >
+                                            {/* Timeline Dot */}
+                                            <div className="absolute left-[-22px] top-1 h-4 w-4 rounded-full bg-primary border-4 border-background"></div>
+                                            
+                                            <div className="text-sm font-semibold text-muted-foreground w-20 text-right shrink-0">{timeSlot}</div>
+                                            
+                                            <div className="flex-grow">
+                                                {isSpecial ? (
+                                                    <div className="flex items-center gap-2 font-bold text-lg text-primary">
+                                                        <SpecialIcon className="h-5 w-5" />
+                                                        <span>{entry.subject}</span>
+                                                    </div>
+                                                ) : (
+                                                    <div>
+                                                        <h4 className="font-bold text-base leading-tight">{entry.subject}</h4>
+                                                        <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
+                                                            <User className="h-3.5 w-3.5" />
+                                                            {getTeacherName(entry.teacher) || <span className='italic'>N/A</span>}
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
@@ -283,7 +290,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
       <div className="overflow-x-auto border rounded-lg">
           <Table>
               <TableHeader>
-                  <TableRow className="bg-muted/50">
+                  <TableRow className="bg-muted/50 hover:bg-muted/50">
                       <TableHead className="font-semibold p-2 sticky left-0 bg-card z-10 min-w-[120px]">Class</TableHead>
                       {timeSlots.map(slot => (
                           <TableHead key={slot} className="text-center font-semibold text-xs p-1 align-bottom min-w-[100px]">
@@ -295,33 +302,40 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
               </TableHeader>
               <TableBody>
                   {sortedClasses.map((className) => {
-                      const specialEntry = timeSlots.map(ts => gridSchedule[day]?.[className]?.[ts]?.[0]).find(e => e?.subject === 'Prayer' || e?.subject === 'Lunch');
-                      if (specialEntry) {
-                         // This logic is flawed for desktop, special entries should be handled per slot.
-                         // Let's render row by row.
-                      }
-
                       return (
-                        <TableRow key={`${day}-${className}`} className="border-t">
+                        <TableRow key={`${day}-${className}`}>
                             <TableCell className="font-medium p-2 sticky left-0 bg-card z-10">{className}</TableCell>
                             {timeSlots.map(timeSlot => {
                                 const entry = gridSchedule[day]?.[className]?.[timeSlot]?.[0];
                                 const isSpecial = entry?.subject === 'Prayer' || entry?.subject === 'Lunch';
-                                if (isSpecial) {
-                                    // In desktop, special periods might span all classes, this logic is tricky.
-                                    // Assuming the generator makes them consistent.
+                                
+                                if (isSpecial && className === sortedClasses[0]) {
+                                    // Find how many classes this special period spans
+                                    let span = 0;
+                                    for(let i = 0; i < sortedClasses.length; i++) {
+                                        const c = sortedClasses[i];
+                                        const currentEntry = gridSchedule[day]?.[c]?.[timeSlot]?.[0];
+                                        if (currentEntry?.subject === entry.subject) {
+                                            span++;
+                                        } else {
+                                            break;
+                                        }
+                                    }
                                     return (
-                                        <TableCell key={`${day}-${className}-${timeSlot}`} className="p-0 align-top border-l bg-secondary" colSpan={1}>
-                                           {className === sortedClasses[0] && (
-                                                <div className="h-full min-h-[60px] flex items-center justify-center p-1 font-semibold"
-                                                     style={{width: `${timeSlots.length * 100}px`}} // HACK: This is problematic
-                                                >
-                                                   {entry.subject}
-                                                </div>
-                                           )}
+                                        <TableCell key={`${day}-${className}-${timeSlot}`} className="p-0 text-center align-middle font-semibold text-primary bg-primary/10 border-l" colSpan={span}>
+                                            {entry.subject}
                                         </TableCell>
-                                    )
+                                    );
                                 }
+                                if (isSpecial && className !== sortedClasses[0]) {
+                                    // Check if previous class was also special, if so, we've already spanned it
+                                    const prevClass = sortedClasses[sortedClasses.indexOf(className) - 1];
+                                    const prevEntry = gridSchedule[day]?.[prevClass]?.[timeSlot]?.[0];
+                                    if(prevEntry?.subject === entry.subject) {
+                                        return null; // This cell is covered by a colSpan
+                                    }
+                                }
+
                                 return (
                                 <TableCell key={`${day}-${className}-${timeSlot}`} className="p-0 align-top border-l">{renderCellContent(day, className, timeSlot)}</TableCell>
                                 )
@@ -372,7 +386,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                     {pdfHeader && pdfHeader.trim().split('\n').map((line, index) => <p key={index} className={cn(index === 0 && 'font-bold')}>{line}</p>)}
                     <h2 className="text-lg font-bold mt-2">Class Routine</h2>
                 </div>
-                <Tabs defaultValue={workingDays.includes(defaultDay) ? defaultDay : workingDays[0]} className="w-full">
+                <Tabs defaultValue={workingDays.includes(defaultDay) ? defaultDay : (workingDays[0] || "Monday")} className="w-full">
                     <div className="overflow-x-auto p-4 sm:p-0 no-print">
                         <TabsList className="mb-4">
                             {workingDays.map(day => <TabsTrigger key={day} value={day}>{day}</TabsTrigger>)}
@@ -445,3 +459,5 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 };
 
 export default RoutineDisplay;
+
+    

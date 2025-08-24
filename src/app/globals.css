@@ -62,47 +62,32 @@
 }
 
 @media print {
-    body, html {
+    body {
         background-color: white !important;
         color: black !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
     }
     .no-print, .no-print * {
         display: none !important;
     }
-
-    /* Hide everything in the body by default */
-    body * {
-        visibility: hidden;
-    }
-
-    /* Make only the printable area and its children visible */
-    .printable-area, .printable-area * {
-        visibility: visible;
-    }
-
-    /* Position the printable area at the top of the page */
     .printable-area {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
+      display: block;
+      width: 100%;
+      position: absolute;
+      left: 0;
+      top: 0;
+      float: none;
     }
-
     .print-header {
       display: block !important;
-      visibility: visible;
     }
-
-    .print-section {
-        page-break-after: always;
+    main > * {
+      display: none;
     }
-    
+    main > .printable-area {
+      display: block;
+    }
     @page {
-        size: A4 landscape;
+        size: A4;
         margin: 0.5in;
     }
 }
-
-    

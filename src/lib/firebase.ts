@@ -1,3 +1,4 @@
+
 import { initializeApp, getApp, getApps, type FirebaseApp, type FirebaseOptions } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
@@ -32,20 +33,15 @@ function getFirestoreDB() {
     }
     const app = getFirebaseApp();
     try {
+        // First, try to initialize with offline persistence
         db = initializeFirestore(app, {
             localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
         });
     } catch (e: any) {
-         if (e.code === 'failed-precondition') {
-            console.warn('Firestore persistence failed: Multiple tabs open. Falling back to memory-only persistence.');
-             db = initializeFirestore(app, {});
-         } else if (e.code === 'unimplemented') {
-            console.warn('Firestore persistence not available in this browser. Falling back to memory-only persistence.');
-             db = initializeFirestore(app, {});
-         } else {
-            console.error("Firestore initialization failed", e);
-            db = initializeFirestore(app, {});
-         }
+         // If persistence fails (e.g., multiple tabs, browser not supported),
+         // fall back to in-memory persistence silently.
+         db = initializeFirestore(app, {});
+         console.warn(`Firestore persistence failed: ${e.code}. Falling back to memory-only.`);
     }
     return db;
 }

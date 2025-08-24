@@ -138,7 +138,7 @@ export default function Home() {
   const hasHistory = routineHistory && routineHistory.length > 0;
   
   const loggedInTeacher = useMemo(() => {
-      if (!user?.email) return null;
+      if (!user?.email || !teachers || teachers.length === 0) return null;
       return teachers.find(t => t.email === user.email) || null;
   }, [user, teachers]);
 
@@ -179,17 +179,46 @@ export default function Home() {
   };
 
   
-  const renderTeacherView = () => (
-    <div className="p-4 md:p-6 space-y-6">
-        <TeacherRoutineDisplay 
-            scheduleData={activeRoutine?.schedule || null}
-            teacher={loggedInTeacher}
-            timeSlots={appState.timeSlots} 
-            workingDays={appState.config.workingDays}
-            holidays={holidays}
-        />
-    </div>
-  );
+  const renderTeacherView = () => {
+    // This view is for a logged-in teacher. We need to wait for `teachers` to be populated.
+    if (appState.teachers.length > 0 && !loggedInTeacher) {
+      return (
+        <div className="p-4 md:p-6 space-y-6 flex items-center justify-center h-full">
+            <Card className="w-full max-w-md text-center">
+              <CardHeader>
+                <CardTitle>Error</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-destructive">Your email ({user?.email}) is not registered as a teacher in this school's data. Please contact the administrator.</p>
+              </CardContent>
+            </Card>
+        </div>
+      );
+    }
+    
+    if (!loggedInTeacher) {
+        return (
+            <div className="p-4 md:p-6 space-y-6 flex items-center justify-center h-full">
+                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                    <Loader2 className="h-8 w-8 animate-spin"/>
+                    <p>Identifying teacher...</p>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="p-4 md:p-6 space-y-6">
+            <TeacherRoutineDisplay 
+                scheduleData={activeRoutine?.schedule || null}
+                teacher={loggedInTeacher}
+                timeSlots={appState.timeSlots} 
+                workingDays={appState.config.workingDays}
+                holidays={holidays}
+            />
+        </div>
+    );
+  };
 
   const renderAdminDashboard = () => (
     <div className="p-4 md:p-6 space-y-6">

@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import type { GenerateScheduleOutput, ScheduleEntry, Teacher, DayOfWeek } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -69,8 +69,16 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   const [isCellDialogOpen, setIsCellDialogOpen] = useState(false);
   const [currentCell, setCurrentCell] = useState<CurrentCell | null>(null);
   const [cellData, setCellData] = useState<CellData>({ subject: "", className: "", teacher: "" });
-  const [selectedClass, setSelectedClass] = useState<string>(sortedClasses[0] || "");
+  const [selectedClass, setSelectedClass] = useState<string | null>(null);
   
+  useEffect(() => {
+    if (isMobile && sortedClasses.length > 0) {
+      setSelectedClass(sortedClasses[0]);
+    } else {
+      setSelectedClass(null);
+    }
+  }, [isMobile, sortedClasses]);
+
   const teacherNameMap = useMemo(() => new Map(teachers.map(t => [t.id, t.name])), [teachers]);
   
   const getTeacherName = (id: string) => teacherNameMap.get(id) || id;
@@ -221,32 +229,32 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
     );
   };
   
-  const renderMobileView = (day: DayOfWeek) => (
-    <div className="space-y-4">
-        <div className="px-1">
-            <ScrollArea className="w-full whitespace-nowrap">
-                <div className="flex space-x-2 pb-2">
-                    {sortedClasses.map(className => (
-                        <Badge 
-                            key={className}
-                            onClick={() => setSelectedClass(className)}
-                            variant={selectedClass === className ? 'default' : 'secondary'}
-                            className="cursor-pointer transition-all"
-                        >
-                            {className}
-                        </Badge>
-                    ))}
+  const renderMobileView = (day: DayOfWeek) => {
+    const classesToShow = selectedClass ? sortedClasses.filter(c => c === selectedClass) : sortedClasses;
+    
+    return (
+        <div className="space-y-4">
+            <div className="px-1">
+                 <div className="overflow-x-auto pb-2">
+                    <div className="flex space-x-2">
+                        {sortedClasses.map(className => (
+                            <Badge 
+                                key={className}
+                                onClick={() => setSelectedClass(className)}
+                                variant={selectedClass === className ? 'default' : 'secondary'}
+                                className="cursor-pointer transition-all flex-shrink-0"
+                            >
+                                {className}
+                            </Badge>
+                        ))}
+                    </div>
                 </div>
-                <ScrollBar orientation="horizontal" />
-            </ScrollArea>
-        </div>
-        {sortedClasses
-            .filter(className => selectedClass === className)
-            .map(className => {
+            </div>
+            {classesToShow.map(className => {
                 const periodsForClass = timeSlots.map(timeSlot => {
                     const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
                     return { timeSlot, entry: entries[0] }; 
-                }).filter(({entry}) => entry);
+                }).filter(({entry}) => entry && entry.subject !== '---');
 
                 if (periodsForClass.length === 0) return (
                     <Card key={className} className="shadow-lg overflow-hidden">
@@ -270,7 +278,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                                 
                                 <div className="space-y-8">
                                     {periodsForClass.map(({ timeSlot, entry }) => {
-                                        if (!entry || entry.subject === '---') return null;
+                                        if (!entry) return null;
                                         const isSpecial = entry.subject === 'Prayer' || entry.subject === 'Lunch';
                                         const SpecialIcon = entry.subject === 'Prayer' ? Sun : Sandwich;
                                         
@@ -314,6 +322,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
         })}
     </div>
   );
+  }
 
   const renderDesktopView = (day: DayOfWeek) => (
       <div className="overflow-x-auto border rounded-lg">
@@ -415,9 +424,11 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                 </div>
                 <Tabs defaultValue={workingDays.includes(defaultDay) ? defaultDay : (workingDays[0] || "Monday")} className="w-full">
                     <div className="overflow-x-auto no-print px-1 sm:px-0">
-                        <TabsList className="mb-4">
-                            {workingDays.map(day => <TabsTrigger key={day} value={day}>{day}</TabsTrigger>)}
-                        </TabsList>
+                        <div className="overflow-x-auto pb-2">
+                           <TabsList className="flex-nowrap justify-start">
+                                {workingDays.map(day => <TabsTrigger key={day} value={day}>{day}</TabsTrigger>)}
+                            </TabsList>
+                        </div>
                     </div>
 
                     {workingDays.map(day => (
@@ -485,5 +496,3 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 };
 
 export default RoutineDisplay;
-
-    

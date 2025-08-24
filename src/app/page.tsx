@@ -294,7 +294,7 @@ export default function Home() {
           </Card>
       </div>
 
-      <div className="flex-1 w-full overflow-y-auto space-y-6 p-4 md:p-6">
+      <div className="flex-1 p-4 md:p-6 overflow-y-auto">
         <RoutineDisplayWrapper />
       </div>
 

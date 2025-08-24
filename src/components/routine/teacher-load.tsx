@@ -49,7 +49,7 @@ export default function TeacherLoad({ teacherLoad, teachers, pdfHeader = "", wor
   const getTeacherName = (id: string) => teachers.find(t => t.id === id)?.name || id;
 
   return (
-    <div className="px-0 md:px-0 print-section">
+    <div className="px-0 md:px-0">
       <Card id="printable-teacher-load">
         <CardHeader>
           <div className="flex flex-wrap justify-between items-start gap-4">

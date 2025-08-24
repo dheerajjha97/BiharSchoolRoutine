@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash2, Printer, Pencil, User, Sun, Sandwich, Loader2 } from "lucide-react";
+import { Trash2, Printer, Pencil, User, Sun, Sandwich, Loader2, MapPin } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn, sortClasses } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
@@ -65,12 +65,12 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   const defaultDay = new Date().toLocaleString('en-US', { weekday: 'long' }) as DayOfWeek;
   const isMobile = useMediaQuery("(max-width: 768px)");
   
+  const sortedClasses = useMemo(() => [...classes].sort(sortClasses), [classes]);
   const [isCellDialogOpen, setIsCellDialogOpen] = useState(false);
   const [currentCell, setCurrentCell] = useState<CurrentCell | null>(null);
   const [cellData, setCellData] = useState<CellData>({ subject: "", className: "", teacher: "" });
-  const [selectedClass, setSelectedClass] = useState<string | 'all'>('all');
+  const [selectedClass, setSelectedClass] = useState<string>(sortedClasses[0] || "");
   
-  const sortedClasses = useMemo(() => [...classes].sort(sortClasses), [classes]);
   const teacherNameMap = useMemo(() => new Map(teachers.map(t => [t.id, t.name])), [teachers]);
   
   const getTeacherName = (id: string) => teacherNameMap.get(id) || id;
@@ -226,13 +226,6 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
         <div className="px-1">
             <ScrollArea className="w-full whitespace-nowrap">
                 <div className="flex space-x-2 pb-2">
-                    <Badge 
-                        onClick={() => setSelectedClass('all')}
-                        variant={selectedClass === 'all' ? 'default' : 'secondary'}
-                        className="cursor-pointer transition-all"
-                    >
-                        All Classes
-                    </Badge>
                     {sortedClasses.map(className => (
                         <Badge 
                             key={className}
@@ -248,14 +241,23 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
             </ScrollArea>
         </div>
         {sortedClasses
-            .filter(className => selectedClass === 'all' || selectedClass === className)
+            .filter(className => selectedClass === className)
             .map(className => {
                 const periodsForClass = timeSlots.map(timeSlot => {
                     const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
                     return { timeSlot, entry: entries[0] }; 
                 }).filter(({entry}) => entry);
 
-                if (periodsForClass.length === 0) return null;
+                if (periodsForClass.length === 0) return (
+                    <Card key={className} className="shadow-lg overflow-hidden">
+                        <CardHeader className="p-4 bg-muted/30">
+                            <CardTitle className="text-base font-bold">{className}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-4 h-48 flex items-center justify-center">
+                            <p className="text-muted-foreground">No periods scheduled for {className} on {day}.</p>
+                        </CardContent>
+                    </Card>
+                );
 
                 return (
                     <Card key={className} className="shadow-lg overflow-hidden">
@@ -483,3 +485,5 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 };
 
 export default RoutineDisplay;
+
+    

@@ -55,12 +55,6 @@ type CurrentCell = {
     entry: ScheduleEntry | null;
 };
 
-type MobileViewDialogData = {
-    day: DayOfWeek;
-    className: string;
-    periods: ScheduleEntry[];
-}
-
 const toRoman = (num: number): string => {
     if (num < 1) return "";
     const romanMap: Record<number, string> = { 10: 'X', 9: 'IX', 5: 'V', 4: 'IV', 1: 'I' };
@@ -76,12 +70,9 @@ const toRoman = (num: number): string => {
 
 const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, teacherSubjects, onScheduleChange, dailyPeriodQuota, pdfHeader = "", isEditable, workingDays }: RoutineDisplayProps) => {
   const { toast } = useToast();
-  const isMobile = useMediaQuery("(max-width: 768px)");
   const defaultDay = new Date().toLocaleString('en-US', { weekday: 'long' }) as DayOfWeek;
   
   const [isCellDialogOpen, setIsCellDialogOpen] = useState(false);
-  const [isMobileClassDialogOpen, setIsMobileClassDialogOpen] = useState(false);
-  const [mobileDialogData, setMobileDialogData] = useState<MobileViewDialogData | null>(null);
   const [currentCell, setCurrentCell] = useState<CurrentCell | null>(null);
   const [cellData, setCellData] = useState<CellData>({ subject: "", className: "", teacher: "" });
   
@@ -205,12 +196,6 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
     setIsCellDialogOpen(true);
   };
   
-  const handleMobileClassClick = (day: DayOfWeek, className: string) => {
-    const periods = timeSlots.map(slot => (gridSchedule[day]?.[className]?.[slot] || [])[0]).filter(Boolean);
-    setMobileDialogData({ day, className, periods });
-    setIsMobileClassDialogOpen(true);
-  }
-
   const handleSave = () => {
     if (!currentCell) return;
   
@@ -354,68 +339,6 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
     );
   };
   
-  const renderDesktopView = () => (
-    <Tabs defaultValue={workingDays.includes(defaultDay) ? defaultDay : workingDays[0]} className="w-full">
-        <TabsList className="mb-4">
-            {workingDays.map(day => <TabsTrigger key={day} value={day}>{day}</TabsTrigger>)}
-        </TabsList>
-        {workingDays.map(day => (
-            <TabsContent key={day} value={day}>
-                <div className="border rounded-lg bg-card overflow-x-auto" id={`table-${day}`}>
-                    <table className="min-w-full w-full border-collapse">
-                        <thead className="bg-card">
-                        <tr>
-                            <th className="font-bold min-w-[120px] sticky left-0 bg-card z-20 p-2 text-left">Class</th>
-                            {timeSlots.map(slot => (
-                            <th key={slot} className="text-center font-bold text-xs min-w-[90px] p-1 align-bottom">
-                                <div>{slot}</div>
-                                <div className="font-normal text-muted-foreground">{instructionalSlotMap[slot] ? toRoman(instructionalSlotMap[slot]) : '-'}</div>
-                            </th>
-                            ))}
-                        </tr>
-                        </thead>
-                        <tbody>
-                            {sortedClasses.map((className) => (
-                                <tr key={`${day}-${className}`} className="border-t">
-                                    <td className="font-medium align-top sticky left-0 bg-card z-10 p-2">{className}</td>
-                                    {timeSlots.map(timeSlot => (
-                                    <td key={`${day}-${className}-${timeSlot}`} className="p-0 align-top border-l">{renderCellContent(day, className, timeSlot)}</td>
-                                    ))}
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </TabsContent>
-        ))}
-    </Tabs>
-  );
-
-  const renderMobileView = () => (
-    <Tabs defaultValue={workingDays.includes(defaultDay) ? defaultDay : (workingDays[0] || "Monday")} className="w-full">
-        <TabsList className="mb-6 flex-nowrap overflow-x-auto justify-start">
-            {workingDays.map(day => (
-                <TabsTrigger key={day} value={day}>{day}</TabsTrigger>
-            ))}
-        </TabsList>
-        {workingDays.map(day => (
-            <TabsContent key={day} value={day}>
-                <div className="space-y-4">
-                    {sortedClasses.map(className => (
-                        <Card key={className} className="cursor-pointer hover:bg-accent" onClick={() => handleMobileClassClick(day, className)}>
-                            <CardContent className="p-4 flex justify-between items-center">
-                                <span className="font-semibold">{className}</span>
-                                <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
-            </TabsContent>
-        ))}
-    </Tabs>
-  );
-
-
   if (!scheduleData || !scheduleData.schedule || scheduleData.schedule.length === 0) {
     return (
       <Card>
@@ -439,7 +362,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
             <div className="flex flex-wrap justify-between items-start gap-4">
                 <div>
                     <CardTitle>View Routine</CardTitle>
-                    <CardDescription>View, download, or edit your routine. {isEditable && !isMobile && "Use the copy icon next to a day's name to paste its schedule to another day."}</CardDescription>
+                    <CardDescription>View, download, or edit your routine. {isEditable && "Use the copy icon next to a day's name to paste its schedule to another day."}</CardDescription>
                 </div>
                  <div className="flex items-center gap-2">
                     <Button size="sm" variant="outline" onClick={() => window.print()}>
@@ -454,7 +377,40 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                     {pdfHeader && pdfHeader.trim().split('\n').map((line, index) => <p key={index} className={cn(index === 0 && 'font-bold')}>{line}</p>)}
                     <h2 className="text-lg font-bold mt-2">Class Routine</h2>
                 </div>
-                {isMobile ? renderMobileView() : renderDesktopView()}
+                <Tabs defaultValue={workingDays.includes(defaultDay) ? defaultDay : workingDays[0]} className="w-full">
+                    <TabsList className="mb-4 flex-nowrap overflow-x-auto justify-start">
+                        {workingDays.map(day => <TabsTrigger key={day} value={day}>{day}</TabsTrigger>)}
+                    </TabsList>
+                    {workingDays.map(day => (
+                        <TabsContent key={day} value={day}>
+                            <div className="border rounded-lg bg-card overflow-x-auto" id={`table-${day}`}>
+                                <table className="min-w-full w-full border-collapse">
+                                    <thead className="bg-card">
+                                    <tr>
+                                        <th className="font-bold min-w-[120px] sticky left-0 bg-card z-20 p-2 text-left">Class</th>
+                                        {timeSlots.map(slot => (
+                                        <th key={slot} className="text-center font-bold text-xs min-w-[90px] p-1 align-bottom">
+                                            <div>{slot}</div>
+                                            <div className="font-normal text-muted-foreground">{instructionalSlotMap[slot] ? toRoman(instructionalSlotMap[slot]) : '-'}</div>
+                                        </th>
+                                        ))}
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                        {sortedClasses.map((className) => (
+                                            <tr key={`${day}-${className}`} className="border-t">
+                                                <td className="font-medium align-top sticky left-0 bg-card z-10 p-2">{className}</td>
+                                                {timeSlots.map(timeSlot => (
+                                                <td key={`${day}-${className}-${timeSlot}`} className="p-0 align-top border-l">{renderCellContent(day, className, timeSlot)}</td>
+                                                ))}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </TabsContent>
+                    ))}
+                </Tabs>
             </div>
         </CardContent>
       </Card>
@@ -497,57 +453,10 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
           </DialogContent>
         </Dialog>
       )}
-
-      {isMobileClassDialogOpen && mobileDialogData && (
-          <Dialog open={isMobileClassDialogOpen} onOpenChange={setIsMobileClassDialogOpen}>
-              <DialogContent>
-                  <DialogHeader>
-                      <DialogTitle>Routine for {mobileDialogData.className}</DialogTitle>
-                      <DialogDescription>{mobileDialogData.day}</DialogDescription>
-                  </DialogHeader>
-                  <div className="py-4 max-h-[60vh] overflow-y-auto">
-                      <Table>
-                          <TableHeader>
-                              <TableRow>
-                                  <TableHead>Time</TableHead>
-                                  <TableHead>Subject</TableHead>
-                                  <TableHead>Teacher</TableHead>
-                                  {isEditable && <TableHead className="text-right">Edit</TableHead>}
-                              </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                              {timeSlots.map(slot => {
-                                  const entry = mobileDialogData.periods.find(p => p.timeSlot === slot);
-                                  return (
-                                    <TableRow key={slot}>
-                                        <TableCell>{slot}</TableCell>
-                                        <TableCell>{entry?.subject === '---' ? '-' : entry?.subject || '-'}</TableCell>
-                                        <TableCell>{getTeacherName(entry?.teacher || '') || '-'}</TableCell>
-                                        {isEditable && (
-                                            <TableCell className="text-right">
-                                                {entry?.subject !== 'Prayer' && entry?.subject !== 'Lunch' && (
-                                                    <Button variant="ghost" size="icon" onClick={() => handleCellClick(mobileDialogData.day, slot, mobileDialogData.className, entry || null)}>
-                                                        <Pencil className="h-4 w-4" />
-                                                    </Button>
-                                                )}
-                                            </TableCell>
-                                        )}
-                                    </TableRow>
-                                  )
-                              })}
-                          </TableBody>
-                      </Table>
-                  </div>
-                  <DialogFooter>
-                      <DialogClose asChild>
-                          <Button variant="outline">Close</Button>
-                      </DialogClose>
-                  </DialogFooter>
-              </DialogContent>
-          </Dialog>
-      )}
     </>
   );
 };
 
 export default RoutineDisplay;
+
+    

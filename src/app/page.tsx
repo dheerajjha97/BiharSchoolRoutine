@@ -30,7 +30,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
+import RoutineDisplay from "@/components/routine/routine-display";
 
 export default function Home() {
     const { 
@@ -195,8 +196,24 @@ export default function Home() {
         </div>
 
         {/* --- Bottom Section (scrolling) --- */}
-        <div className="w-full overflow-x-auto flex-1 p-4 md:p-6 space-y-6">
-            {/* RoutineDisplay and TeacherLoad components were here and are now removed. */}
+        <div className="flex-1 w-full overflow-x-auto p-4 md:p-6 space-y-6">
+           <RoutineDisplay 
+                scheduleData={activeRoutine?.schedule || null}
+                onScheduleChange={(newSchedule) => {
+                    if (activeRoutine) {
+                    updateRoutineVersion(activeRoutine.id, { schedule: { schedule: newSchedule } });
+                    }
+                }}
+                isEditable={true}
+                timeSlots={appState.timeSlots} 
+                classes={appState.classes}
+                subjects={appState.subjects}
+                teachers={appState.teachers}
+                teacherSubjects={config.teacherSubjects}
+                dailyPeriodQuota={appState.config.dailyPeriodQuota}
+                pdfHeader={appState.schoolInfo.pdfHeader}
+                workingDays={appState.config.workingDays}
+                />
         </div>
 
          <Dialog open={!!routineToRename} onOpenChange={(isOpen) => !isOpen && setRoutineToRename(null)}>
@@ -219,3 +236,5 @@ export default function Home() {
 
   return isUserAdmin ? renderAdminDashboard() : renderTeacherView();
 }
+
+    

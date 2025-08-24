@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash2, Printer, Pencil, Clock, User, Sandwich, Sun } from "lucide-react";
+import { Trash2, Printer, Pencil, User, Sun, Sandwich } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn, sortClasses } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
@@ -219,7 +219,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   };
 
   const renderMobileView = (day: DayOfWeek) => (
-    <div className="space-y-6">
+    <div className="space-y-4">
         {sortedClasses.map(className => {
             const periodsForClass = timeSlots.map(timeSlot => {
                 const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
@@ -229,14 +229,13 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
             if (periodsForClass.length === 0) return null;
 
             return (
-                <Card key={className} className="shadow-lg border-l-4 border-primary overflow-hidden">
+                <Card key={className} className="shadow-lg overflow-hidden">
                     <CardHeader className="p-4 bg-muted/30">
-                        <CardTitle className="text-lg font-bold">{className}</CardTitle>
+                        <CardTitle className="text-base font-bold">{className}</CardTitle>
                     </CardHeader>
                     <CardContent className="p-4">
                         <div className="relative pl-6">
-                            {/* Vertical timeline bar */}
-                            <div className="absolute left-2 top-0 h-full w-0.5 bg-border"></div>
+                            <div className="absolute left-2.5 top-0 h-full w-0.5 bg-border"></div>
                             
                             <div className="space-y-8">
                                 {periodsForClass.map(({ timeSlot, entry }) => {
@@ -253,22 +252,21 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                                             )}
                                             onClick={() => isEditable && !isSpecial && handleCellClick(day, timeSlot, className, entry)}
                                         >
-                                            {/* Timeline Dot */}
-                                            <div className="absolute left-[-22px] top-1 h-4 w-4 rounded-full bg-primary border-4 border-background"></div>
+                                            <div className="absolute left-[-24px] top-1.5 h-5 w-5 rounded-full bg-primary border-4 border-background z-10"></div>
                                             
-                                            <div className="text-sm font-semibold text-muted-foreground w-20 text-right shrink-0">{timeSlot}</div>
+                                            <div className="text-xs font-semibold text-muted-foreground w-20 shrink-0 pt-2">{timeSlot}</div>
                                             
                                             <div className="flex-grow">
                                                 {isSpecial ? (
-                                                    <div className="flex items-center gap-2 font-bold text-lg text-primary">
+                                                    <div className="flex items-center gap-2 font-bold text-base text-primary pt-1">
                                                         <SpecialIcon className="h-5 w-5" />
                                                         <span>{entry.subject}</span>
                                                     </div>
                                                 ) : (
                                                     <div>
-                                                        <h4 className="font-bold text-base leading-tight">{entry.subject}</h4>
-                                                        <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
-                                                            <User className="h-3.5 w-3.5" />
+                                                        <h4 className="font-bold text-sm leading-tight">{entry.subject}</h4>
+                                                        <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
+                                                            <User className="h-3 w-3" />
                                                             {getTeacherName(entry.teacher) || <span className='italic'>N/A</span>}
                                                         </p>
                                                     </div>
@@ -310,7 +308,6 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                                 const isSpecial = entry?.subject === 'Prayer' || entry?.subject === 'Lunch';
                                 
                                 if (isSpecial && className === sortedClasses[0]) {
-                                    // Find how many classes this special period spans
                                     let span = 0;
                                     for(let i = 0; i < sortedClasses.length; i++) {
                                         const c = sortedClasses[i];
@@ -328,11 +325,10 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                                     );
                                 }
                                 if (isSpecial && className !== sortedClasses[0]) {
-                                    // Check if previous class was also special, if so, we've already spanned it
                                     const prevClass = sortedClasses[sortedClasses.indexOf(className) - 1];
                                     const prevEntry = gridSchedule[day]?.[prevClass]?.[timeSlot]?.[0];
                                     if(prevEntry?.subject === entry.subject) {
-                                        return null; // This cell is covered by a colSpan
+                                        return null;
                                     }
                                 }
 
@@ -387,8 +383,8 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                     <h2 className="text-lg font-bold mt-2">Class Routine</h2>
                 </div>
                 <Tabs defaultValue={workingDays.includes(defaultDay) ? defaultDay : (workingDays[0] || "Monday")} className="w-full">
-                    <div className="overflow-x-auto p-4 sm:p-0 no-print">
-                        <TabsList className="mb-4">
+                    <div className="overflow-x-auto no-print">
+                        <TabsList className="mb-4 flex-nowrap">
                             {workingDays.map(day => <TabsTrigger key={day} value={day}>{day}</TabsTrigger>)}
                         </TabsList>
                     </div>
@@ -399,7 +395,6 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                         </TabsContent>
                     ))}
 
-                    {/* Print-only view */}
                     <div className="hidden print-block">
                         {workingDays.map(day => (
                             <div key={`print-${day}`} className="page-break-before">
@@ -459,5 +454,3 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 };
 
 export default RoutineDisplay;
-
-    

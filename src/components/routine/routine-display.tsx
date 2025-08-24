@@ -9,14 +9,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash2, Printer, Pencil, User, Sun, Sandwich, Loader2, MapPin } from "lucide-react";
+import { Trash2, Printer, Pencil, User, Sun, Sandwich, MapPin } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn, sortClasses } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import useMediaQuery from '@/hooks/use-media-query';
 import { Badge } from '../ui/badge';
-import { ScrollArea, ScrollBar } from '../ui/scroll-area';
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+
 
 interface RoutineDisplayProps {
   scheduleData: GenerateScheduleOutput | null;
@@ -72,7 +73,6 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   const [selectedClass, setSelectedClass] = useState<string>('');
   
   useEffect(() => {
-    // Select the first class by default when classes are loaded or view changes
     if (sortedClasses.length > 0) {
       setSelectedClass(sortedClasses[0]);
     }
@@ -228,13 +228,13 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
     );
   };
   
-  const renderMobileView = (day: DayOfWeek) => {
-    const classesToShow = sortedClasses.filter(c => c === selectedClass);
+const renderMobileView = (day: DayOfWeek) => {
+    const classesToShow = selectedClass ? sortedClasses.filter(c => c === selectedClass) : sortedClasses;
     
     return (
       <div className="space-y-4">
-        <div className="w-full overflow-x-auto pb-2">
-            <div className="flex w-max space-x-2">
+        <ScrollArea className="w-full whitespace-nowrap">
+            <div className="flex w-max space-x-2 pb-2">
                 {sortedClasses.map(className => (
                     <Badge 
                         key={className}
@@ -246,7 +246,8 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                     </Badge>
                 ))}
             </div>
-        </div>
+            <ScrollBar orientation="horizontal" />
+        </ScrollArea>
         {classesToShow.map(className => {
             const periodsForClass = timeSlots.map(timeSlot => {
                 const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
@@ -420,11 +421,12 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
                     <h2 className="text-lg font-bold mt-2">Class Routine</h2>
                 </div>
                 <Tabs defaultValue={workingDays.includes(defaultDay) ? defaultDay : (workingDays[0] || "Monday")} className="w-full">
-                    <div className="w-full overflow-x-auto no-print px-1 sm:px-0">
-                        <TabsList className="flex-nowrap justify-start">
-                            {workingDays.map(day => <TabsTrigger key={day} value={day}>{day}</TabsTrigger>)}
-                        </TabsList>
-                    </div>
+                    <ScrollArea className="w-full whitespace-nowrap no-print">
+                      <TabsList className="flex-nowrap justify-start">
+                          {workingDays.map(day => <TabsTrigger key={day} value={day}>{day}</TabsTrigger>)}
+                      </TabsList>
+                      <ScrollBar orientation="horizontal" />
+                    </ScrollArea>
 
                     {workingDays.map(day => (
                         <TabsContent key={day} value={day} className="sm:p-0">
@@ -491,3 +493,5 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
 };
 
 export default RoutineDisplay;
+
+    

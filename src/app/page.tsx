@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { generateScheduleLogic } from "@/lib/schedule-generator";
 import { useToast } from "@/hooks/use-toast";
-import { BrainCircuit, FilePlus, Trash2, Pencil, MoreVertical } from "lucide-react";
+import { BrainCircuit, FilePlus, Trash2, Pencil } from "lucide-react";
 import type { GenerateScheduleOutput, RoutineVersion } from "@/types";
 import {
   Dialog,
@@ -32,6 +32,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import TeacherRoutineDisplay from "@/components/routine/teacher-routine-display";
+import RoutineDisplay from "@/components/routine/routine-display";
+import TeacherLoad from "@/components/routine/teacher-load";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,6 +44,73 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+
+const RoutineDisplayWrapper = () => {
+    const { appState, updateRoutineVersion } = useContext(AppStateContext);
+    const { 
+        routineHistory = [],
+        activeRoutineId,
+        timeSlots, 
+        classes,
+        subjects, 
+        teachers, 
+        config,
+        schoolInfo,
+    } = appState;
+    const { teacherSubjects, dailyPeriodQuota, workingDays } = config;
+    const { pdfHeader } = schoolInfo;
+
+    const activeRoutine = useMemo(() => {
+        if (!activeRoutineId || !routineHistory) return null;
+        return routineHistory.find(r => r.id === activeRoutineId);
+    }, [routineHistory, activeRoutineId]);
+
+    const handleScheduleChange = (newSchedule: any[]) => {
+        if (!activeRoutineId) return;
+        updateRoutineVersion(activeRoutineId, { 
+            schedule: { schedule: newSchedule }
+        });
+    };
+
+    if (!activeRoutine) {
+        return (
+            <Card className="mt-6">
+                <CardContent className="p-6">
+                    <div className="text-center py-12 text-muted-foreground">
+                        <h2 className="text-xl font-semibold mb-2">No Active Routine</h2>
+                        <p>Generate a new routine or select one from the "Manage Routines" menu to view it here.</p>
+                    </div>
+                </CardContent>
+            </Card>
+        );
+    }
+
+    return (
+        <>
+            <RoutineDisplay
+                scheduleData={activeRoutine.schedule}
+                timeSlots={timeSlots}
+                classes={classes}
+                subjects={subjects}
+                teachers={teachers}
+                teacherSubjects={teacherSubjects}
+                onScheduleChange={handleScheduleChange}
+                dailyPeriodQuota={dailyPeriodQuota}
+                pdfHeader={pdfHeader}
+                isEditable={true}
+                workingDays={workingDays}
+            />
+             <div className="mt-6">
+                <TeacherLoad 
+                    teacherLoad={appState.teacherLoad}
+                    teachers={teachers}
+                    pdfHeader={pdfHeader}
+                    workingDays={workingDays}
+                />
+            </div>
+        </>
+    );
+};
 
 export default function Home() {
     const { 
@@ -129,8 +198,10 @@ export default function Home() {
   );
 
   const renderAdminDashboard = () => (
-     <div className="flex flex-col items-center w-full overflow-hidden p-4 md:p-6">
-            <div className="w-full max-w-xl">
+    <div className="flex flex-col h-full overflow-hidden">
+        {/* === Top static part === */}
+        <div className="p-4 md:p-6">
+            <div className="w-full max-w-xl mx-auto">
                 <PageHeader 
                     title="Dashboard"
                     description="Generate, view, and manage your school's class routine."
@@ -196,8 +267,14 @@ export default function Home() {
                     </CardContent>
                 </Card>
             </div>
+        </div>
+
+        {/* === Bottom scrollable part === */}
+        <div className="flex-1 w-full overflow-auto p-4 md:p-6 pt-0 md:pt-0">
+            <RoutineDisplayWrapper />
+        </div>
         
-         <Dialog open={!!routineToRename} onOpenChange={(isOpen) => !isOpen && setRoutineToRename(null)}>
+        <Dialog open={!!routineToRename} onOpenChange={(isOpen) => !isOpen && setRoutineToRename(null)}>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Rename Routine</DialogTitle>

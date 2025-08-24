@@ -229,14 +229,14 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   };
   
 const renderMobileView = (day: DayOfWeek) => {
-    const classesToShow = selectedClass ? sortedClasses.filter(c => c === selectedClass) : sortedClasses;
-    
+    const classesToShow = selectedClass ? sortedClasses.filter(c => c === selectedClass) : [];
+
     return (
       <div className="space-y-4">
         <ScrollArea className="w-full whitespace-nowrap">
             <div className="flex w-max space-x-2 pb-2">
                 {sortedClasses.map(className => (
-                    <Badge 
+                    <Badge
                         key={className}
                         onClick={() => setSelectedClass(className)}
                         variant={selectedClass === className ? 'default' : 'secondary'}
@@ -248,13 +248,14 @@ const renderMobileView = (day: DayOfWeek) => {
             </div>
             <ScrollBar orientation="horizontal" />
         </ScrollArea>
+        
         {classesToShow.map(className => {
             const periodsForClass = timeSlots.map(timeSlot => {
                 const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
-                return { timeSlot, entry: entries[0] }; 
-            }).filter(({entry}) => entry && entry.subject !== '---');
+                return { timeSlot, entry: entries[0] };
+            });
 
-            if (periodsForClass.length === 0) return (
+            if (periodsForClass.filter(({entry}) => entry && entry.subject !== '---').length === 0) return (
                 <Card key={className} className="shadow-lg overflow-hidden">
                     <CardHeader className="p-4 bg-muted/30">
                         <CardTitle className="text-base font-bold">{className}</CardTitle>
@@ -273,16 +274,19 @@ const renderMobileView = (day: DayOfWeek) => {
                     <CardContent className="p-4">
                         <div className="relative pl-6">
                             <div className="absolute left-2.5 top-0 h-full w-0.5 bg-border"></div>
-                            
+
                             <div className="space-y-8">
                                 {periodsForClass.map(({ timeSlot, entry }) => {
                                     if (!entry) return null;
                                     const isSpecial = entry.subject === 'Prayer' || entry.subject === 'Lunch';
+                                    const isFree = entry.subject === '---';
+                                    if (isFree) return null;
+
                                     const SpecialIcon = entry.subject === 'Prayer' ? Sun : Sandwich;
                                     
                                     return (
-                                        <div 
-                                            key={timeSlot} 
+                                        <div
+                                            key={timeSlot}
                                             className={cn(
                                                 "relative flex gap-4 items-start",
                                                 isEditable && !isSpecial && 'cursor-pointer'
@@ -317,10 +321,11 @@ const renderMobileView = (day: DayOfWeek) => {
                     </CardContent>
                 </Card>
             )
-    })}
-</div>
-);
-  }
+        })}
+      </div>
+    );
+}
+
 
   const renderDesktopView = (day: DayOfWeek) => (
       <div className="overflow-x-auto border rounded-lg">
@@ -422,14 +427,14 @@ const renderMobileView = (day: DayOfWeek) => {
                 </div>
                 <Tabs defaultValue={workingDays.includes(defaultDay) ? defaultDay : (workingDays[0] || "Monday")} className="w-full">
                     <ScrollArea className="w-full whitespace-nowrap no-print">
-                      <TabsList className="flex-nowrap justify-start">
-                          {workingDays.map(day => <TabsTrigger key={day} value={day}>{day}</TabsTrigger>)}
-                      </TabsList>
+                        <TabsList>
+                            {workingDays.map(day => <TabsTrigger key={day} value={day}>{day}</TabsTrigger>)}
+                        </TabsList>
                       <ScrollBar orientation="horizontal" />
                     </ScrollArea>
 
                     {workingDays.map(day => (
-                        <TabsContent key={day} value={day} className="sm:p-0">
+                        <TabsContent key={day} value={day} className="sm:p-0 pt-4">
                              {isMobile ? renderMobileView(day) : renderDesktopView(day)}
                         </TabsContent>
                     ))}
@@ -493,5 +498,3 @@ const renderMobileView = (day: DayOfWeek) => {
 };
 
 export default RoutineDisplay;
-
-    

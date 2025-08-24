@@ -27,6 +27,7 @@ import {
   Heart,
   LayoutDashboard,
   Beaker,
+  User as UserIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "../icons";
@@ -42,6 +43,7 @@ const adminNavItems = [
 ];
 
 const teacherNavItems = [
+    { href: "/", label: "My Routine", icon: UserIcon },
     { href: "/school-routine", label: "Final Routine", icon: School },
     { href: "/holidays", label: "Holidays", icon: NotebookText },
 ];
@@ -211,3 +213,5 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+
+    

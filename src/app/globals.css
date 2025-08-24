@@ -61,6 +61,13 @@
   }
 }
 
+@layer utilities {
+    .table-responsive-container {
+        @apply w-full overflow-x-auto;
+    }
+}
+
+
 @media print {
     body {
         background-color: white !important;

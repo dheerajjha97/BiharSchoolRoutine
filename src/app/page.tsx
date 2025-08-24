@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { generateScheduleLogic } from "@/lib/schedule-generator";
 import { useToast } from "@/hooks/use-toast";
-import { BrainCircuit, FilePlus, ListCollapse, Trash2, Pencil } from "lucide-react";
+import { BrainCircuit, FilePlus, Trash2, Pencil, MoreVertical } from "lucide-react";
 import type { GenerateScheduleOutput, RoutineVersion } from "@/types";
 import {
   Dialog,
@@ -31,9 +31,17 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import RoutineDisplay from "@/components/routine/routine-display";
 import TeacherRoutineDisplay from "@/components/routine/teacher-routine-display";
-import TeacherLoad from "@/components/routine/teacher-load";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 export default function Home() {
     const { 
@@ -121,14 +129,12 @@ export default function Home() {
   );
 
   const renderAdminDashboard = () => (
-    <div className="flex flex-col h-full w-full overflow-hidden">
-        {/* --- Top Section (non-scrolling) --- */}
-        <div className="p-4 md:p-6 w-full">
-            <PageHeader 
-                title="Dashboard"
-                description="Generate, view, and manage your school's class routine."
-            />
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+     <div className="flex flex-col items-center w-full overflow-hidden p-4 md:p-6">
+            <div className="w-full max-w-xl">
+                <PageHeader 
+                    title="Dashboard"
+                    description="Generate, view, and manage your school's class routine."
+                />
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -137,68 +143,59 @@ export default function Home() {
                         <CardDescription>Use the generator or create a blank template. This creates a new version.</CardDescription>
                     </CardHeader>
                     <CardContent className="flex flex-col sm:flex-row gap-2">
-                        <Button onClick={handleGenerateRoutine} disabled={isLoading} className="w-full sm:w-auto">
-                            {isLoading ? "Generating..." : "Generate Routine"}
+                        <Button onClick={handleGenerateRoutine} disabled={isLoading} className="flex-grow">
+                            {isLoading ? "Generating..." : "Generate with AI"}
                         </Button>
-                         <Button onClick={handleCreateBlankRoutine} variant="outline" className="w-full sm:w-auto">
-                            <FilePlus className="mr-2 h-4 w-4" /> Create Blank Routine
+                         <Button onClick={handleCreateBlankRoutine} variant="outline" className="flex-grow">
+                            <FilePlus className="mr-2 h-4 w-4" /> Create Blank
                         </Button>
+                         {hasHistory && (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="secondary">Manage Routines</Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent className="w-64" align="end">
+                                    <DropdownMenuLabel>Select Active Routine</DropdownMenuLabel>
+                                    <DropdownMenuRadioGroup value={activeRoutineId || ""} onValueChange={setActiveRoutineId}>
+                                        {routineHistory.map(routine => (
+                                            <DropdownMenuRadioItem key={routine.id} value={routine.id}>
+                                                {routine.name}
+                                            </DropdownMenuRadioItem>
+                                        ))}
+                                    </DropdownMenuRadioGroup>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                    {routineHistory.map(routine => (
+                                         <DropdownMenuItem key={`action-${routine.id}`} className="flex justify-between items-center">
+                                            <span className="truncate pr-2">{routine.name}</span>
+                                            <div className="flex items-center gap-1">
+                                                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => {e.stopPropagation(); openRenameDialog(routine);}}><Pencil className="h-4 w-4"/></Button>
+                                                  <AlertDialog onOpenChange={(e) => e && event?.stopPropagation()}>
+                                                    <AlertDialogTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"><Trash2 className="h-4 w-4"/></Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                                                        <AlertDialogHeader>
+                                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            This action cannot be undone. This will permanently delete "{routine.name}".
+                                                        </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => deleteRoutineVersion(routine.id)}>Delete</AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </div>
+                                         </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                         )}
                     </CardContent>
                 </Card>
-
-                {hasHistory && activeRoutine && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <ListCollapse className="h-6 w-6 text-primary" /> Manage Active Routine
-                            </CardTitle>
-                            <CardDescription>Select a routine version to view, edit, or download. Your last 5 versions are saved.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <ul className="space-y-2">
-                                {routineHistory.map(routine => (
-                                    <li key={routine.id} className="flex items-center justify-between p-2 rounded-md bg-secondary">
-                                        <div className="flex items-center gap-2">
-                                            <input 
-                                                type="radio"
-                                                name="activeRoutine"
-                                                id={routine.id}
-                                                value={routine.id}
-                                                checked={activeRoutineId === routine.id}
-                                                onChange={() => setActiveRoutineId(routine.id)}
-                                                className="h-4 w-4 text-primary focus:ring-primary border-gray-300"
-                                            />
-                                            <label htmlFor={routine.id} className="text-sm font-medium">{routine.name}</label>
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openRenameDialog(routine)}><Pencil className="h-4 w-4"/></Button>
-                                            <AlertDialog>
-                                                <AlertDialogTrigger asChild>
-                                                     <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive"><Trash2 className="h-4 w-4"/></Button>
-                                                </AlertDialogTrigger>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                        This action cannot be undone. This will permanently delete the routine version named "{routine.name}".
-                                                    </AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => deleteRoutineVersion(routine.id)}>Delete</AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
-                                        </div>
-                                    </li>
-                                ))}
-                            </ul>
-                        </CardContent>
-                    </Card>
-                )}
             </div>
-        </div>
-
         
          <Dialog open={!!routineToRename} onOpenChange={(isOpen) => !isOpen && setRoutineToRename(null)}>
             <DialogContent>

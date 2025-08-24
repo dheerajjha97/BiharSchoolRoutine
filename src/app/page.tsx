@@ -195,7 +195,7 @@ export default function Home() {
   );
 
   const renderAdminDashboard = () => (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-x-hidden">
       <div className="p-4 md:p-6">
           <PageHeader 
             title="Admin Dashboard"

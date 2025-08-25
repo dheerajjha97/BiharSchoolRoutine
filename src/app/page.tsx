@@ -340,6 +340,8 @@ export default function Home() {
             teacherLoad={teacherLoad}
             teachers={teachers}
             workingDays={config.workingDays}
+            scheduleData={activeRoutine.schedule}
+            timeSlots={timeSlots}
         />
       )}
 

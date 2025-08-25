@@ -1,17 +1,20 @@
 
 "use client";
 
-import type { Teacher, TeacherLoad, DayOfWeek } from "@/types";
+import { useMemo } from "react";
+import type { Teacher, TeacherLoad, DayOfWeek, GenerateScheduleOutput, ScheduleEntry } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import useMediaQuery from '@/hooks/use-media-query';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { cn } from "@/lib/utils";
+import { cn, sortTimeSlots } from "@/lib/utils";
 
 interface TeacherLoadDisplayProps {
   teacherLoad: TeacherLoad;
   teachers: Teacher[];
   workingDays: DayOfWeek[];
+  scheduleData: GenerateScheduleOutput | null;
+  timeSlots: string[];
 }
 
 const dayColors: Record<DayOfWeek, string> = {
@@ -24,9 +27,42 @@ const dayColors: Record<DayOfWeek, string> = {
     "Sunday": "bg-red-100 dark:bg-red-900/30",
 };
 
-const TeacherLoadDisplay = ({ teacherLoad, teachers, workingDays }: TeacherLoadDisplayProps) => {
+const TeacherLoadDisplay = ({ teacherLoad, teachers, workingDays, scheduleData, timeSlots }: TeacherLoadDisplayProps) => {
     const isMobile = useMediaQuery("(max-width: 768px)");
     
+    const teacherSchedules = useMemo(() => {
+        const schedules: Record<string, Record<DayOfWeek, ScheduleEntry[]>> = {};
+        if (!scheduleData?.schedule) return schedules;
+
+        teachers.forEach(teacher => {
+            schedules[teacher.id] = {} as Record<DayOfWeek, ScheduleEntry[]>;
+            workingDays.forEach(day => {
+                schedules[teacher.id][day] = [];
+            });
+        });
+
+        scheduleData.schedule.forEach(entry => {
+            if (entry.teacher && entry.teacher !== 'N/A' && entry.subject !== 'Prayer' && entry.subject !== 'Lunch') {
+                const teacherIds = entry.teacher.split(' & ').map(t => t.trim());
+                teacherIds.forEach(teacherId => {
+                    if (schedules[teacherId] && schedules[teacherId][entry.day]) {
+                        schedules[teacherId][entry.day].push(entry);
+                    }
+                });
+            }
+        });
+        
+        // Sort periods by time for each teacher and day
+        Object.values(schedules).forEach(daySchedule => {
+            Object.keys(daySchedule).forEach(day => {
+                daySchedule[day as DayOfWeek].sort((a,b) => timeSlots.indexOf(a.timeSlot) - timeSlots.indexOf(b.timeSlot));
+            })
+        });
+
+        return schedules;
+    }, [scheduleData, teachers, workingDays, timeSlots]);
+    
+
     if (Object.keys(teacherLoad).length === 0) {
         return null;
     }
@@ -73,6 +109,8 @@ const TeacherLoadDisplay = ({ teacherLoad, teachers, workingDays }: TeacherLoadD
         <Accordion type="multiple" className="space-y-3">
             {sortedTeachers.map(teacher => {
                 const totalLoad = teacherLoad[teacher.id]?.Total || { total: 0, main: 0, additional: 0 };
+                const teacherDaySchedule = teacherSchedules[teacher.id] || {};
+
                 return (
                     <AccordionItem key={teacher.id} value={teacher.id} className="border rounded-lg bg-card shadow-sm px-4">
                         <AccordionTrigger className="py-4">
@@ -87,18 +125,26 @@ const TeacherLoadDisplay = ({ teacherLoad, teachers, workingDays }: TeacherLoadD
                             </div>
                         </AccordionTrigger>
                         <AccordionContent>
-                             <div className="border-t pt-4">
-                                <div className="grid grid-cols-3 gap-2 text-center">
-                                    {workingDays.map(day => {
-                                        const dayLoad = teacherLoad[teacher.id]?.[day] || { total: 0, main: 0, additional: 0 };
-                                        return (
-                                            <div key={day} className={cn("p-2 rounded-md", dayColors[day])}>
-                                                <div className="text-xs font-medium text-muted-foreground">{day.substring(0,3)}</div>
-                                                <div className="font-bold mt-1">{dayLoad.total}</div>
+                             <div className="border-t pt-4 space-y-3">
+                                {workingDays.map(day => {
+                                    const dayPeriods = teacherDaySchedule[day] || [];
+                                    if (dayPeriods.length === 0) return null;
+
+                                    return (
+                                        <div key={day} className={cn("p-3 rounded-md", dayColors[day])}>
+                                            <h4 className="font-bold mb-2 text-sm text-foreground">{day}</h4>
+                                            <div className="space-y-1.5 text-xs">
+                                                {dayPeriods.map((period, index) => (
+                                                    <div key={index} className="flex justify-between items-center bg-background/50 p-1.5 rounded">
+                                                        <span className="font-medium">{period.timeSlot}</span>
+                                                        <span>{period.subject}</span>
+                                                        <span className="text-muted-foreground">{period.className}</span>
+                                                    </div>
+                                                ))}
                                             </div>
-                                        )
-                                    })}
-                                </div>
+                                        </div>
+                                    )
+                                })}
                              </div>
                         </AccordionContent>
                     </AccordionItem>
@@ -112,7 +158,7 @@ const TeacherLoadDisplay = ({ teacherLoad, teachers, workingDays }: TeacherLoadD
             <CardHeader>
                 <CardTitle>Teacher Load Analysis</CardTitle>
                 <CardDescription>
-                    Weekly period distribution for each teacher based on the active routine. (M = Main, A = Additional)
+                    Weekly period distribution for each teacher based on the active routine. Click on a teacher to see their detailed schedule. (M = Main, A = Additional)
                 </CardDescription>
             </CardHeader>
             <CardContent>

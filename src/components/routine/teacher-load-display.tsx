@@ -9,17 +9,15 @@ import useMediaQuery from '@/hooks/use-media-query';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
 
-const dayColors: Record<DayOfWeek, string> = {
-    "Monday": "bg-blue-100 dark:bg-blue-900/30",
-    "Tuesday": "bg-green-100 dark:bg-green-900/30",
-    "Wednesday": "bg-yellow-100 dark:bg-yellow-900/30",
-    "Thursday": "bg-orange-100 dark:bg-orange-900/30",
-    "Friday": "bg-purple-100 dark:bg-purple-900/30",
-    "Saturday": "bg-pink-100 dark:bg-pink-900/30",
-    "Sunday": "bg-red-100 dark:bg-red-900/30",
-};
+interface TeacherLoadDisplayProps {
+    teacherLoad: TeacherLoad;
+    teachers: Teacher[];
+    workingDays: DayOfWeek[];
+    scheduleData: GenerateScheduleOutput | null;
+    timeSlots: string[];
+}
 
-const TeacherLoadDisplay = ({ teacherLoad, teachers, workingDays, scheduleData, timeSlots }: TeacherLoadDisplayProps) => {
+const TeacherLoadDisplay = ({ teacherLoad, teachers, workingDays }: TeacherLoadDisplayProps) => {
     const isMobile = useMediaQuery("(max-width: 768px)");
 
     if (Object.keys(teacherLoad).length === 0) {
@@ -86,23 +84,27 @@ const TeacherLoadDisplay = ({ teacherLoad, teachers, workingDays, scheduleData, 
                         <AccordionContent>
                              <div className="border-t pt-4">
                                 <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            {workingDays.map(day => (
-                                                <TableHead key={day} className="text-center h-8">{day.substring(0,3)}</TableHead>
-                                            ))}
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>Day</TableHead>
+                                      <TableHead className="text-center">Main</TableHead>
+                                      <TableHead className="text-center">Additional</TableHead>
+                                      <TableHead className="text-center">Total</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {workingDays.map(day => {
+                                      const dayLoad = teacherDailyLoad[day] || { total: 0, main: 0, additional: 0 };
+                                      return (
+                                        <TableRow key={day}>
+                                          <TableCell className="font-medium">{day}</TableCell>
+                                          <TableCell className="text-center">{dayLoad.main}</TableCell>
+                                          <TableCell className="text-center">{dayLoad.additional}</TableCell>
+                                          <TableCell className="text-center font-bold">{dayLoad.total}</TableCell>
                                         </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        <TableRow>
-                                             {workingDays.map(day => {
-                                                const dayLoad = teacherDailyLoad[day]?.total || 0;
-                                                return (
-                                                     <TableCell key={day} className="text-center font-bold">{dayLoad}</TableCell>
-                                                )
-                                             })}
-                                        </TableRow>
-                                    </TableBody>
+                                      );
+                                    })}
+                                  </TableBody>
                                 </Table>
                              </div>
                         </AccordionContent>

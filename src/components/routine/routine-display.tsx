@@ -70,7 +70,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   const [isCellDialogOpen, setIsCellDialogOpen] = useState(false);
   const [currentCell, setCurrentCell] = useState<CurrentCell | null>(null);
   const [cellData, setCellData] = useState<CellData>({ subject: "", className: "", teacher: "" });
-  const [selectedClass, setSelectedClass] = useState<string>(sortedClasses[0] || '');
+  const [selectedClass, setSelectedClass] = useState<string>('');
   
   useEffect(() => {
     if (sortedClasses.length > 0 && !selectedClass) {
@@ -229,24 +229,24 @@ const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, 
   };
   
 const renderMobileView = (day: DayOfWeek) => {
-    const classesToShow = sortedClasses.filter(c => c === selectedClass);
+    const classesToShow = selectedClass ? sortedClasses.filter(c => c === selectedClass) : sortedClasses;
 
     return (
       <div className="space-y-4">
         <ScrollArea className="w-full whitespace-nowrap">
-          <div className="flex w-max space-x-2 p-1">
-            {sortedClasses.map(className => (
-                <Badge
-                    key={className}
-                    onClick={() => setSelectedClass(className)}
-                    variant={selectedClass === className ? 'default' : 'secondary'}
-                    className="cursor-pointer transition-all flex-shrink-0"
-                >
-                    {className}
-                </Badge>
-            ))}
-          </div>
-          <ScrollBar orientation="horizontal" />
+            <div className="flex w-max space-x-2 p-1">
+                 {sortedClasses.map(className => (
+                    <Badge
+                        key={className}
+                        onClick={() => setSelectedClass(className)}
+                        variant={selectedClass === className ? 'default' : 'secondary'}
+                        className="cursor-pointer transition-all flex-shrink-0"
+                    >
+                        {className}
+                    </Badge>
+                ))}
+            </div>
+            <ScrollBar orientation="horizontal" />
         </ScrollArea>
         
         {classesToShow.map(className => {
@@ -326,66 +326,50 @@ const renderMobileView = (day: DayOfWeek) => {
     );
 }
 
+const renderDesktopView = (day: DayOfWeek) => {
+    return (
+        <div className="overflow-x-auto border rounded-lg">
+            <Table>
+                <TableHeader>
+                    <TableRow className="bg-muted/50 hover:bg-muted/50">
+                        <TableHead className="font-semibold p-2 sticky left-0 bg-card z-10 min-w-[120px]">Time / Class</TableHead>
+                        {sortedClasses.map(c => (
+                            <TableHead key={c} className="text-center font-semibold text-xs p-1 align-bottom min-w-[100px]">{c}</TableHead>
+                        ))}
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {timeSlots.map(timeSlot => {
+                        const firstEntry = gridSchedule[day]?.[sortedClasses[0]]?.[timeSlot]?.[0];
+                        const isSpecial = firstEntry?.subject === 'Prayer' || firstEntry?.subject === 'Lunch';
+                        
+                        if (isSpecial) {
+                            return (
+                                <TableRow key={timeSlot}>
+                                    <TableCell className="font-medium p-2 sticky left-0 bg-card z-10">{timeSlot}</TableCell>
+                                    <TableCell colSpan={sortedClasses.length} className="p-0 text-center align-middle font-semibold text-primary bg-primary/10">
+                                        {firstEntry.subject}
+                                    </TableCell>
+                                </TableRow>
+                            );
+                        }
 
-  const renderDesktopView = (day: DayOfWeek) => (
-      <div className="overflow-x-auto border rounded-lg">
-          <Table>
-              <TableHeader>
-                  <TableRow className="bg-muted/50 hover:bg-muted/50">
-                      <TableHead className="font-semibold p-2 sticky left-0 bg-card z-10 min-w-[120px]">Class</TableHead>
-                      {timeSlots.map(slot => (
-                          <TableHead key={slot} className="text-center font-semibold text-xs p-1 align-bottom min-w-[100px]">
-                              <div>{slot}</div>
-                              <div className="font-normal text-muted-foreground">{instructionalSlotMap[slot] ? toRoman(instructionalSlotMap[slot]) : '-'}</div>
-                          </TableHead>
-                      ))}
-                  </TableRow>
-              </TableHeader>
-              <TableBody>
-                  {sortedClasses.map((className) => {
-                      return (
-                        <TableRow key={`${day}-${className}`}>
-                            <TableCell className="font-medium p-2 sticky left-0 bg-card z-10">{className}</TableCell>
-                            {timeSlots.map(timeSlot => {
-                                const entry = gridSchedule[day]?.[className]?.[timeSlot]?.[0];
-                                const isSpecial = entry?.subject === 'Prayer' || entry?.subject === 'Lunch';
-                                
-                                if (isSpecial && className === sortedClasses[0]) {
-                                    let span = 0;
-                                    for(let i = 0; i < sortedClasses.length; i++) {
-                                        const c = sortedClasses[i];
-                                        const currentEntry = gridSchedule[day]?.[c]?.[timeSlot]?.[0];
-                                        if (currentEntry?.subject === entry.subject) {
-                                            span++;
-                                        } else {
-                                            break;
-                                        }
-                                    }
-                                    return (
-                                        <TableCell key={`${day}-${className}-${timeSlot}`} className="p-0 text-center align-middle font-semibold text-primary bg-primary/10 border-l" colSpan={span}>
-                                            {entry.subject}
-                                        </TableCell>
-                                    );
-                                }
-                                if (isSpecial && className !== sortedClasses[0]) {
-                                    const prevClass = sortedClasses[sortedClasses.indexOf(className) - 1];
-                                    const prevEntry = gridSchedule[day]?.[prevClass]?.[timeSlot]?.[0];
-                                    if(prevEntry?.subject === entry.subject) {
-                                        return null;
-                                    }
-                                }
-
-                                return (
-                                <TableCell key={`${day}-${className}-${timeSlot}`} className="p-0 align-top border-l">{renderCellContent(day, className, timeSlot)}</TableCell>
-                                )
-                            })}
-                        </TableRow>
-                      )
-                  })}
-              </TableBody>
-          </Table>
-      </div>
-  );
+                        return (
+                            <TableRow key={timeSlot}>
+                                <TableCell className="font-medium p-2 sticky left-0 bg-card z-10">{timeSlot}<br/><span className="font-normal text-muted-foreground text-xs">{instructionalSlotMap[timeSlot] ? `(${toRoman(instructionalSlotMap[timeSlot])})` : ''}</span></TableCell>
+                                {sortedClasses.map(className => (
+                                    <TableCell key={className} className="p-0 align-top border-l">
+                                        {renderCellContent(day, className, timeSlot)}
+                                    </TableCell>
+                                ))}
+                            </TableRow>
+                        );
+                    })}
+                </TableBody>
+            </Table>
+        </div>
+    );
+};
 
   if (!scheduleData || !scheduleData.schedule || scheduleData.schedule.length === 0) {
     return (
@@ -432,6 +416,23 @@ const renderMobileView = (day: DayOfWeek) => {
                       </TabsList>
                       <ScrollBar orientation="horizontal" />
                     </ScrollArea>
+                    <div className='my-4 no-print'>
+                      <ScrollArea className="w-full whitespace-nowrap">
+                        <div className="flex w-max space-x-2 p-1">
+                            {sortedClasses.map(className => (
+                                <Badge
+                                    key={className}
+                                    onClick={() => setSelectedClass(className)}
+                                    variant={selectedClass === className ? 'default' : 'secondary'}
+                                    className="cursor-pointer transition-all flex-shrink-0"
+                                >
+                                    {className}
+                                </Badge>
+                            ))}
+                        </div>
+                        <ScrollBar orientation="horizontal" />
+                      </ScrollArea>
+                    </div>
 
                     {workingDays.map(day => (
                         <TabsContent key={day} value={day} className="sm:p-0 pt-4">
@@ -499,4 +500,3 @@ const renderMobileView = (day: DayOfWeek) => {
 
 export default RoutineDisplay;
 
-    

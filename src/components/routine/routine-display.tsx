@@ -399,7 +399,7 @@ const renderDesktopView = (day: DayOfWeek) => {
                          <div className="flex w-full items-center">
                             <div className="flex-1 w-0">
                                 <ScrollArea className="w-full whitespace-nowrap scrollbar-hide">
-                                    <TabsList>
+                                    <TabsList className="pb-2">
                                         {workingDays.map(day => <TabsTrigger key={day} value={day}>{day}</TabsTrigger>)}
                                     </TabsList>
                                     <ScrollBar orientation="horizontal" />
@@ -409,7 +409,7 @@ const renderDesktopView = (day: DayOfWeek) => {
                         <div className="flex w-full items-center">
                             <div className="flex-1 w-0">
                                <ScrollArea className="w-full whitespace-nowrap scrollbar-hide">
-                                    <div className="flex w-max space-x-2 p-1">
+                                    <div className="flex w-max space-x-2 p-1 pb-2">
                                         {sortedClasses.map(className => (
                                             <Badge
                                                 key={className}
@@ -493,6 +493,7 @@ const renderDesktopView = (day: DayOfWeek) => {
 };
 
 export default RoutineDisplay;
+
 
 
 

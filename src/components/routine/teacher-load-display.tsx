@@ -6,12 +6,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import useMediaQuery from '@/hooks/use-media-query';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { cn } from "@/lib/utils";
 
 interface TeacherLoadDisplayProps {
   teacherLoad: TeacherLoad;
   teachers: Teacher[];
   workingDays: DayOfWeek[];
 }
+
+const dayColors: Record<DayOfWeek, string> = {
+    "Monday": "bg-blue-100 dark:bg-blue-900/30",
+    "Tuesday": "bg-green-100 dark:bg-green-900/30",
+    "Wednesday": "bg-yellow-100 dark:bg-yellow-900/30",
+    "Thursday": "bg-orange-100 dark:bg-orange-900/30",
+    "Friday": "bg-purple-100 dark:bg-purple-900/30",
+    "Saturday": "bg-pink-100 dark:bg-pink-900/30",
+    "Sunday": "bg-red-100 dark:bg-red-900/30",
+};
 
 const TeacherLoadDisplay = ({ teacherLoad, teachers, workingDays }: TeacherLoadDisplayProps) => {
     const isMobile = useMediaQuery("(max-width: 768px)");
@@ -39,7 +50,7 @@ const TeacherLoadDisplay = ({ teacherLoad, teachers, workingDays }: TeacherLoadD
                         <TableRow key={teacher.id}>
                             <TableCell className="font-medium sticky left-0 bg-card z-10">{teacher.name}</TableCell>
                             {dayColumns.map(day => {
-                                const load = teacherLoad[teacher.id]?.[day] || { total: 0, main: 0, additional: 0 };
+                                const load = teacherLoad[teacher.id]?.[day as DayOfWeek] || { total: 0, main: 0, additional: 0 };
                                 return (
                                     <TableCell key={day} className="text-center">
                                         <div className="flex flex-col items-center">
@@ -81,7 +92,7 @@ const TeacherLoadDisplay = ({ teacherLoad, teachers, workingDays }: TeacherLoadD
                                     {workingDays.map(day => {
                                         const dayLoad = teacherLoad[teacher.id]?.[day] || { total: 0, main: 0, additional: 0 };
                                         return (
-                                            <div key={day} className="p-2 bg-muted/50 rounded-md">
+                                            <div key={day} className={cn("p-2 rounded-md", dayColors[day])}>
                                                 <div className="text-xs font-medium text-muted-foreground">{day.substring(0,3)}</div>
                                                 <div className="font-bold mt-1">{dayLoad.total}</div>
                                             </div>

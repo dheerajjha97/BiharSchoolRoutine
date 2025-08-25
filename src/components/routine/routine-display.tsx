@@ -395,19 +395,20 @@ const renderDesktopView = (day: DayOfWeek) => {
                     <h2 className="text-lg font-bold mt-2">Class Routine</h2>
                 </div>
                 <Tabs defaultValue={workingDays.includes(defaultDay) ? defaultDay : (workingDays[0] || "Monday")} className="w-full">
-                    <div className="no-print">
-                        <div className="flex w-full items-center space-x-4 mb-4">
+                    <div className="no-print space-y-4">
+                         <div className="flex w-full items-center">
                             <div className="flex-1 w-0">
-                                <ScrollArea className="w-full whitespace-nowrap">
+                                <ScrollArea className="w-full whitespace-nowrap scrollbar-hide">
                                     <TabsList>
                                         {workingDays.map(day => <TabsTrigger key={day} value={day}>{day}</TabsTrigger>)}
                                     </TabsList>
+                                    <ScrollBar orientation="horizontal" />
                                 </ScrollArea>
                             </div>
                         </div>
-                        <div className="flex w-full items-center space-x-4">
+                        <div className="flex w-full items-center">
                             <div className="flex-1 w-0">
-                               <ScrollArea className="w-full whitespace-nowrap">
+                               <ScrollArea className="w-full whitespace-nowrap scrollbar-hide">
                                     <div className="flex w-max space-x-2 p-1">
                                         {sortedClasses.map(className => (
                                             <Badge
@@ -420,6 +421,7 @@ const renderDesktopView = (day: DayOfWeek) => {
                                             </Badge>
                                         ))}
                                     </div>
+                                    <ScrollBar orientation="horizontal" />
                                 </ScrollArea>
                             </div>
                         </div>
@@ -491,6 +493,7 @@ const renderDesktopView = (day: DayOfWeek) => {
 };
 
 export default RoutineDisplay;
+
 
 
 

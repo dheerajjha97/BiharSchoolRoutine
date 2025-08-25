@@ -233,21 +233,6 @@ const renderMobileView = (day: DayOfWeek) => {
 
     return (
       <div className="space-y-4">
-        <ScrollArea className="w-full whitespace-nowrap">
-            <div className="flex w-max space-x-2 p-1">
-                 {sortedClasses.map(className => (
-                    <Badge
-                        key={className}
-                        onClick={() => setSelectedClass(className)}
-                        variant={selectedClass === className ? 'default' : 'secondary'}
-                        className="cursor-pointer transition-all flex-shrink-0"
-                    >
-                        {className}
-                    </Badge>
-                ))}
-            </div>
-            <ScrollBar orientation="horizontal" />
-        </ScrollArea>
         
         {classesToShow.map(className => {
             const periodsForClass = timeSlots.map(timeSlot => {
@@ -340,15 +325,15 @@ const renderDesktopView = (day: DayOfWeek) => {
                 </TableHeader>
                 <TableBody>
                     {timeSlots.map(timeSlot => {
-                        const firstEntry = gridSchedule[day]?.[sortedClasses[0]]?.[timeSlot]?.[0];
-                        const isSpecial = firstEntry?.subject === 'Prayer' || firstEntry?.subject === 'Lunch';
+                        const firstEntryForDay = gridSchedule[day]?.[sortedClasses[0]]?.[timeSlot]?.[0];
+                        const isSpecial = firstEntryForDay?.subject === 'Prayer' || firstEntryForDay?.subject === 'Lunch';
                         
                         if (isSpecial) {
                             return (
                                 <TableRow key={timeSlot}>
                                     <TableCell className="font-medium p-2 sticky left-0 bg-card z-10">{timeSlot}</TableCell>
                                     <TableCell colSpan={sortedClasses.length} className="p-0 text-center align-middle font-semibold text-primary bg-primary/10">
-                                        {firstEntry.subject}
+                                        {firstEntryForDay.subject}
                                     </TableCell>
                                 </TableRow>
                             );
@@ -410,32 +395,37 @@ const renderDesktopView = (day: DayOfWeek) => {
                     <h2 className="text-lg font-bold mt-2">Class Routine</h2>
                 </div>
                 <Tabs defaultValue={workingDays.includes(defaultDay) ? defaultDay : (workingDays[0] || "Monday")} className="w-full">
-                    <ScrollArea className="w-full whitespace-nowrap no-print">
-                      <TabsList className="w-max">
-                          {workingDays.map(day => <TabsTrigger key={day} value={day}>{day}</TabsTrigger>)}
-                      </TabsList>
-                      <ScrollBar orientation="horizontal" />
-                    </ScrollArea>
-                    <div className='my-4 no-print'>
-                      <ScrollArea className="w-full whitespace-nowrap">
-                        <div className="flex w-max space-x-2 p-1">
-                            {sortedClasses.map(className => (
-                                <Badge
-                                    key={className}
-                                    onClick={() => setSelectedClass(className)}
-                                    variant={selectedClass === className ? 'default' : 'secondary'}
-                                    className="cursor-pointer transition-all flex-shrink-0"
-                                >
-                                    {className}
-                                </Badge>
-                            ))}
+                    <div className="no-print">
+                        <div className="mb-4">
+                            <ScrollArea className="w-full whitespace-nowrap">
+                              <TabsList>
+                                  {workingDays.map(day => <TabsTrigger key={day} value={day}>{day}</TabsTrigger>)}
+                              </TabsList>
+                              <ScrollBar orientation="horizontal" />
+                            </ScrollArea>
                         </div>
-                        <ScrollBar orientation="horizontal" />
-                      </ScrollArea>
+                        <div>
+                             <ScrollArea className="w-full whitespace-nowrap">
+                                <div className="flex w-max space-x-2 p-1">
+                                    {sortedClasses.map(className => (
+                                        <Badge
+                                            key={className}
+                                            onClick={() => setSelectedClass(className)}
+                                            variant={selectedClass === className ? 'default' : 'secondary'}
+                                            className="cursor-pointer transition-all flex-shrink-0"
+                                        >
+                                            {className}
+                                        </Badge>
+                                    ))}
+                                </div>
+                                <ScrollBar orientation="horizontal" />
+                              </ScrollArea>
+                        </div>
                     </div>
+                    
 
                     {workingDays.map(day => (
-                        <TabsContent key={day} value={day} className="sm:p-0 pt-4">
+                        <TabsContent key={day} value={day} className="mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:p-0 pt-4">
                              {isMobile ? renderMobileView(day) : renderDesktopView(day)}
                         </TabsContent>
                     ))}
@@ -499,4 +489,5 @@ const renderDesktopView = (day: DayOfWeek) => {
 };
 
 export default RoutineDisplay;
+
 

@@ -39,7 +39,6 @@ const adminNavItems = [
   { href: "/adjustments", label: "Adjustments", icon: Replace },
   { href: "/reports", label: "Exams", icon: ClipboardCheck },
   { href: "/holidays", label: "Holidays", icon: NotebookText },
-  { href: "/test-routine", label: "Test Routine", icon: Beaker },
 ];
 
 const teacherNavItems = [
@@ -213,5 +212,3 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
-
-    

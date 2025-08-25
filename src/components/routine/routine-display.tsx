@@ -234,19 +234,19 @@ const renderMobileView = (day: DayOfWeek) => {
     return (
       <div className="space-y-4">
         <ScrollArea className="w-full whitespace-nowrap">
-            <div className="flex w-max space-x-2 pb-2">
-                {sortedClasses.map(className => (
-                    <Badge
-                        key={className}
-                        onClick={() => setSelectedClass(className)}
-                        variant={selectedClass === className ? 'default' : 'secondary'}
-                        className="cursor-pointer transition-all flex-shrink-0"
-                    >
-                        {className}
-                    </Badge>
-                ))}
-            </div>
-            <ScrollBar orientation="horizontal" />
+          <div className="flex w-max space-x-2 p-1">
+            {sortedClasses.map(className => (
+                <Badge
+                    key={className}
+                    onClick={() => setSelectedClass(className)}
+                    variant={selectedClass === className ? 'default' : 'secondary'}
+                    className="cursor-pointer transition-all flex-shrink-0"
+                >
+                    {className}
+                </Badge>
+            ))}
+          </div>
+          <ScrollBar orientation="horizontal" />
         </ScrollArea>
         
         {classesToShow.map(className => {
@@ -498,3 +498,5 @@ const renderMobileView = (day: DayOfWeek) => {
 };
 
 export default RoutineDisplay;
+
+    

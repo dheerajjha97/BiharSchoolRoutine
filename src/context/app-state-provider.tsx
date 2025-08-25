@@ -139,13 +139,13 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     });
 
     activeRoutine.schedule.schedule.forEach(entry => {
-        if (!entry || entry.subject === "Prayer" || entry.subject === "Lunch" || entry.subject === "---") return;
+        if (!entry || entry.subject === "Prayer" || entry.subject === "Lunch" || entry.subject === "---" || !entry.teacher || entry.teacher === "N/A") return;
         
         const teacherIdsInEntry = (entry.teacher || '').split(' & ').map(tId => tId.trim());
         const subjectsInEntry = (entry.subject || '').split(' / ').map(s => s.trim());
 
         teacherIdsInEntry.forEach((teacherId, index) => {
-            if (teacherId && teacherId !== "N/A" && load[teacherId]) {
+            if (teacherId && load[teacherId]) {
                 const subject = subjectsInEntry[index] || subjectsInEntry[0];
                 const category = appState.config.subjectCategories[subject] || 'additional';
 
@@ -189,11 +189,13 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   }, []);
 
   useEffect(() => {
-    if (!isLoading && appState.teachers.length > 0) { // Only update if not loading and state is initialized
+    if (!isLoading && appState.teachers.length > 0 && activeRoutine) {
         updateState('teacherLoad', calculatedTeacherLoad);
+    } else if (!activeRoutine) {
+        updateState('teacherLoad', {});
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [calculatedTeacherLoad, isLoading]);
+  }, [calculatedTeacherLoad, isLoading, activeRoutine]);
   
   const updateSchoolInfo = useCallback(<K extends keyof SchoolInfo>(key: K, value: SchoolInfo[K]) => {
      setAppState(prevState => ({

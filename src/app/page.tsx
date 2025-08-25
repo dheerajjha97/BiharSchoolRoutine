@@ -41,7 +41,8 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
+import TeacherLoadDisplay from "@/components/routine/teacher-load-display";
 
 
 const RoutineDisplayWrapper = () => {
@@ -123,6 +124,7 @@ export default function Home() {
         activeRoutineId,
         holidays = [],
         user,
+        teacherLoad,
      } = appState;
     
   const { toast } = useToast();
@@ -180,10 +182,19 @@ export default function Home() {
 
   
   const renderTeacherView = () => {
-    // This view is for a logged-in teacher. We need to wait for `teachers` to be populated.
-    if (!loggedInTeacher && (appState.teachers.length > 0 || !user)) {
-      // Show error only if we have teachers data and user is loaded, but still no match.
-      if (user?.email && appState.teachers.length > 0) {
+    if (isLoading) {
+       return (
+            <div className="p-4 md:p-6 space-y-6 flex items-center justify-center h-full">
+                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                    <Loader2 className="h-8 w-8 animate-spin"/>
+                    <p>Loading routine...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (!loggedInTeacher && user?.email) {
+      if (appState.teachers.length > 0) {
         return (
           <div className="p-4 md:p-6 space-y-6 flex items-center justify-center h-full">
             <Card className="w-full max-w-md text-center">
@@ -323,6 +334,14 @@ export default function Home() {
       </Card>
 
       <RoutineDisplayWrapper />
+
+      {activeRoutine && (
+        <TeacherLoadDisplay 
+            teacherLoad={teacherLoad}
+            teachers={teachers}
+            workingDays={config.workingDays}
+        />
+      )}
 
       <Dialog open={!!routineToRename} onOpenChange={(isOpen) => !isOpen && cancelRename()}>
         <DialogContent>

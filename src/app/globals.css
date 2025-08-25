@@ -75,6 +75,8 @@
     body {
         background-color: white !important;
         color: black !important;
+        -webkit-print-color-adjust: exact; /* Chrome, Safari, Edge */
+        print-color-adjust: exact; /* Firefox */
     }
     .no-print, .no-print * {
         display: none !important;
@@ -89,17 +91,22 @@
     .print-header {
       display: block !important;
     }
-    main > * {
-      display: none;
+    main {
+      padding: 0 !important;
+      margin: 0 !important;
+      overflow: visible !important;
     }
-    main > .printable-area {
-      display: block;
+    main > * {
+      display: none !important;
+    }
+    main > .print-section, main > .print-section > * {
+      display: block !important;
     }
     .page-break-before {
         page-break-before: always;
     }
     @page {
-        size: A4;
+        size: A4 landscape;
         margin: 0.5in;
     }
 }

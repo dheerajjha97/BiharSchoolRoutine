@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Trash2, Printer, Pencil, User, Sun, Sandwich, MapPin } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { cn, sortClasses } from '@/lib/utils';
+import { cn, sortClasses, sortTimeSlots } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import useMediaQuery from '@/hooks/use-media-query';
@@ -61,11 +61,12 @@ const toRoman = (num: number): string => {
     return result;
 };
 
-const RoutineDisplay = ({ scheduleData, timeSlots, classes, subjects, teachers, teacherSubjects, onScheduleChange, dailyPeriodQuota, pdfHeader = "", isEditable, workingDays }: RoutineDisplayProps) => {
+const RoutineDisplay = ({ scheduleData, timeSlots: rawTimeSlots, classes, subjects, teachers, teacherSubjects, onScheduleChange, dailyPeriodQuota, pdfHeader = "", isEditable, workingDays }: RoutineDisplayProps) => {
   const { toast } = useToast();
   const defaultDay = new Date().toLocaleString('en-US', { weekday: 'long' }) as DayOfWeek;
   const isMobile = useMediaQuery("(max-width: 768px)");
   
+  const timeSlots = useMemo(() => sortTimeSlots(rawTimeSlots), [rawTimeSlots]);
   const sortedClasses = useMemo(() => [...classes].sort(sortClasses), [classes]);
   const [isCellDialogOpen, setIsCellDialogOpen] = useState(false);
   const [currentCell, setCurrentCell] = useState<CurrentCell | null>(null);
@@ -371,6 +372,9 @@ const renderDesktopView = (day: DayOfWeek) => {
       </Card>
     );
   }
+  
+  const instructionalTimeSlots = timeSlots.filter(slot => !['Prayer', 'Lunch'].some(sub => scheduleData.schedule.find(e => e.timeSlot === slot && e.subject === sub)));
+
 
   return (
     <>
@@ -390,13 +394,69 @@ const renderDesktopView = (day: DayOfWeek) => {
         </CardHeader>
         <CardContent className="p-0 sm:p-6 sm:pt-0">
              <div className="printable-area">
-                <div className="print-header hidden text-center mb-4">
-                    {pdfHeader && pdfHeader.trim().split('\n').map((line, index) => <p key={index} className={cn(index === 0 && 'font-bold')}>{line}</p>)}
-                    <h2 className="text-lg font-bold mt-2">Class Routine</h2>
+                <div className="hidden print-block">
+                     <div className="print-header text-center mb-4">
+                        {pdfHeader && pdfHeader.trim().split('\n').map((line, index) => <p key={index} className={cn(index === 0 && 'font-bold')}>{line}</p>)}
+                        <h2 className="text-lg font-bold mt-2">Class Routine</h2>
+                    </div>
+                    <Table className="border">
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="border font-semibold">Day</TableHead>
+                                <TableHead className="border font-semibold">Class</TableHead>
+                                {timeSlots.map(slot => {
+                                    const periodNumber = instructionalSlotMap[slot] ? `(${toRoman(instructionalSlotMap[slot])})` : '';
+                                    return (
+                                        <TableHead key={slot} className="border text-center text-xs p-1">
+                                            {slot} <br/> {periodNumber}
+                                        </TableHead>
+                                    );
+                                })}
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {workingDays.map((day, dayIndex) => (
+                                sortedClasses.map((className, classIndex) => {
+                                    const isPrayerOrLunchRow = timeSlots.some(slot => gridSchedule[day]?.[className]?.[slot]?.[0]?.subject === 'Prayer' || gridSchedule[day]?.[className]?.[slot]?.[0]?.subject === 'Lunch');
+                                    if (isPrayerOrLunchRow && classIndex > 0) return null;
+
+                                    return (
+                                        <TableRow key={`${day}-${className}`}>
+                                            {classIndex === 0 && <TableCell rowSpan={sortedClasses.length} className="border font-semibold align-middle text-center">{day}</TableCell>}
+                                            <TableCell className="border font-semibold">{className}</TableCell>
+                                            {timeSlots.map(timeSlot => {
+                                                const entries = gridSchedule[day]?.[className]?.[timeSlot] || [];
+                                                const entry = entries[0];
+
+                                                if (entry && (entry.subject === 'Prayer' || entry.subject === 'Lunch')) {
+                                                    if (classIndex === 0) {
+                                                         return <TableCell key={timeSlot} colSpan={1} className="border text-center align-middle font-semibold p-1 bg-muted/50">{entry.subject}</TableCell>;
+                                                    }
+                                                    return null;
+                                                }
+
+                                                const teacherNames = entry ? (entry.teacher || '').split(' & ').map(tId => getTeacherName(tId.trim())).join(' & ') : '';
+                                                return (
+                                                    <TableCell key={timeSlot} className="border text-center p-1 text-xs">
+                                                        {entry && entry.subject !== '---' ? (
+                                                            <>
+                                                                <div className="font-bold">{entry.subject}</div>
+                                                                <div className="text-muted-foreground">{teacherNames || 'N/A'}</div>
+                                                            </>
+                                                        ) : null}
+                                                    </TableCell>
+                                                );
+                                            })}
+                                        </TableRow>
+                                    )
+                                })
+                            ))}
+                        </TableBody>
+                    </Table>
                 </div>
-                <Tabs defaultValue={workingDays.includes(defaultDay) ? defaultDay : (workingDays[0] || "Monday")} className="w-full">
+                <Tabs defaultValue={workingDays.includes(defaultDay) ? defaultDay : (workingDays[0] || "Monday")} className="w-full no-print">
                     <div className="no-print space-y-4">
-                         <div className="flex w-full items-center">
+                        <div className="flex w-full items-center">
                             <div className="flex-1 w-0">
                                 <ScrollArea className="w-full whitespace-nowrap scrollbar-hide">
                                     <TabsList className="pb-2">
@@ -433,15 +493,6 @@ const renderDesktopView = (day: DayOfWeek) => {
                              {isMobile ? renderMobileView(day) : renderDesktopView(day)}
                         </TabsContent>
                     ))}
-
-                    <div className="hidden print-block">
-                        {workingDays.map(day => (
-                            <div key={`print-${day}`} className="page-break-before">
-                                <h3 className="text-xl font-bold text-center my-4">{day}</h3>
-                                {renderDesktopView(day)}
-                            </div>
-                        ))}
-                    </div>
                 </Tabs>
             </div>
         </CardContent>
@@ -494,8 +545,4 @@ const renderDesktopView = (day: DayOfWeek) => {
 
 export default RoutineDisplay;
 
-
-
-
-
-
+    

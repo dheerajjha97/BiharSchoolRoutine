@@ -81,13 +81,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const navItems = isUserAdmin ? adminNavItems : teacherNavItems;
   const displayName = user?.displayName;
 
-  const Brand = () => (
-      <Link href="/" className="flex items-center gap-2 font-semibold text-lg" onClick={() => setIsSheetOpen(false)}>
-        <Logo className="h-7 w-7 text-primary" />
-        <span className="hidden lg:block">Bihar School Routine</span>
-      </Link>
-  );
-
   const userProfileSection = user ? (
     <div className="p-4 text-center">
       <Avatar className="h-16 w-16 mx-auto mb-2">
@@ -96,6 +89,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </Avatar>
       <h3 className="font-semibold text-lg">{displayName}</h3>
       <p className="text-sm text-muted-foreground">{isUserAdmin ? "Admin" : "Teacher"}</p>
+      <p className="text-xs text-muted-foreground truncate">{user.email}</p>
     </div>
   ) : null;
 

@@ -350,7 +350,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots: rawTimeSlots, classes, subjec
                         <div key={slot} className="flex items-center gap-4 p-3 border rounded-lg bg-background">
                             <div className="flex flex-col items-center text-center w-20 flex-shrink-0">
                                 <span className="font-bold text-sm">{slot}</span>
-                                {instructionalSlotMap[slot] && <span className="text-xs text-muted-foreground">({toRoman(instructionalSlotMap[slot])})</span>}
+                                {instructionalSlotMap[slot] && <span className="text-xs text-muted-foreground">({toRoman(instructionalSlotMap[slot])}</span>}
                             </div>
                             <div className="border-l pl-4 flex-grow">
                                 <h4 className="font-bold flex items-center gap-2 text-primary"><BookOpen className="h-4 w-4" /> {entry.subject}</h4>
@@ -515,3 +515,5 @@ const RoutineDisplay = ({ scheduleData, timeSlots: rawTimeSlots, classes, subjec
 };
 
 export default RoutineDisplay;
+
+    

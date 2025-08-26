@@ -140,7 +140,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   const sidebarHeader = (
     <div className="flex h-16 items-center border-b px-6">
-        <Brand />
+        <Link href="/" className="flex items-center gap-2 font-semibold">
+            <Logo className="h-7 w-7 text-primary" />
+            <span className="text-lg">Bihar School Routine</span>
+        </Link>
     </div>
   );
 

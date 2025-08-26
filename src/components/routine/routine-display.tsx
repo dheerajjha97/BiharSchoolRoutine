@@ -9,13 +9,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash2, Printer, Pencil } from "lucide-react";
+import { Trash2, Printer, Pencil, BookOpen, Clock, User } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn, sortClasses, sortTimeSlots } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import useMediaQuery from '@/hooks/use-media-query';
 
 interface RoutineDisplayProps {
@@ -62,14 +61,19 @@ const toRoman = (num: number): string => {
 
 const RoutineDisplay = ({ scheduleData, timeSlots: rawTimeSlots, classes, subjects, teachers, teacherSubjects, onScheduleChange, dailyPeriodQuota, pdfHeader = "", isEditable, workingDays }: RoutineDisplayProps) => {
   const { toast } = useToast();
-  const defaultDay = new Date().toLocaleString('en-US', { weekday: 'long' }) as DayOfWeek;
   const isMobile = useMediaQuery("(max-width: 768px)");
+  const systemDefaultDay = new Date().toLocaleString('en-US', { weekday: 'long' }) as DayOfWeek;
+  const defaultDay = workingDays.includes(systemDefaultDay) ? systemDefaultDay : (workingDays[0] || "Monday");
 
   const timeSlots = useMemo(() => sortTimeSlots(rawTimeSlots), [rawTimeSlots]);
   const sortedClasses = useMemo(() => [...classes].sort(sortClasses), [classes]);
   const [isCellDialogOpen, setIsCellDialogOpen] = useState(false);
   const [currentCell, setCurrentCell] = useState<CurrentCell | null>(null);
   const [cellData, setCellData] = useState<CellData>({ subject: "", className: "", teacher: "" });
+  
+  // State for mobile view
+  const [selectedDay, setSelectedDay] = useState<DayOfWeek>(defaultDay);
+  const [selectedClass, setSelectedClass] = useState<string>(sortedClasses[0] || "");
   
   const teacherNameMap = useMemo(() => new Map(teachers.map(t => [t.id, t.name])), [teachers]);
   
@@ -223,7 +227,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots: rawTimeSlots, classes, subjec
 
   const renderDesktopView = () => {
     return (
-        <Tabs defaultValue={workingDays.includes(defaultDay) ? defaultDay : (workingDays[0] || "Monday")} className="w-full no-print">
+        <Tabs defaultValue={defaultDay} className="w-full no-print">
             <TabsList className="mb-4">
                 {workingDays.map(day => <TabsTrigger key={day} value={day}>{day}</TabsTrigger>)}
             </TabsList>
@@ -284,65 +288,84 @@ const RoutineDisplay = ({ scheduleData, timeSlots: rawTimeSlots, classes, subjec
 };
 
   const renderMobileView = () => {
-    return (
-      <Accordion type="single" defaultValue={workingDays.includes(defaultDay) ? defaultDay : (workingDays[0] || "Monday")} collapsible className="w-full no-print">
-        {workingDays.map(day => (
-          <AccordionItem value={day} key={day}>
-            <AccordionTrigger className="bg-muted/50 px-4 py-3 rounded-md">
-              <span className="font-semibold">{day}</span>
-            </AccordionTrigger>
-            <AccordionContent className="pt-2">
-                <ScrollArea className="w-full whitespace-nowrap">
-                  <div className="border rounded-lg">
-                      <Table>
-                          <TableHeader>
-                              <TableRow className="bg-muted/50 hover:bg-muted/50">
-                                  <TableHead className="font-semibold p-2 sticky left-0 bg-muted/50 z-20 min-w-[120px] shadow-sm">Time</TableHead>
-                                  {sortedClasses.map(c => (
-                                      <TableHead key={c} className="text-center font-semibold text-xs p-1 align-bottom min-w-[120px]">{c}</TableHead>
-                                  ))}
-                              </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                              {timeSlots.map(timeSlot => {
-                                  const firstEntryForDay = gridSchedule[day]?.[sortedClasses[0]]?.[timeSlot]?.[0];
-                                  const isSpecial = firstEntryForDay?.subject === 'Prayer' || firstEntryForDay?.subject === 'Lunch';
-                                  
-                                  if (isSpecial) {
-                                      return (
-                                          <TableRow key={timeSlot}>
-                                              <TableCell className="font-medium p-2 sticky left-0 bg-card z-10">{timeSlot}</TableCell>
-                                              <TableCell colSpan={sortedClasses.length} className="p-0 text-center align-middle font-semibold text-primary bg-primary/10">
-                                                  {firstEntryForDay.subject}
-                                              </TableCell>
-                                          </TableRow>
-                                      );
-                                  }
+    const timelineEntries = timeSlots
+      .map(slot => ({
+        slot,
+        entry: (gridSchedule[selectedDay]?.[selectedClass]?.[slot] || [])[0]
+      }))
+      .filter(item => item.entry && item.entry.subject !== '---');
 
-                                  return (
-                                      <TableRow key={timeSlot}>
-                                          <TableCell className="font-medium p-2 sticky left-0 bg-card z-10">
-                                            {timeSlot}
-                                            <br/>
-                                            <span className="font-normal text-muted-foreground text-xs">{instructionalSlotMap[timeSlot] ? `(${toRoman(instructionalSlotMap[timeSlot])})` : ''}</span>
-                                          </TableCell>
-                                          {sortedClasses.map(className => (
-                                              <TableCell key={className} className="p-0 align-top border-l">
-                                                  {renderCellContent(day, className, timeSlot)}
-                                              </TableCell>
-                                          ))}
-                                      </TableRow>
-                                  );
-                              })}
-                          </TableBody>
-                      </Table>
-                  </div>
-                  <ScrollBar orientation="horizontal" />
-                </ScrollArea>
-            </AccordionContent>
-          </AccordionItem>
-        ))}
-      </Accordion>
+    return (
+      <div className="no-print space-y-4">
+        {/* Day Filter Badges */}
+        <ScrollArea className="w-full whitespace-nowrap">
+            <div className="flex items-center gap-2 pb-2">
+                {workingDays.map(day => (
+                    <Button 
+                        key={day} 
+                        variant={selectedDay === day ? "default" : "outline"} 
+                        size="sm"
+                        onClick={() => setSelectedDay(day)}
+                    >
+                        {day}
+                    </Button>
+                ))}
+            </div>
+            <ScrollBar orientation="horizontal" />
+        </ScrollArea>
+
+        {/* Class Filter Badges */}
+        <ScrollArea className="w-full whitespace-nowrap">
+            <div className="flex items-center gap-2 pb-2">
+                {sortedClasses.map(c => (
+                    <Button 
+                        key={c}
+                        variant={selectedClass === c ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setSelectedClass(c)}
+                    >
+                        {c}
+                    </Button>
+                ))}
+            </div>
+            <ScrollBar orientation="horizontal" />
+        </ScrollArea>
+        
+        {/* Timeline View */}
+        <div className="mt-4 space-y-2">
+            {timelineEntries.length > 0 ? (
+                 timelineEntries.map(({ slot, entry }, index) => {
+                    if (!entry) return null;
+                    const teacherNames = (entry.teacher || '').split(' & ').map(tId => getTeacherName(tId.trim())).join(' & ');
+                    
+                    if (entry.subject === "Prayer" || entry.subject === "Lunch") {
+                         return (
+                            <div key={slot} className="flex items-center justify-center p-3 text-center bg-secondary text-secondary-foreground font-semibold rounded-md">
+                                {entry.subject}
+                            </div>
+                        );
+                    }
+
+                    return (
+                        <div key={slot} className="flex items-center gap-4 p-3 border rounded-lg bg-background">
+                            <div className="flex flex-col items-center text-center w-20 flex-shrink-0">
+                                <span className="font-bold text-sm">{slot}</span>
+                                {instructionalSlotMap[slot] && <span className="text-xs text-muted-foreground">({toRoman(instructionalSlotMap[slot])})</span>}
+                            </div>
+                            <div className="border-l pl-4 flex-grow">
+                                <h4 className="font-bold flex items-center gap-2 text-primary"><BookOpen className="h-4 w-4" /> {entry.subject}</h4>
+                                <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1"><User className="h-4 w-4" /> {teacherNames !== 'N/A' ? teacherNames : 'Not Assigned'}</p>
+                            </div>
+                        </div>
+                    );
+                })
+            ) : (
+                <div className="text-center py-10 text-muted-foreground">
+                    No classes scheduled for {selectedClass} on {selectedDay}.
+                </div>
+            )}
+        </div>
+      </div>
     );
   };
 

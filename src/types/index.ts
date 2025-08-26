@@ -2,6 +2,7 @@
 // A single source of truth for all major data types in the application.
 
 import { z } from 'zod';
+import type { User } from 'firebase/auth';
 
 // Base Schemas
 export const TeacherSchema = z.object({
@@ -167,5 +168,10 @@ export type AppState = {
     date: string;
     absentTeacherIds: string[];
     substitutionPlan: SubstitutionPlan | null;
-  }
+  };
+  // User auth state
+  user: User | null;
+  isUserAdmin: boolean;
 };
+
+    

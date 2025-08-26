@@ -3,10 +3,13 @@
 
 import { useState, useEffect } from 'react';
 
-function useMediaQuery(query: string): boolean {
+function useMediaQuery(query: string): { isMobile: boolean, isMounted: boolean } {
   const [matches, setMatches] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
+    
     // Ensure this code only runs on the client
     if (typeof window !== 'undefined') {
       const media = window.matchMedia(query);
@@ -19,9 +22,9 @@ function useMediaQuery(query: string): boolean {
       media.addEventListener('change', listener);
       return () => media.removeEventListener('change', listener);
     }
-  }, [matches, query]);
+  }, [query]); // matches dependency removed to prevent re-renders
 
-  return matches;
+  return { isMobile: matches, isMounted };
 }
 
 export default useMediaQuery;

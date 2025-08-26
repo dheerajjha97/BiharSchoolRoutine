@@ -141,9 +141,9 @@ export default function Home() {
   const hasHistory = routineHistory && routineHistory.length > 0;
   
   const loggedInTeacher = useMemo(() => {
-      if (!user?.email || !teachers || teachers.length === 0) return null;
+      if (isAuthLoading || isLoading || !user?.email || !teachers || teachers.length === 0) return null;
       return teachers.find(t => t.email === user.email) || null;
-  }, [user, teachers]);
+  }, [user, teachers, isAuthLoading, isLoading]);
 
   const handleGenerateRoutine = () => {
         setIsLoading(true);
@@ -192,12 +192,6 @@ export default function Home() {
 
   
   const renderTeacherView = () => {
-    if (!loggedInTeacher) {
-      // This state can happen briefly while `loggedInTeacher` is being calculated
-      // or if the teacher's email isn't in the database for some reason.
-      return renderGenericLoader("Identifying teacher...");
-    }
-    
     if (user && !loggedInTeacher && teachers.length > 0) {
       return (
         <div className="p-4 md:p-6 space-y-6 flex items-center justify-center h-full">

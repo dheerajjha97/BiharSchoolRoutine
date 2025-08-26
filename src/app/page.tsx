@@ -132,7 +132,6 @@ export default function Home() {
   const [routineToRename, setRoutineToRename] = useState<RoutineVersion | null>(null);
 
   const loggedInTeacher = useMemo(() => {
-      // This calculation is safe because it will only run when the dependencies (user, teachers) are available.
       if (!user?.email || !teachers || teachers.length === 0) {
           return null;
       }
@@ -185,14 +184,9 @@ export default function Home() {
    * Renders the view for a logged-in teacher.
    */
   const renderTeacherView = () => {
-    // This is called only when isAuthLoading is false.
-    // By this point, `user` and `teachers` are available.
-    
-    // Safety check: Ensure user object and email exist before proceeding.
-    // This prevents rendering errors if auth state is somehow inconsistent.
     if (!user || !user.email) {
       return (
-        <div className="flex h-full w-full items-center justify-center p-6">
+        <div className="flex h-full w-full items-center justify-center">
             <div className="flex flex-col items-center gap-2 text-muted-foreground">
                 <Loader2 className="h-8 w-8 animate-spin"/>
                 <p>Waiting for user data...</p>
@@ -201,13 +195,16 @@ export default function Home() {
       );
     }
     
-    // Now we can safely check for the loggedInTeacher
     if (!loggedInTeacher) {
         return (
-            <div className="p-4 md:p-6 space-y-6 flex items-center justify-center h-full">
+            <div className="space-y-6">
+                <PageHeader 
+                    title="Error"
+                    description="Could not identify your account."
+                />
                 <Card className="w-full max-w-md text-center">
                     <CardHeader>
-                        <CardTitle>Error: Could not identify teacher</CardTitle>
+                        <CardTitle>Teacher Not Found</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <p className="text-destructive">Your email ({user.email}) is not registered as a teacher in this school's data. Please contact the administrator.</p>
@@ -218,7 +215,7 @@ export default function Home() {
     }
     
     return (
-        <div className="p-4 md:p-6 space-y-6">
+        <div className="space-y-6">
             <PageHeader 
                 title="My Routine"
                 description={`Showing the schedule for ${loggedInTeacher.name} (${loggedInTeacher.email}).`}
@@ -239,7 +236,7 @@ export default function Home() {
    * Renders the main dashboard for an administrator.
    */
   const renderAdminDashboard = () => (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       <PageHeader 
         title="Admin Dashboard"
         description="Generate, view, and manage your school's class routine."
@@ -372,14 +369,9 @@ export default function Home() {
     </div>
   );
   
-  // MAIN RENDER LOGIC
-  // This is the single entry point for deciding what to show.
-  
-  // While authentication and data loading are in progress, show a loading spinner.
-  // isAuthLoading is the single source of truth from the context provider.
   if (isAuthLoading) {
     return (
-        <div className="flex h-full w-full items-center justify-center p-6">
+        <div className="flex h-full w-full items-center justify-center">
             <div className="flex flex-col items-center gap-2 text-muted-foreground">
                 <Loader2 className="h-8 w-8 animate-spin"/>
                 <p>Loading data...</p>
@@ -388,7 +380,6 @@ export default function Home() {
     );
   }
 
-  // After loading is complete, decide which view to render.
   if (isUserAdmin) {
     return renderAdminDashboard();
   } else {

@@ -334,6 +334,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         
         if (newUser) {
             const db = getFirestoreDB();
+            setIsLoading(true);
             
             // 1. Check for Admin role
             const roleDocRef = doc(db, "userRoles", newUser.email!);
@@ -488,3 +489,5 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     </AppStateContext.Provider>
   );
 };
+
+    

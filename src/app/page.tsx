@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useContext, useState, useMemo } from "react";
+import { useContext, useState, useMemo, useEffect } from "react";
 import PageHeader from "@/components/app/page-header";
 import { AppStateContext } from "@/context/app-state-provider";
 import { Button } from "@/components/ui/button";
@@ -192,27 +192,25 @@ export default function Home() {
             </div>
         );
     }
-
-    if (!loggedInTeacher && user?.email) {
-      if (appState.teachers.length > 0) {
-        return (
-          <div className="p-4 md:p-6 space-y-6 flex items-center justify-center h-full">
-            <Card className="w-full max-w-md text-center">
-              <CardHeader>
-                <CardTitle>Error</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-destructive">Your email ({user.email}) is not registered as a teacher in this school's data. Please contact the administrator.</p>
-              </CardContent>
-            </Card>
-          </div>
-        );
-      }
-    }
     
+    if (user && !loggedInTeacher && teachers.length > 0) {
+      return (
+        <div className="p-4 md:p-6 space-y-6 flex items-center justify-center h-full">
+          <Card className="w-full max-w-md text-center">
+            <CardHeader>
+              <CardTitle>Error</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-destructive">Your email ({user.email}) is not registered as a teacher in this school's data. Please contact the administrator.</p>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
     if (!loggedInTeacher) {
         return (
-            <div className="p-4 md:p-6 space-y-6 flex items-center justify-center h-full">
+             <div className="p-4 md:p-6 space-y-6 flex items-center justify-center h-full">
                 <div className="flex flex-col items-center gap-2 text-muted-foreground">
                     <Loader2 className="h-8 w-8 animate-spin"/>
                     <p>Identifying teacher...</p>
@@ -370,3 +368,5 @@ export default function Home() {
 
   return isUserAdmin ? renderAdminDashboard() : renderTeacherView();
 }
+
+    

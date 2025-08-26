@@ -190,9 +190,9 @@ export default function Home() {
 
   
   const renderTeacherView = () => {
-    // This is the final fallback for a teacher who is logged in
-    // but couldn't be found in the teachers list after all data loaded.
-    if (!loggedInTeacher) {
+    // This condition handles the case where all data is loaded,
+    // but the logged-in user's email is not found in the teachers list.
+    if (user && user.email && !loggedInTeacher) {
       return (
         <div className="p-4 md:p-6 space-y-6 flex items-center justify-center h-full">
           <Card className="w-full max-w-md text-center">
@@ -200,14 +200,14 @@ export default function Home() {
               <CardTitle>Error: Could not identify teacher</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-destructive">Your email ({user?.email}) is not registered as a teacher in this school's data. Please contact the administrator.</p>
+              <p className="text-destructive">Your email ({user.email}) is not registered as a teacher in this school's data. Please contact the administrator.</p>
             </CardContent>
           </Card>
         </div>
       );
     }
     
-    // If we reach this point, `loggedInTeacher` is populated.
+    // If we reach here, `loggedInTeacher` is populated, so we can safely render the display.
     return (
         <div className="p-4 md:p-6 space-y-6">
             <TeacherRoutineDisplay 
@@ -363,6 +363,13 @@ export default function Home() {
   if (isUserAdmin) {
     return renderAdminDashboard();
   } else {
-    return renderTeacherView();
+    // For a teacher, we must wait for the user object and email to be available
+    if (user && user.email) {
+      return renderTeacherView();
+    }
+    // If not, continue showing loader until user data is fully populated
+    return renderGenericLoader("Identifying teacher...");
   }
 }
+
+    

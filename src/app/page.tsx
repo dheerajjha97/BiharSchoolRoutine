@@ -44,7 +44,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import TeacherLoadDisplay from "@/components/routine/teacher-load-display";
 
-
+/**
+ * A wrapper component to conditionally render the main routine display.
+ * It shows a message if no routine is active.
+ */
 const RoutineDisplayWrapper = () => {
     const { appState, updateRoutineVersion } = useContext(AppStateContext);
     const { 
@@ -57,8 +60,6 @@ const RoutineDisplayWrapper = () => {
         config,
         schoolInfo,
     } = appState;
-    const { teacherSubjects, dailyPeriodQuota, workingDays } = config;
-    const { pdfHeader } = schoolInfo;
 
     const activeRoutine = useMemo(() => {
         if (!activeRoutineId || !routineHistory) return null;
@@ -92,12 +93,12 @@ const RoutineDisplayWrapper = () => {
             classes={classes}
             subjects={subjects}
             teachers={teachers}
-            teacherSubjects={teacherSubjects}
+            teacherSubjects={config.teacherSubjects}
             onScheduleChange={handleScheduleChange}
-            dailyPeriodQuota={dailyPeriodQuota}
-            pdfHeader={pdfHeader}
+            dailyPeriodQuota={config.dailyPeriodQuota}
+            pdfHeader={schoolInfo.pdfHeader}
             isEditable={true}
-            workingDays={workingDays}
+            workingDays={config.workingDays}
         />
     );
 };
@@ -130,6 +131,15 @@ export default function Home() {
   const [renameValue, setRenameValue] = useState("");
   const [routineToRename, setRoutineToRename] = useState<RoutineVersion | null>(null);
 
+  const loggedInTeacher = useMemo(() => {
+      // This calculation is safe because it will only run when the dependencies (user, teachers) are available.
+      // The main component logic ensures we don't try to access this before data is loaded.
+      if (!user?.email || !teachers || teachers.length === 0) {
+          return null;
+      }
+      return teachers.find(t => t.email === user.email) || null;
+  }, [user, teachers]);
+
   const activeRoutine = useMemo(() => {
     if (!routineHistory || routineHistory.length === 0) return null;
     const active = routineHistory.find(r => r.id === activeRoutineId);
@@ -138,13 +148,7 @@ export default function Home() {
 
   const hasHistory = routineHistory && routineHistory.length > 0;
   
-  const loggedInTeacher = useMemo(() => {
-      if (!user?.email || !teachers || teachers.length === 0) {
-          return null;
-      }
-      return teachers.find(t => t.email === user.email) || null;
-  }, [user, teachers]);
-
+  // Handler functions for the admin dashboard
   const handleGenerateRoutine = () => {
         try {
             const schedule = generateScheduleLogic({ teachers, classes, subjects, timeSlots, ...config });
@@ -178,8 +182,11 @@ export default function Home() {
     setRenameValue("");
   };
   
+  /**
+   * Renders the view for a logged-in teacher.
+   */
   const renderTeacherView = () => {
-    // This check is now robust. It only runs after all data is loaded and user.email is available.
+    // By the time this function is called, loading is complete and we can reliably check loggedInTeacher.
     if (!loggedInTeacher) {
       return (
         <div className="p-4 md:p-6 space-y-6 flex items-center justify-center h-full">
@@ -208,6 +215,9 @@ export default function Home() {
     );
   };
 
+  /**
+   * Renders the main dashboard for an administrator.
+   */
   const renderAdminDashboard = () => (
     <div className="space-y-6 p-6">
       <PageHeader 
@@ -225,8 +235,8 @@ export default function Home() {
         <CardContent className="flex flex-col sm:flex-row gap-4">
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button size="lg" disabled={isAuthLoading} className="flex-grow">
-                {isAuthLoading ? (<Loader2 className="mr-2 h-5 w-5 animate-spin" />) : (<Wand2 className="mr-2 h-5 w-5" />)}
+              <Button size="lg" className="flex-grow">
+                <Wand2 className="mr-2 h-5 w-5" />
                 Generate New Routine
               </Button>
             </AlertDialogTrigger>
@@ -245,7 +255,7 @@ export default function Home() {
           </AlertDialog>
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button size="lg" variant="outline" disabled={isAuthLoading} className="flex-grow">
+              <Button size="lg" variant="outline" className="flex-grow">
                 <PlusSquare className="mr-2 h-5 w-5" />
                 Create New Blank Routine
               </Button>
@@ -342,9 +352,14 @@ export default function Home() {
     </div>
   );
   
-  if (isAuthLoading || !user?.email) {
+  // MAIN RENDER LOGIC
+  // This is the single entry point for deciding what to show.
+  
+  // While authentication and data loading are in progress, show a loading spinner.
+  // isAuthLoading is the single source of truth from the context provider.
+  if (isAuthLoading) {
     return (
-        <div className="p-4 md:p-6 space-y-6 flex items-center justify-center h-full">
+        <div className="flex h-full w-full items-center justify-center p-6">
             <div className="flex flex-col items-center gap-2 text-muted-foreground">
                 <Loader2 className="h-8 w-8 animate-spin"/>
                 <p>Loading data...</p>
@@ -353,10 +368,12 @@ export default function Home() {
     );
   }
 
-  // After loading, decide which view to render
+  // After loading is complete, decide which view to render.
   if (isUserAdmin) {
     return renderAdminDashboard();
   } else {
     return renderTeacherView();
   }
 }
+
+    

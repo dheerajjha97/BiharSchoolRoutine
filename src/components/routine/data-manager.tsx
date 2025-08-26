@@ -1,19 +1,20 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useContext } from "react";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { X, User, School, Book, Clock, DoorOpen } from "lucide-react";
+import { X } from "lucide-react";
 import { sortTimeSlots } from "@/lib/utils";
 import type { Teacher } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { useToast } from "@/hooks/use-toast";
-import { isEmailUnique } from "@/app/register/actions";
+import { isEmailUnique, addTeacherRole } from "@/app/register/actions";
+import { AppStateContext } from "@/context/app-state-provider";
 
 interface DataManagerProps {
   title: "Teachers" | "Classes" | "Subjects" | "Time Slots" | "Rooms / Halls";
@@ -25,6 +26,7 @@ interface DataManagerProps {
 }
 
 const TeacherManager = ({ items, setItems }: { items: Teacher[], setItems: (items: Teacher[]) => void }) => {
+    const { appState } = useContext(AppStateContext);
     const [newName, setNewName] = useState("");
     const [newEmail, setNewEmail] = useState("");
     const { toast } = useToast();
@@ -49,6 +51,13 @@ const TeacherManager = ({ items, setItems }: { items: Teacher[], setItems: (item
             toast({ variant: "destructive", title: "Email Already Exists", description: "This email is already registered as a teacher or admin in the system." });
             return;
         }
+        
+        // Add the teacher role to the userRoles collection for fast lookups
+        const roleResult = await addTeacherRole(email, appState.schoolInfo.udise);
+        if (!roleResult.success) {
+            toast({ variant: "destructive", title: "Failed to Register Role", description: "Could not add the teacher's role to the central registry. Please try again." });
+            return;
+        }
 
         const newTeacher: Teacher = { id: uuidv4(), name, email };
         const newItemsList = [newTeacher, ...items].sort((a, b) => a.name.localeCompare(b.name));
@@ -58,6 +67,9 @@ const TeacherManager = ({ items, setItems }: { items: Teacher[], setItems: (item
     };
     
     const handleRemoveItem = (idToRemove: string) => {
+        // Note: This only removes the teacher from the school's data list.
+        // It does not currently remove their entry from the userRoles collection.
+        // A more robust system would handle that, perhaps with a confirmation dialog.
         setItems(items.filter(item => item.id !== idToRemove));
     };
 

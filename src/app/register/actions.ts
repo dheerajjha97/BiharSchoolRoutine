@@ -75,6 +75,25 @@ export async function registerAdmin(input: RegistrationInput): Promise<Registrat
     }
 }
 
+export async function addTeacherRole(email: string, udise: string): Promise<{success: boolean}> {
+    if (!email || !udise) return { success: false };
+    const lowerCaseEmail = email.toLowerCase();
+    try {
+        const db = getFirestoreDB();
+        const newTeacherRole = {
+            email: lowerCaseEmail,
+            role: 'teacher',
+            udise: udise,
+            createdAt: new Date().toISOString(),
+        };
+        await setDoc(doc(db, 'userRoles', lowerCaseEmail), newTeacherRole);
+        return { success: true };
+    } catch (error) {
+        console.error("Error adding teacher role:", error);
+        return { success: false };
+    }
+}
+
 
 export async function isEmailUnique(email: string): Promise<boolean> {
     const lowerCaseEmail = email.toLowerCase();
@@ -83,22 +102,11 @@ export async function isEmailUnique(email: string): Promise<boolean> {
     try {
         const db = getFirestoreDB();
 
-        // 1. Check in userRoles collection (for admins)
+        // 1. Check in userRoles collection (for admins and teachers)
         const roleDocRef = doc(db, 'userRoles', lowerCaseEmail);
         const roleDoc = await getDoc(roleDocRef);
         if (roleDoc.exists()) {
             return false;
-        }
-        
-        // 2. Check across all school documents for any teacher with that email
-        const schoolsQuery = query(collection(db, 'schoolAdmins'));
-        const schoolsSnapshot = await getDocs(schoolsQuery);
-
-        for (const schoolDoc of schoolsSnapshot.docs) {
-            const teachers = schoolDoc.data().teachers || [];
-            if (teachers.some((t: { email: string }) => t.email && t.email.toLowerCase() === lowerCaseEmail)) {
-                return false; // Found a teacher with the same email in some school
-            }
         }
 
         return true;
@@ -112,24 +120,13 @@ export async function isEmailUnique(email: string): Promise<boolean> {
 export async function getTotalUserCount(): Promise<number> {
     try {
         const db = getFirestoreDB();
-        let totalUsers = 0;
-
-        // Count admins from userRoles
+        
+        // userRoles collection contains all users (admins and teachers)
         const userRolesRef = collection(db, 'userRoles');
-        const adminQuery = query(userRolesRef, where('role', '==', 'admin'));
-        const adminSnapshot = await getDocs(adminQuery);
-        totalUsers += adminSnapshot.size;
+        const snapshot = await getDocs(userRolesRef);
+        
+        return snapshot.size;
 
-        // Count teachers from all school documents
-        const schoolsQuery = query(collection(db, 'schoolAdmins'));
-        const schoolsSnapshot = await getDocs(schoolsQuery);
-
-        schoolsSnapshot.forEach(schoolDoc => {
-            const teachers = schoolDoc.data().teachers || [];
-            totalUsers += teachers.length;
-        });
-
-        return totalUsers;
     } catch (error) {
         console.error("Error getting total user count:", error);
         return 0;

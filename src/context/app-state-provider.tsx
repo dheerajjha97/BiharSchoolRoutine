@@ -336,75 +336,45 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
             const db = getFirestoreDB();
             setIsLoading(true);
             
-            // 1. Check for Admin role
             const roleDocRef = doc(db, "userRoles", newUser.email!);
             const roleSnap = await getDoc(roleDocRef);
 
-            if (roleSnap.exists()) {
-                const { role, udise } = roleSnap.data() as { role: 'admin' | 'teacher', udise: string };
-                if (role === 'admin') {
-                    setIsUserAdmin(true);
-                    const schoolDocRef = doc(db, "schoolAdmins", udise);
-                    
-                    firestoreUnsubscribeRef.current = onSnapshot(schoolDocRef, (dataSnap) => {
-                        if (dataSnap.exists()) {
-                            loadAndMergeState(dataSnap.data() as Partial<AppState>);
-                        } else {
-                            // Admin's school doc doesn't exist, create it
-                            const newSchoolData: AppState = { ...DEFAULT_APP_STATE, schoolInfo: { name: "", udise, pdfHeader: "" } };
-                            setDoc(schoolDocRef, newSchoolData);
-                            setAppState(newSchoolData);
-                        }
-                        setIsLoading(false);
-                        setIsAuthLoading(false);
-                    }, (error) => {
-                        console.error("Error in admin snapshot listener:", error);
-                        toast({ variant: "destructive", title: "Data Sync Error", description: "Could not sync admin data." });
-                        handleLogout();
-                    });
-                    return;
-                }
-            }
-
-            // 2. If not admin, search for Teacher role across all schools
-            setIsUserAdmin(false);
-            const schoolsCollectionRef = collection(db, "schoolAdmins");
-            const schoolsSnapshot = await getDocs(schoolsCollectionRef);
-
-            if (schoolsSnapshot.empty) {
-                toast({ variant: "destructive", title: "Account Not Found", description: "No schools are registered. Please contact support." });
+            if (!roleSnap.exists()) {
+                toast({ variant: "destructive", title: "Account Not Found", description: "Your email is not registered. Please register or contact support." });
                 handleLogout();
                 return;
             }
 
-            let foundTeacher = false;
-            for (const schoolDoc of schoolsSnapshot.docs) {
-                const schoolData = schoolDoc.data() as AppState;
-                const teacherMatch = (schoolData.teachers || []).find(t => t.email === newUser.email);
-                
-                if (teacherMatch) {
-                    foundTeacher = true;
-                    const schoolDocRef = doc(db, "schoolAdmins", schoolDoc.id);
-                    firestoreUnsubscribeRef.current = onSnapshot(schoolDocRef, (dataSnap) => {
-                        if (dataSnap.exists()) {
-                             loadAndMergeState(dataSnap.data() as Partial<AppState>);
-                        }
-                        // IMPORTANT: Only set loading to false after the first data load
-                        setIsLoading(false);
-                        setIsAuthLoading(false);
-                    }, (error) => {
-                        console.error("Error in teacher snapshot listener:", error);
-                        toast({ variant: "destructive", title: "Data Sync Error", description: "Could not sync school data." });
-                        handleLogout();
-                    });
-                    break;
-                }
-            }
+            const { role, udise } = roleSnap.data() as { role: 'admin' | 'teacher', udise: string };
+            const schoolDocRef = doc(db, "schoolAdmins", udise);
 
-            if (!foundTeacher) {
-                toast({ variant: "destructive", title: "Account Not Found", description: "Your email is not registered as a teacher in any school." });
-                handleLogout();
+            if (role === 'admin') {
+                setIsUserAdmin(true);
+            } else {
+                setIsUserAdmin(false);
             }
+            
+            firestoreUnsubscribeRef.current = onSnapshot(schoolDocRef, (dataSnap) => {
+                if (dataSnap.exists()) {
+                    loadAndMergeState(dataSnap.data() as Partial<AppState>);
+                } else if (role === 'admin') {
+                    // Admin's school doc doesn't exist, create it
+                    const newSchoolData: AppState = { ...DEFAULT_APP_STATE, schoolInfo: { name: "", udise, pdfHeader: "" } };
+                    setDoc(schoolDocRef, newSchoolData);
+                    setAppState(newSchoolData);
+                } else {
+                    // Teacher's school doesn't exist, this is an error state
+                     toast({ variant: "destructive", title: "School Data Not Found", description: `Could not find data for school with UDISE ${udise}.` });
+                     handleLogout();
+                     return;
+                }
+                setIsLoading(false);
+                setIsAuthLoading(false); // Set auth loading to false only after data is loaded
+            }, (error) => {
+                console.error("Error in snapshot listener:", error);
+                toast({ variant: "destructive", title: "Data Sync Error", description: "Could not sync data." });
+                handleLogout();
+            });
 
         } else {
             // User is logged out
@@ -490,6 +460,3 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     </AppStateContext.Provider>
   );
 };
-
-    
-    

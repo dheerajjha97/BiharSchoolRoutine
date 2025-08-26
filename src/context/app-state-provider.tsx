@@ -343,14 +343,18 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
             // Fallback for existing teachers not yet in userRoles
             if (!roleSnap.exists()) {
                 const schoolAdminsRef = collection(db, "schoolAdmins");
-                const q = query(schoolAdminsRef, where("teachers", "array-contains", { email: newUser.email, name: newUser.displayName }));
-                const schoolsSnap = await getDocs(q);
+                // This is an expensive query, but it's a one-time fallback for migrating old users.
+                const allSchoolsSnap = await getDocs(schoolAdminsRef);
                 
-                if (!schoolsSnap.empty) {
-                    const schoolDoc = schoolsSnap.docs[0];
-                    const udise = schoolDoc.id;
-                    await addTeacherRole(newUser.email!, udise);
-                    roleSnap = await getDoc(roleDocRef); // Re-fetch the role doc
+                for (const schoolDoc of allSchoolsSnap.docs) {
+                    const schoolData = schoolDoc.data() as AppState;
+                    const foundTeacher = schoolData.teachers?.find(t => t.email === newUser.email);
+                    if (foundTeacher) {
+                        const udise = schoolDoc.id;
+                        await addTeacherRole(newUser.email!, udise);
+                        roleSnap = await getDoc(roleDocRef); // Re-fetch the role doc
+                        break; // Stop searching once found
+                    }
                 }
             }
 
@@ -475,5 +479,3 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     </AppStateContext.Provider>
   );
 };
-
-    

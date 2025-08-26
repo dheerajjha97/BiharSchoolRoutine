@@ -196,6 +196,7 @@ export default function Home() {
   
   const renderTeacherView = () => {
     // This view is only rendered after all loading is complete.
+    // We can be sure loggedInTeacher exists if we reach this point.
     return (
         <div className="p-4 md:p-6 space-y-6">
             <TeacherRoutineDisplay 
@@ -376,5 +377,7 @@ export default function Home() {
   }
 
   // Fallback for any other edge cases, e.g. user object is not fully populated yet
-  return renderGenericLoader("Finalizing...");
+  // This indicates a state mismatch and we should not hang forever.
+  // The main layout will likely redirect to /login in this scenario.
+  return renderGenericLoader("Loading data...");
 }

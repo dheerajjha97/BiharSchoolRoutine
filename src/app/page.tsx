@@ -192,21 +192,8 @@ export default function Home() {
 
   
   const renderTeacherView = () => {
-    if (user && !loggedInTeacher && teachers.length > 0) {
-      return (
-        <div className="p-4 md:p-6 space-y-6 flex items-center justify-center h-full">
-          <Card className="w-full max-w-md text-center">
-            <CardHeader>
-              <CardTitle>Error</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-destructive">Your email ({user.email}) is not registered as a teacher in this school's data. Please contact the administrator.</p>
-            </CardContent>
-          </Card>
-        </div>
-      );
-    }
-
+    // This view is only rendered after all loading is complete.
+    // The check for the loggedInTeacher happens in the main return block.
     return (
         <div className="p-4 md:p-6 space-y-6">
             <TeacherRoutineDisplay 
@@ -358,5 +345,27 @@ export default function Home() {
     return renderGenericLoader("Loading data...");
   }
 
-  return isUserAdmin ? renderAdminDashboard() : renderTeacherView();
+  // After loading, decide which view to render
+  if (isUserAdmin) {
+    return renderAdminDashboard();
+  } else {
+    // If it's a teacher, make sure we could identify them before rendering
+    if (loggedInTeacher) {
+      return renderTeacherView();
+    } else {
+      // This is the final fallback if a logged-in user is not an admin and not found in the teachers list
+      return (
+        <div className="p-4 md:p-6 space-y-6 flex items-center justify-center h-full">
+          <Card className="w-full max-w-md text-center">
+            <CardHeader>
+              <CardTitle>Error: Could not identify teacher</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-destructive">Your email ({user?.email}) is not registered as a teacher in this school's data. Please contact the administrator.</p>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+  }
 }

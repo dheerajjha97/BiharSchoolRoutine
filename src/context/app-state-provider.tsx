@@ -389,6 +389,7 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
                         if (dataSnap.exists()) {
                              loadAndMergeState(dataSnap.data() as Partial<AppState>);
                         }
+                        // IMPORTANT: Only set loading to false after the first data load
                         setIsLoading(false);
                         setIsAuthLoading(false);
                     }, (error) => {
@@ -490,4 +491,5 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   );
 };
 
+    
     

@@ -133,7 +133,6 @@ export default function Home() {
 
   const loggedInTeacher = useMemo(() => {
       // This calculation is safe because it will only run when the dependencies (user, teachers) are available.
-      // The main component logic ensures we don't try to access this before data is loaded.
       if (!user?.email || !teachers || teachers.length === 0) {
           return null;
       }
@@ -186,24 +185,44 @@ export default function Home() {
    * Renders the view for a logged-in teacher.
    */
   const renderTeacherView = () => {
-    // By the time this function is called, loading is complete and we can reliably check loggedInTeacher.
-    if (!loggedInTeacher) {
+    // This is called only when isAuthLoading is false.
+    // By this point, `user` and `teachers` are available.
+    
+    // Safety check: Ensure user object and email exist before proceeding.
+    // This prevents rendering errors if auth state is somehow inconsistent.
+    if (!user || !user.email) {
       return (
-        <div className="p-4 md:p-6 space-y-6 flex items-center justify-center h-full">
-          <Card className="w-full max-w-md text-center">
-            <CardHeader>
-              <CardTitle>Error: Could not identify teacher</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-destructive">Your email ({user?.email}) is not registered as a teacher in this school's data. Please contact the administrator.</p>
-            </CardContent>
-          </Card>
+        <div className="flex h-full w-full items-center justify-center p-6">
+            <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                <Loader2 className="h-8 w-8 animate-spin"/>
+                <p>Waiting for user data...</p>
+            </div>
         </div>
       );
     }
     
+    // Now we can safely check for the loggedInTeacher
+    if (!loggedInTeacher) {
+        return (
+            <div className="p-4 md:p-6 space-y-6 flex items-center justify-center h-full">
+                <Card className="w-full max-w-md text-center">
+                    <CardHeader>
+                        <CardTitle>Error: Could not identify teacher</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-destructive">Your email ({user.email}) is not registered as a teacher in this school's data. Please contact the administrator.</p>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+    
     return (
         <div className="p-4 md:p-6 space-y-6">
+            <PageHeader 
+                title="My Routine"
+                description={`Showing the schedule for ${loggedInTeacher.name} (${loggedInTeacher.email}).`}
+            />
             <TeacherRoutineDisplay 
                 scheduleData={activeRoutine?.schedule || null}
                 teacher={loggedInTeacher}
@@ -214,6 +233,7 @@ export default function Home() {
         </div>
     );
   };
+
 
   /**
    * Renders the main dashboard for an administrator.
@@ -375,5 +395,3 @@ export default function Home() {
     return renderTeacherView();
   }
 }
-
-    

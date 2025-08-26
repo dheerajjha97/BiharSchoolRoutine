@@ -179,6 +179,7 @@ export default function Home() {
   };
   
   const renderTeacherView = () => {
+    // This check is now robust. It only runs after all data is loaded and user.email is available.
     if (!loggedInTeacher) {
       return (
         <div className="p-4 md:p-6 space-y-6 flex items-center justify-center h-full">
@@ -341,7 +342,7 @@ export default function Home() {
     </div>
   );
   
-  if (isAuthLoading) {
+  if (isAuthLoading || !user?.email) {
     return (
         <div className="p-4 md:p-6 space-y-6 flex items-center justify-center h-full">
             <div className="flex flex-col items-center gap-2 text-muted-foreground">
@@ -359,5 +360,3 @@ export default function Home() {
     return renderTeacherView();
   }
 }
-
-    

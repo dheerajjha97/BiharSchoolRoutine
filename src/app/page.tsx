@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { generateScheduleLogic } from "@/lib/schedule-generator";
 import { useToast } from "@/hooks/use-toast";
 import { Wand2, PlusSquare, Edit, Trash2, Loader2 } from "lucide-react";
-import type { GenerateScheduleOutput, RoutineVersion } from "@/types";
+import type { GenerateScheduleOutput, RoutineVersion, Teacher } from "@/types";
 import {
   Dialog,
   DialogContent,
@@ -110,6 +110,7 @@ export default function Home() {
         updateRoutineVersion,
         setActiveRoutineId,
         isLoading,
+        isAuthLoading,
         setIsLoading,
         isUserAdmin,
     } = useContext(AppStateContext);
@@ -180,17 +181,21 @@ export default function Home() {
     setRenameValue("");
   };
 
+  const renderGenericLoader = (message: string) => (
+      <div className="p-4 md:p-6 space-y-6 flex items-center justify-center h-full">
+          <div className="flex flex-col items-center gap-2 text-muted-foreground">
+              <Loader2 className="h-8 w-8 animate-spin"/>
+              <p>{message}</p>
+          </div>
+      </div>
+  );
+
   
   const renderTeacherView = () => {
-    if (isLoading) {
-       return (
-            <div className="p-4 md:p-6 space-y-6 flex items-center justify-center h-full">
-                <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                    <Loader2 className="h-8 w-8 animate-spin"/>
-                    <p>Loading routine...</p>
-                </div>
-            </div>
-        );
+    if (!loggedInTeacher) {
+      // This state can happen briefly while `loggedInTeacher` is being calculated
+      // or if the teacher's email isn't in the database for some reason.
+      return renderGenericLoader("Identifying teacher...");
     }
     
     if (user && !loggedInTeacher && teachers.length > 0) {
@@ -206,17 +211,6 @@ export default function Home() {
           </Card>
         </div>
       );
-    }
-
-    if (!loggedInTeacher) {
-        return (
-             <div className="p-4 md:p-6 space-y-6 flex items-center justify-center h-full">
-                <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                    <Loader2 className="h-8 w-8 animate-spin"/>
-                    <p>Identifying teacher...</p>
-                </div>
-            </div>
-        );
     }
 
     return (
@@ -365,8 +359,10 @@ export default function Home() {
       </Dialog>
     </div>
   );
+  
+  if (isAuthLoading || isLoading) {
+    return renderGenericLoader("Loading data...");
+  }
 
   return isUserAdmin ? renderAdminDashboard() : renderTeacherView();
 }
-
-    

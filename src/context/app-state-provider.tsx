@@ -19,6 +19,7 @@ import type {
     Holiday,
     DayOfWeek,
 } from '@/types';
+import { addTeacherRole } from "@/app/register/actions";
 
 export const AppStateContext = createContext<AppStateContextType>({} as AppStateContextType);
 
@@ -336,8 +337,22 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
             const db = getFirestoreDB();
             setIsLoading(true);
             
-            const roleDocRef = doc(db, "userRoles", newUser.email!);
-            const roleSnap = await getDoc(roleDocRef);
+            let roleDocRef = doc(db, "userRoles", newUser.email!);
+            let roleSnap = await getDoc(roleDocRef);
+
+            // Fallback for existing teachers not yet in userRoles
+            if (!roleSnap.exists()) {
+                const schoolAdminsRef = collection(db, "schoolAdmins");
+                const q = query(schoolAdminsRef, where("teachers", "array-contains", { email: newUser.email, name: newUser.displayName }));
+                const schoolsSnap = await getDocs(q);
+                
+                if (!schoolsSnap.empty) {
+                    const schoolDoc = schoolsSnap.docs[0];
+                    const udise = schoolDoc.id;
+                    await addTeacherRole(newUser.email!, udise);
+                    roleSnap = await getDoc(roleDocRef); // Re-fetch the role doc
+                }
+            }
 
             if (!roleSnap.exists()) {
                 toast({ variant: "destructive", title: "Account Not Found", description: "Your email is not registered. Please register or contact support." });
@@ -460,3 +475,5 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     </AppStateContext.Provider>
   );
 };
+
+    

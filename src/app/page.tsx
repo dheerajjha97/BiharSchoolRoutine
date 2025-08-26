@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useContext, useState, useMemo, useEffect } from "react";
+import { useContext, useState, useMemo } from "react";
 import PageHeader from "@/components/app/page-header";
 import { AppStateContext } from "@/context/app-state-provider";
 import { Button } from "@/components/ui/button";
@@ -196,17 +196,34 @@ export default function Home() {
   
   const renderTeacherView = () => {
     // This view is only rendered after all loading is complete.
-    // We can be sure loggedInTeacher exists if we reach this point.
+    // If we reach this point, `loggedInTeacher` should be populated if they exist.
+    if (loggedInTeacher) {
+      return (
+          <div className="p-4 md:p-6 space-y-6">
+              <TeacherRoutineDisplay 
+                  scheduleData={activeRoutine?.schedule || null}
+                  teacher={loggedInTeacher}
+                  timeSlots={appState.timeSlots} 
+                  workingDays={appState.config.workingDays}
+                  holidays={holidays}
+              />
+          </div>
+      );
+    }
+    
+    // This is the final fallback for a teacher who is logged in
+    // but couldn't be found in the teachers list after all data loaded.
     return (
-        <div className="p-4 md:p-6 space-y-6">
-            <TeacherRoutineDisplay 
-                scheduleData={activeRoutine?.schedule || null}
-                teacher={loggedInTeacher}
-                timeSlots={appState.timeSlots} 
-                workingDays={appState.config.workingDays}
-                holidays={holidays}
-            />
-        </div>
+      <div className="p-4 md:p-6 space-y-6 flex items-center justify-center h-full">
+        <Card className="w-full max-w-md text-center">
+          <CardHeader>
+            <CardTitle>Error: Could not identify teacher</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-destructive">Your email ({user?.email}) is not registered as a teacher in this school's data. Please contact the administrator.</p>
+          </CardContent>
+        </Card>
+      </div>
     );
   };
 
@@ -353,31 +370,7 @@ export default function Home() {
     return renderAdminDashboard();
   } 
   
-  // If not admin, check for teacher status
-  if (loggedInTeacher) {
-    return renderTeacherView();
-  }
-  
-  // This is the final fallback. It only runs if loading is complete,
-  // user is not an admin, AND they could not be found in the teachers list.
-  // We also check for user.email to prevent the "blank email" error.
-  if (user && user.email) {
-    return (
-      <div className="p-4 md:p-6 space-y-6 flex items-center justify-center h-full">
-        <Card className="w-full max-w-md text-center">
-          <CardHeader>
-            <CardTitle>Error: Could not identify teacher</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-destructive">Your email ({user.email}) is not registered as a teacher in this school's data. Please contact the administrator.</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Fallback for any other edge cases, e.g. user object is not fully populated yet
-  // This indicates a state mismatch and we should not hang forever.
-  // The main layout will likely redirect to /login in this scenario.
-  return renderGenericLoader("Loading data...");
+  // If not admin, we assume teacher. The renderTeacherView function
+  // will handle the case where the teacher isn't found.
+  return renderTeacherView();
 }

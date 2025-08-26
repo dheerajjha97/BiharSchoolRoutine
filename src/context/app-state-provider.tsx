@@ -30,8 +30,6 @@ interface AppStateContextType {
   updateSchoolInfo: <K extends keyof SchoolInfo>(key: K, value: SchoolInfo[K]) => void;
   updateConfig: <K extends keyof SchoolConfig>(key: K, value: SchoolConfig[K]) => void;
   updateAdjustments: <K extends keyof AppState['adjustments']>(key: K, value: AppState['adjustments'][K]) => void;
-  isLoading: boolean;
-  setIsLoading: (loading: boolean) => void;
   isAuthLoading: boolean;
   isSyncing: boolean;
   user: User | null;
@@ -105,8 +103,7 @@ const removeUndefined = (obj: any): any => {
 
 export const AppStateProvider = ({ children }: { children: React.ReactNode }) => {
   const [appState, setAppState] = useState<AppState>(DEFAULT_APP_STATE);
-  const [isLoading, setIsLoading] = useState(true); // General loading for operations like routine generation
-  const [isAuthLoading, setIsAuthLoading] = useState(true); // Specific loading for auth state
+  const [isAuthLoading, setIsAuthLoading] = useState(true); // Manages auth and data loading
   const [isSyncing, setIsSyncing] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [isUserAdmin, setIsUserAdmin] = useState(false);
@@ -190,13 +187,13 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
   }, []);
 
   useEffect(() => {
-    if (!isLoading && appState.teachers.length > 0 && activeRoutine) {
+    if (!isAuthLoading && appState.teachers.length > 0 && activeRoutine) {
         updateState('teacherLoad', calculatedTeacherLoad);
     } else if (!activeRoutine) {
         updateState('teacherLoad', {});
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [calculatedTeacherLoad, isLoading, activeRoutine]);
+  }, [calculatedTeacherLoad, isAuthLoading, activeRoutine]);
   
   const updateSchoolInfo = useCallback(<K extends keyof SchoolInfo>(key: K, value: SchoolInfo[K]) => {
      setAppState(prevState => ({
@@ -335,7 +332,6 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         
         if (newUser) {
             const db = getFirestoreDB();
-            setIsLoading(true);
             
             let roleDocRef = doc(db, "userRoles", newUser.email!);
             let roleSnap = await getDoc(roleDocRef);
@@ -343,18 +339,14 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
             // Fallback for existing teachers not yet in userRoles
             if (!roleSnap.exists()) {
                 const schoolAdminsRef = collection(db, "schoolAdmins");
-                // This is an expensive query, but it's a one-time fallback for migrating old users.
-                const allSchoolsSnap = await getDocs(schoolAdminsRef);
-                
-                for (const schoolDoc of allSchoolsSnap.docs) {
-                    const schoolData = schoolDoc.data() as AppState;
-                    const foundTeacher = schoolData.teachers?.find(t => t.email === newUser.email);
-                    if (foundTeacher) {
-                        const udise = schoolDoc.id;
-                        await addTeacherRole(newUser.email!, udise);
-                        roleSnap = await getDoc(roleDocRef); // Re-fetch the role doc
-                        break; // Stop searching once found
-                    }
+                const q = query(schoolAdminsRef, where("teachers", "array-contains", { email: newUser.email, name: newUser.displayName }));
+                const matchingSchoolsSnap = await getDocs(q);
+
+                if (!matchingSchoolsSnap.empty) {
+                    const schoolDoc = matchingSchoolsSnap.docs[0];
+                    const udise = schoolDoc.id;
+                    await addTeacherRole(newUser.email!, udise);
+                    roleSnap = await getDoc(roleDocRef); // Re-fetch the role doc
                 }
             }
 
@@ -387,7 +379,6 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
                      handleLogout();
                      return;
                 }
-                setIsLoading(false);
                 setIsAuthLoading(false); // Set auth loading to false only after data is loaded
             }, (error) => {
                 console.error("Error in snapshot listener:", error);
@@ -400,7 +391,6 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
             setUser(null);
             setIsUserAdmin(false);
             setAppState(DEFAULT_APP_STATE);
-            setIsLoading(false);
             setIsAuthLoading(false);
         }
     });
@@ -460,8 +450,6 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
         updateSchoolInfo,
         updateConfig,
         updateAdjustments,
-        isLoading, 
-        setIsLoading,
         isAuthLoading,
         isSyncing,
         user,

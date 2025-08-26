@@ -109,9 +109,7 @@ export default function Home() {
         deleteRoutineVersion, 
         updateRoutineVersion,
         setActiveRoutineId,
-        isLoading,
         isAuthLoading,
-        setIsLoading,
         isUserAdmin,
     } = useContext(AppStateContext);
 
@@ -149,15 +147,12 @@ export default function Home() {
   }, [user, teachers]);
 
   const handleGenerateRoutine = () => {
-        setIsLoading(true);
         try {
             const schedule = generateScheduleLogic({ teachers, classes, subjects, timeSlots, ...config });
             addRoutineVersion(schedule, `School Routine - ${new Date().toLocaleString()}`);
             toast({ title: "Routine Generated Successfully", description: "A new routine version has been created and set as active." });
         } catch (error) {
             toast({ variant: "destructive", title: "Generation Failed", description: error instanceof Error ? error.message : "An unknown error occurred." });
-        } finally {
-            setIsLoading(false);
         }
     };
     
@@ -195,35 +190,34 @@ export default function Home() {
 
   
   const renderTeacherView = () => {
-    // This view is only rendered after all loading is complete.
-    // If we reach this point, `loggedInTeacher` should be populated if they exist.
-    if (loggedInTeacher) {
+    // This is the final fallback for a teacher who is logged in
+    // but couldn't be found in the teachers list after all data loaded.
+    if (!loggedInTeacher) {
       return (
-          <div className="p-4 md:p-6 space-y-6">
-              <TeacherRoutineDisplay 
-                  scheduleData={activeRoutine?.schedule || null}
-                  teacher={loggedInTeacher}
-                  timeSlots={appState.timeSlots} 
-                  workingDays={appState.config.workingDays}
-                  holidays={holidays}
-              />
-          </div>
+        <div className="p-4 md:p-6 space-y-6 flex items-center justify-center h-full">
+          <Card className="w-full max-w-md text-center">
+            <CardHeader>
+              <CardTitle>Error: Could not identify teacher</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-destructive">Your email ({user?.email}) is not registered as a teacher in this school's data. Please contact the administrator.</p>
+            </CardContent>
+          </Card>
+        </div>
       );
     }
     
-    // This is the final fallback for a teacher who is logged in
-    // but couldn't be found in the teachers list after all data loaded.
+    // If we reach this point, `loggedInTeacher` is populated.
     return (
-      <div className="p-4 md:p-6 space-y-6 flex items-center justify-center h-full">
-        <Card className="w-full max-w-md text-center">
-          <CardHeader>
-            <CardTitle>Error: Could not identify teacher</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-destructive">Your email ({user?.email}) is not registered as a teacher in this school's data. Please contact the administrator.</p>
-          </CardContent>
-        </Card>
-      </div>
+        <div className="p-4 md:p-6 space-y-6">
+            <TeacherRoutineDisplay 
+                scheduleData={activeRoutine?.schedule || null}
+                teacher={loggedInTeacher}
+                timeSlots={appState.timeSlots} 
+                workingDays={appState.config.workingDays}
+                holidays={holidays}
+            />
+        </div>
     );
   };
 
@@ -244,8 +238,8 @@ export default function Home() {
         <CardContent className="flex flex-col sm:flex-row gap-4">
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button size="lg" disabled={isLoading} className="flex-grow">
-                {isLoading ? (<Loader2 className="mr-2 h-5 w-5 animate-spin" />) : (<Wand2 className="mr-2 h-5 w-5" />)}
+              <Button size="lg" disabled={isAuthLoading} className="flex-grow">
+                {isAuthLoading ? (<Loader2 className="mr-2 h-5 w-5 animate-spin" />) : (<Wand2 className="mr-2 h-5 w-5" />)}
                 Generate New Routine
               </Button>
             </AlertDialogTrigger>
@@ -264,7 +258,7 @@ export default function Home() {
           </AlertDialog>
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button size="lg" variant="outline" disabled={isLoading} className="flex-grow">
+              <Button size="lg" variant="outline" disabled={isAuthLoading} className="flex-grow">
                 <PlusSquare className="mr-2 h-5 w-5" />
                 Create New Blank Routine
               </Button>
@@ -361,20 +355,14 @@ export default function Home() {
     </div>
   );
   
-  if (isAuthLoading || isLoading) {
+  if (isAuthLoading) {
     return renderGenericLoader("Loading data...");
   }
 
   // After loading, decide which view to render
   if (isUserAdmin) {
     return renderAdminDashboard();
-  } 
-  
-  // Strict check to ensure user and email are available before rendering teacher view
-  if (user && user.email && !isUserAdmin) {
+  } else {
     return renderTeacherView();
   }
-
-  // Fallback if something is still loading or in an inconsistent state
-  return renderGenericLoader("Finalizing...");
 }

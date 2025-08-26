@@ -298,7 +298,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots: rawTimeSlots, classes, subjec
     return (
       <div className="no-print space-y-4">
         {/* Day Filter Badges */}
-        <ScrollArea className="w-full whitespace-nowrap">
+        <ScrollArea>
             <div className="flex items-center gap-2 pb-2">
                 {workingDays.map(day => (
                     <Button 
@@ -306,6 +306,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots: rawTimeSlots, classes, subjec
                         variant={selectedDay === day ? "default" : "outline"} 
                         size="sm"
                         onClick={() => setSelectedDay(day)}
+                        className="flex-shrink-0"
                     >
                         {day}
                     </Button>
@@ -315,7 +316,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots: rawTimeSlots, classes, subjec
         </ScrollArea>
 
         {/* Class Filter Badges */}
-        <ScrollArea className="w-full whitespace-nowrap">
+        <ScrollArea>
             <div className="flex items-center gap-2 pb-2">
                 {sortedClasses.map(c => (
                     <Button 
@@ -323,6 +324,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots: rawTimeSlots, classes, subjec
                         variant={selectedClass === c ? "default" : "outline"}
                         size="sm"
                         onClick={() => setSelectedClass(c)}
+                        className="flex-shrink-0"
                     >
                         {c}
                     </Button>
@@ -350,7 +352,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots: rawTimeSlots, classes, subjec
                         <div key={slot} className="flex items-center gap-4 p-3 border rounded-lg bg-background">
                             <div className="flex flex-col items-center text-center w-20 flex-shrink-0">
                                 <span className="font-bold text-sm">{slot}</span>
-                                {instructionalSlotMap[slot] && <span className="text-xs text-muted-foreground">({toRoman(instructionalSlotMap[slot])}</span>}
+                                {instructionalSlotMap[slot] && <span className="text-xs text-muted-foreground">({toRoman(instructionalSlotMap[slot])})</span>}
                             </div>
                             <div className="border-l pl-4 flex-grow">
                                 <h4 className="font-bold flex items-center gap-2 text-primary"><BookOpen className="h-4 w-4" /> {entry.subject}</h4>

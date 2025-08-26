@@ -139,7 +139,6 @@ export default function Home() {
   const hasHistory = routineHistory && routineHistory.length > 0;
   
   const loggedInTeacher = useMemo(() => {
-      // Ensure we only run this when all data is present to prevent race conditions
       if (!user?.email || !teachers || teachers.length === 0) {
           return null;
       }
@@ -178,21 +177,9 @@ export default function Home() {
     setRoutineToRename(null);
     setRenameValue("");
   };
-
-  const renderGenericLoader = (message: string) => (
-      <div className="p-4 md:p-6 space-y-6 flex items-center justify-center h-full">
-          <div className="flex flex-col items-center gap-2 text-muted-foreground">
-              <Loader2 className="h-8 w-8 animate-spin"/>
-              <p>{message}</p>
-          </div>
-      </div>
-  );
-
   
   const renderTeacherView = () => {
-    // This condition handles the case where all data is loaded,
-    // but the logged-in user's email is not found in the teachers list.
-    if (user && user.email && !loggedInTeacher) {
+    if (!loggedInTeacher) {
       return (
         <div className="p-4 md:p-6 space-y-6 flex items-center justify-center h-full">
           <Card className="w-full max-w-md text-center">
@@ -200,14 +187,13 @@ export default function Home() {
               <CardTitle>Error: Could not identify teacher</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-destructive">Your email ({user.email}) is not registered as a teacher in this school's data. Please contact the administrator.</p>
+              <p className="text-destructive">Your email ({user?.email}) is not registered as a teacher in this school's data. Please contact the administrator.</p>
             </CardContent>
           </Card>
         </div>
       );
     }
     
-    // If we reach here, `loggedInTeacher` is populated, so we can safely render the display.
     return (
         <div className="p-4 md:p-6 space-y-6">
             <TeacherRoutineDisplay 
@@ -356,19 +342,21 @@ export default function Home() {
   );
   
   if (isAuthLoading) {
-    return renderGenericLoader("Loading data...");
+    return (
+        <div className="p-4 md:p-6 space-y-6 flex items-center justify-center h-full">
+            <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                <Loader2 className="h-8 w-8 animate-spin"/>
+                <p>Loading data...</p>
+            </div>
+        </div>
+    );
   }
 
   // After loading, decide which view to render
   if (isUserAdmin) {
     return renderAdminDashboard();
   } else {
-    // For a teacher, we must wait for the user object and email to be available
-    if (user && user.email) {
-      return renderTeacherView();
-    }
-    // If not, continue showing loader until user data is fully populated
-    return renderGenericLoader("Identifying teacher...");
+    return renderTeacherView();
   }
 }
 

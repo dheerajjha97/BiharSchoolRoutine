@@ -298,43 +298,43 @@ const RoutineDisplay = ({ scheduleData, timeSlots: rawTimeSlots, classes, subjec
     return (
       <div className="no-print space-y-4">
         {/* Day Filter Badges */}
-        <ScrollArea>
-            <div className="flex items-center gap-2 pb-2">
+        <ScrollArea className="w-full">
+            <div className="flex gap-2 pb-2 px-4">
                 {workingDays.map(day => (
                     <Button 
                         key={day} 
-                        variant={selectedDay === day ? "default" : "outline"} 
+                        variant={selectedDay === day ? "default" : "outline"}
                         size="sm"
                         onClick={() => setSelectedDay(day)}
-                        className="flex-shrink-0"
+                        className="rounded-full flex-shrink-0"
                     >
                         {day}
                     </Button>
                 ))}
             </div>
-            <ScrollBar orientation="horizontal" />
+            <ScrollBar orientation="horizontal" className="h-2" />
         </ScrollArea>
 
         {/* Class Filter Badges */}
-        <ScrollArea>
-            <div className="flex items-center gap-2 pb-2">
+        <ScrollArea className="w-full">
+            <div className="flex gap-2 pb-2 px-4">
                 {sortedClasses.map(c => (
                     <Button 
                         key={c}
                         variant={selectedClass === c ? "default" : "outline"}
                         size="sm"
                         onClick={() => setSelectedClass(c)}
-                        className="flex-shrink-0"
+                        className="rounded-full flex-shrink-0"
                     >
                         {c}
                     </Button>
                 ))}
             </div>
-            <ScrollBar orientation="horizontal" />
+            <ScrollBar orientation="horizontal" className="h-2" />
         </ScrollArea>
         
         {/* Timeline View */}
-        <div className="mt-4 space-y-2">
+        <div className="mt-4 space-y-2 px-2">
             {timelineEntries.length > 0 ? (
                  timelineEntries.map(({ slot, entry }, index) => {
                     if (!entry) return null;
@@ -352,7 +352,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots: rawTimeSlots, classes, subjec
                         <div key={slot} className="flex items-center gap-4 p-3 border rounded-lg bg-background">
                             <div className="flex flex-col items-center text-center w-20 flex-shrink-0">
                                 <span className="font-bold text-sm">{slot}</span>
-                                {instructionalSlotMap[slot] && <span className="text-xs text-muted-foreground">({toRoman(instructionalSlotMap[slot])})</span>}
+                                {instructionalSlotMap[slot] && <span className="text-xs text-muted-foreground">({toRoman(instructionalSlotMap[slot])}</span>}
                             </div>
                             <div className="border-l pl-4 flex-grow">
                                 <h4 className="font-bold flex items-center gap-2 text-primary"><BookOpen className="h-4 w-4" /> {entry.subject}</h4>

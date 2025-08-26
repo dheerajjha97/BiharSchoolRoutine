@@ -9,14 +9,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash2, Printer, Pencil, User, Sun, Sandwich } from "lucide-react";
+import { Trash2, Printer, Pencil } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn, sortClasses, sortTimeSlots } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from '../ui/badge';
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import useMediaQuery from '@/hooks/use-media-query';
 
 interface RoutineDisplayProps {
   scheduleData: GenerateScheduleOutput | null;
@@ -37,7 +37,7 @@ type GridSchedule = Record<string, Record<string, Record<string, ScheduleEntry[]
 type CellData = {
     subject: string;
     className: string;
-    teacher: string; // This will store the teacher's ID
+    teacher: string;
 }
 
 type CurrentCell = {
@@ -63,7 +63,8 @@ const toRoman = (num: number): string => {
 const RoutineDisplay = ({ scheduleData, timeSlots: rawTimeSlots, classes, subjects, teachers, teacherSubjects, onScheduleChange, dailyPeriodQuota, pdfHeader = "", isEditable, workingDays }: RoutineDisplayProps) => {
   const { toast } = useToast();
   const defaultDay = new Date().toLocaleString('en-US', { weekday: 'long' }) as DayOfWeek;
-  
+  const isMobile = useMediaQuery("(max-width: 768px)");
+
   const timeSlots = useMemo(() => sortTimeSlots(rawTimeSlots), [rawTimeSlots]);
   const sortedClasses = useMemo(() => [...classes].sort(sortClasses), [classes]);
   const [isCellDialogOpen, setIsCellDialogOpen] = useState(false);
@@ -117,7 +118,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots: rawTimeSlots, classes, subjec
     });
   }, [cellData.subject, teachers, teacherSubjects]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (cellData.subject && cellData.teacher) {
         const teacherIsAvailable = availableTeachers.some(t => t.id === cellData.teacher);
         if (!teacherIsAvailable && cellData.teacher !== 'N/A') {
@@ -220,54 +221,131 @@ const RoutineDisplay = ({ scheduleData, timeSlots: rawTimeSlots, classes, subjec
     );
   };
 
-const renderDayView = (day: DayOfWeek) => {
+  const renderDesktopView = () => {
     return (
-        <div className="border rounded-lg">
-            <Table>
-                <TableHeader>
-                    <TableRow className="bg-muted/50 hover:bg-muted/50">
-                        <TableHead className="font-semibold p-2 sticky left-0 bg-muted/50 z-20 min-w-[120px] shadow-sm">Time / Class</TableHead>
-                        {sortedClasses.map(c => (
-                            <TableHead key={c} className="text-center font-semibold text-xs p-1 align-bottom min-w-[120px]">{c}</TableHead>
-                        ))}
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {timeSlots.map(timeSlot => {
-                        const firstEntryForDay = gridSchedule[day]?.[sortedClasses[0]]?.[timeSlot]?.[0];
-                        const isSpecial = firstEntryForDay?.subject === 'Prayer' || firstEntryForDay?.subject === 'Lunch';
-                        
-                        if (isSpecial) {
-                            return (
-                                <TableRow key={timeSlot}>
-                                    <TableCell className="font-medium p-2 sticky left-0 bg-card z-10">{timeSlot}</TableCell>
-                                    <TableCell colSpan={sortedClasses.length} className="p-0 text-center align-middle font-semibold text-primary bg-primary/10">
-                                        {firstEntryForDay.subject}
-                                    </TableCell>
-                                </TableRow>
-                            );
-                        }
+        <Tabs defaultValue={workingDays.includes(defaultDay) ? defaultDay : (workingDays[0] || "Monday")} className="w-full no-print">
+            <TabsList className="mb-4">
+                {workingDays.map(day => <TabsTrigger key={day} value={day}>{day}</TabsTrigger>)}
+            </TabsList>
+            
+            {workingDays.map(day => (
+                <TabsContent key={day} value={day} className="mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                     <ScrollArea className="w-full whitespace-nowrap">
+                        <div className="border rounded-lg">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow className="bg-muted/50 hover:bg-muted/50">
+                                        <TableHead className="font-semibold p-2 sticky left-0 bg-muted/50 z-20 min-w-[120px] shadow-sm">Time / Class</TableHead>
+                                        {sortedClasses.map(c => (
+                                            <TableHead key={c} className="text-center font-semibold text-xs p-1 align-bottom min-w-[120px]">{c}</TableHead>
+                                        ))}
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {timeSlots.map(timeSlot => {
+                                        const firstEntryForDay = gridSchedule[day]?.[sortedClasses[0]]?.[timeSlot]?.[0];
+                                        const isSpecial = firstEntryForDay?.subject === 'Prayer' || firstEntryForDay?.subject === 'Lunch';
+                                        
+                                        if (isSpecial) {
+                                            return (
+                                                <TableRow key={timeSlot}>
+                                                    <TableCell className="font-medium p-2 sticky left-0 bg-card z-10">{timeSlot}</TableCell>
+                                                    <TableCell colSpan={sortedClasses.length} className="p-0 text-center align-middle font-semibold text-primary bg-primary/10">
+                                                        {firstEntryForDay.subject}
+                                                    </TableCell>
+                                                </TableRow>
+                                            );
+                                        }
 
-                        return (
-                            <TableRow key={timeSlot}>
-                                <TableCell className="font-medium p-2 sticky left-0 bg-card z-10">
-                                  {timeSlot}
-                                  <br/>
-                                  <span className="font-normal text-muted-foreground text-xs">{instructionalSlotMap[timeSlot] ? `(${toRoman(instructionalSlotMap[timeSlot])})` : ''}</span>
-                                </TableCell>
-                                {sortedClasses.map(className => (
-                                    <TableCell key={className} className="p-0 align-top border-l">
-                                        {renderCellContent(day, className, timeSlot)}
-                                    </TableCell>
-                                ))}
-                            </TableRow>
-                        );
-                    })}
-                </TableBody>
-            </Table>
-        </div>
+                                        return (
+                                            <TableRow key={timeSlot}>
+                                                <TableCell className="font-medium p-2 sticky left-0 bg-card z-10">
+                                                  {timeSlot}
+                                                  <br/>
+                                                  <span className="font-normal text-muted-foreground text-xs">{instructionalSlotMap[timeSlot] ? `(${toRoman(instructionalSlotMap[timeSlot])})` : ''}</span>
+                                                </TableCell>
+                                                {sortedClasses.map(className => (
+                                                    <TableCell key={className} className="p-0 align-top border-l">
+                                                        {renderCellContent(day, className, timeSlot)}
+                                                    </TableCell>
+                                                ))}
+                                            </TableRow>
+                                        );
+                                    })}
+                                </TableBody>
+                            </Table>
+                        </div>
+                        <ScrollBar orientation="horizontal" />
+                    </ScrollArea>
+                </TabsContent>
+            ))}
+        </Tabs>
     );
 };
+
+  const renderMobileView = () => {
+    return (
+      <Accordion type="single" defaultValue={workingDays.includes(defaultDay) ? defaultDay : (workingDays[0] || "Monday")} collapsible className="w-full no-print">
+        {workingDays.map(day => (
+          <AccordionItem value={day} key={day}>
+            <AccordionTrigger className="bg-muted/50 px-4 py-3 rounded-md">
+              <span className="font-semibold">{day}</span>
+            </AccordionTrigger>
+            <AccordionContent className="pt-2">
+                <ScrollArea className="w-full whitespace-nowrap">
+                  <div className="border rounded-lg">
+                      <Table>
+                          <TableHeader>
+                              <TableRow className="bg-muted/50 hover:bg-muted/50">
+                                  <TableHead className="font-semibold p-2 sticky left-0 bg-muted/50 z-20 min-w-[120px] shadow-sm">Time</TableHead>
+                                  {sortedClasses.map(c => (
+                                      <TableHead key={c} className="text-center font-semibold text-xs p-1 align-bottom min-w-[120px]">{c}</TableHead>
+                                  ))}
+                              </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                              {timeSlots.map(timeSlot => {
+                                  const firstEntryForDay = gridSchedule[day]?.[sortedClasses[0]]?.[timeSlot]?.[0];
+                                  const isSpecial = firstEntryForDay?.subject === 'Prayer' || firstEntryForDay?.subject === 'Lunch';
+                                  
+                                  if (isSpecial) {
+                                      return (
+                                          <TableRow key={timeSlot}>
+                                              <TableCell className="font-medium p-2 sticky left-0 bg-card z-10">{timeSlot}</TableCell>
+                                              <TableCell colSpan={sortedClasses.length} className="p-0 text-center align-middle font-semibold text-primary bg-primary/10">
+                                                  {firstEntryForDay.subject}
+                                              </TableCell>
+                                          </TableRow>
+                                      );
+                                  }
+
+                                  return (
+                                      <TableRow key={timeSlot}>
+                                          <TableCell className="font-medium p-2 sticky left-0 bg-card z-10">
+                                            {timeSlot}
+                                            <br/>
+                                            <span className="font-normal text-muted-foreground text-xs">{instructionalSlotMap[timeSlot] ? `(${toRoman(instructionalSlotMap[timeSlot])})` : ''}</span>
+                                          </TableCell>
+                                          {sortedClasses.map(className => (
+                                              <TableCell key={className} className="p-0 align-top border-l">
+                                                  {renderCellContent(day, className, timeSlot)}
+                                              </TableCell>
+                                          ))}
+                                      </TableRow>
+                                  );
+                              })}
+                          </TableBody>
+                      </Table>
+                  </div>
+                  <ScrollBar orientation="horizontal" />
+                </ScrollArea>
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+    );
+  };
+
 
   if (!scheduleData || !scheduleData.schedule || scheduleData.schedule.length === 0) {
     return (
@@ -324,7 +402,7 @@ const renderDayView = (day: DayOfWeek) => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {workingDays.map((day, dayIndex) => (
+                            {workingDays.map((day) => (
                                 sortedClasses.map((className, classIndex) => {
                                     const isPrayerOrLunchRow = timeSlots.some(slot => gridSchedule[day]?.[className]?.[slot]?.[0]?.subject === 'Prayer' || gridSchedule[day]?.[className]?.[slot]?.[0]?.subject === 'Lunch');
                                     if (isPrayerOrLunchRow && classIndex > 0) return null;
@@ -339,7 +417,7 @@ const renderDayView = (day: DayOfWeek) => {
 
                                                 if (entry && (entry.subject === 'Prayer' || entry.subject === 'Lunch')) {
                                                     if (classIndex === 0) {
-                                                         return <TableCell key={timeSlot} colSpan={1} className="border text-center align-middle font-semibold p-1 bg-muted/50">{entry.subject}</TableCell>;
+                                                         return <TableCell key={timeSlot} colSpan={sortedClasses.length} className="border text-center align-middle font-semibold p-1 bg-muted/50">{entry.subject}</TableCell>;
                                                     }
                                                     return null;
                                                 }
@@ -363,21 +441,7 @@ const renderDayView = (day: DayOfWeek) => {
                         </TableBody>
                     </Table>
                 </div>
-                <Tabs defaultValue={workingDays.includes(defaultDay) ? defaultDay : (workingDays[0] || "Monday")} className="w-full no-print">
-                    <TabsList className="mb-4">
-                        {workingDays.map(day => <TabsTrigger key={day} value={day}>{day}</TabsTrigger>)}
-                    </TabsList>
-                    
-
-                    {workingDays.map(day => (
-                        <TabsContent key={day} value={day} className="mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-                             <ScrollArea className="w-full whitespace-nowrap">
-                                {renderDayView(day)}
-                                <ScrollBar orientation="horizontal" />
-                            </ScrollArea>
-                        </TabsContent>
-                    ))}
-                </Tabs>
+                {isMobile ? renderMobileView() : renderDesktopView()}
             </div>
         </CardContent>
       </Card>

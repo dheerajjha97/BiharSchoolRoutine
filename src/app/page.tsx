@@ -141,7 +141,7 @@ export default function Home() {
   const hasHistory = routineHistory && routineHistory.length > 0;
   
   const loggedInTeacher = useMemo(() => {
-      // Ensure we have the necessary data before trying to find the teacher
+      // Ensure we only run this when all data is present to prevent race conditions
       if (!user?.email || !teachers || teachers.length === 0) {
           return null;
       }
@@ -370,7 +370,11 @@ export default function Home() {
     return renderAdminDashboard();
   } 
   
-  // If not admin, we assume teacher. The renderTeacherView function
-  // will handle the case where the teacher isn't found.
-  return renderTeacherView();
+  // Strict check to ensure user and email are available before rendering teacher view
+  if (user && user.email && !isUserAdmin) {
+    return renderTeacherView();
+  }
+
+  // Fallback if something is still loading or in an inconsistent state
+  return renderGenericLoader("Finalizing...");
 }

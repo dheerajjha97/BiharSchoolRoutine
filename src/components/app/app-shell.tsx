@@ -179,7 +179,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="grid min-h-screen w-full lg:grid-cols-[280px_1fr]">
-      <div className="hidden border-r bg-card lg:flex lg:flex-col">
+      <div className="hidden border-r bg-card/50 lg:flex lg:flex-col">
         {sidebarContent}
       </div>
       <div className="flex flex-col">
@@ -202,7 +202,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </div>
             <ThemeToggle />
          </header>
-         <main className="flex-1 bg-muted/40 overflow-auto p-4 md:p-6">
+         <main className="flex-1 bg-background overflow-auto p-4 md:p-6">
             {children}
         </main>
       </div>

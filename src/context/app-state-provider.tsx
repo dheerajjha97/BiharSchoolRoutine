@@ -80,7 +80,8 @@ const DEFAULT_APP_STATE: AppState = {
   teacherLoad: {},
   examTimetable: [],
   adjustments: DEFAULT_ADJUSTMENTS_STATE,
-  user: null, // Add user to app state
+  user: null,
+  isUserAdmin: false,
 };
 
 const removeUndefined = (obj: any): any => {
@@ -464,5 +465,3 @@ export const AppStateProvider = ({ children }: { children: React.ReactNode }) =>
     </AppStateContext.Provider>
   );
 };
-
-    

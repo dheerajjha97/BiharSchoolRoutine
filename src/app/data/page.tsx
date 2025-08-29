@@ -52,6 +52,8 @@ const DEFAULT_APP_STATE: AppState = {
   teacherLoad: {},
   examTimetable: [],
   adjustments: DEFAULT_ADJUSTMENTS_STATE,
+  user: null,
+  isUserAdmin: false,
 };
 
 
@@ -267,3 +269,5 @@ export default function DataManagementPage() {
         </div>
     );
 }
+
+    

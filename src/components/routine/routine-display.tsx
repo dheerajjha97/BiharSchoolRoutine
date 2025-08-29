@@ -299,7 +299,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots: rawTimeSlots, classes, subjec
       <div className="no-print space-y-4">
         {/* Day Filter Badges */}
         <ScrollArea className="w-full">
-            <div className="flex gap-2 pb-2 px-4">
+            <div className="flex gap-2 pb-2 whitespace-nowrap px-4">
                 {workingDays.map(day => (
                     <Button 
                         key={day} 
@@ -317,7 +317,7 @@ const RoutineDisplay = ({ scheduleData, timeSlots: rawTimeSlots, classes, subjec
 
         {/* Class Filter Badges */}
         <ScrollArea className="w-full">
-            <div className="flex gap-2 pb-2 px-4">
+            <div className="flex gap-2 pb-2 whitespace-nowrap px-4">
                 {sortedClasses.map(c => (
                     <Button 
                         key={c}

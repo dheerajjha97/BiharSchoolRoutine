@@ -1,12 +1,13 @@
 
 "use client";
 
-import React, { useContext, useMemo } from "react";
+import React, { useContext, useMemo, useState } from "react";
 import PageHeader from "@/components/app/page-header";
 import { AppStateContext } from "@/context/app-state-provider";
 import type { ScheduleEntry, DayOfWeek, Teacher } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { sortClasses, sortTimeSlots } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { Book, Microscope, Laptop, Palette, Landmark, Dumbbell, Languages } from "lucide-react";
@@ -56,7 +57,12 @@ const getSubjectColor = (subject: string, subjectColorMap: Map<string, string>):
 export default function SchoolRoutinePage() {
     const { appState } = useContext(AppStateContext);
     const { routineHistory, activeRoutineId, timeSlots, config, schoolInfo, teachers, classes } = appState;
-    const defaultDay = new Date().toLocaleString('en-US', { weekday: 'long' }) as DayOfWeek;
+    
+    const systemDefaultDay = new Date().toLocaleString('en-US', { weekday: 'long' }) as DayOfWeek;
+    const defaultDay = config.workingDays.includes(systemDefaultDay) ? systemDefaultDay : (config.workingDays[0] || "Monday");
+    
+    const [selectedDay, setSelectedDay] = useState<DayOfWeek>(defaultDay);
+    const [selectedClass, setSelectedClass] = useState<string | null>(null);
 
     const activeRoutine = routineHistory.find(r => r.id === activeRoutineId);
     
@@ -73,9 +79,6 @@ export default function SchoolRoutinePage() {
             grid[day] = {};
             sortedClasses.forEach(c => {
                 grid[day][c] = {};
-                sortedTimeSlots.forEach(slot => {
-                     // Intentionally left empty, will be filled below
-                });
             });
         });
         
@@ -89,10 +92,9 @@ export default function SchoolRoutinePage() {
         });
 
         return grid;
-    }, [activeRoutine, sortedTimeSlots, sortedClasses, config.workingDays]);
+    }, [activeRoutine, sortedClasses, config.workingDays]);
 
     const subjectColorMap = useMemo(() => new Map<string, string>(), []);
-
 
     if (!activeRoutine) {
         return (
@@ -117,81 +119,108 @@ export default function SchoolRoutinePage() {
             />
 
             <Card>
-                <CardContent className="p-4 md:p-6">
-                    <Tabs defaultValue={config.workingDays.includes(defaultDay) ? defaultDay : (config.workingDays[0] || "Monday")} className="w-full">
-                        <div className="overflow-x-auto">
-                            <TabsList className="mb-6 flex-nowrap justify-start">
-                                {config.workingDays.map(day => (
-                                    <TabsTrigger key={day} value={day}>{day}</TabsTrigger>
-                                ))}
-                            </TabsList>
+                <CardContent className="p-4 md:p-6 space-y-4">
+                    <ScrollArea>
+                        <div className="flex space-x-2 pb-2">
+                            {config.workingDays.map(day => (
+                                <Button
+                                    key={day}
+                                    variant={selectedDay === day ? "default" : "outline"}
+                                    onClick={() => setSelectedDay(day)}
+                                    className="rounded-full"
+                                >
+                                    {day}
+                                </Button>
+                            ))}
                         </div>
-                        
-                        {config.workingDays.map(day => (
-                            <TabsContent key={day} value={day}>
-                                <div className="overflow-x-auto">
-                                    <table className="w-full border-collapse" style={{ borderCollapse: 'separate', borderSpacing: '0 4px' }}>
-                                        <thead>
-                                            <tr className="bg-transparent">
-                                                <th className="sticky left-0 z-20 p-2 text-sm font-semibold text-foreground align-bottom bg-card text-left">Time / Class</th>
-                                                {sortedClasses.map(c => (
-                                                    <th key={c} className="p-2 text-center text-sm font-semibold text-foreground min-w-[150px]">{c}</th>
-                                                ))}
+                        <ScrollBar orientation="horizontal" />
+                    </ScrollArea>
+                    <ScrollArea>
+                        <div className="flex space-x-2 pb-2">
+                             <Button
+                                variant={selectedClass === null ? "secondary" : "outline"}
+                                onClick={() => setSelectedClass(null)}
+                                className="rounded-full"
+                            >
+                                All
+                            </Button>
+                            {sortedClasses.map(c => (
+                                <Button
+                                    key={c}
+                                    variant={selectedClass === c ? "secondary" : "outline"}
+                                    onClick={() => setSelectedClass(c)}
+                                    className="rounded-full"
+                                >
+                                    {c}
+                                </Button>
+                            ))}
+                        </div>
+                        <ScrollBar orientation="horizontal" />
+                    </ScrollArea>
+                    
+                    <div className="overflow-x-auto border rounded-lg">
+                        <table className="w-full border-collapse" style={{ borderCollapse: 'separate', borderSpacing: '0' }}>
+                            <thead>
+                                <tr className="bg-muted/50">
+                                    <th className="sticky left-0 z-20 p-2 text-sm font-semibold text-foreground align-bottom bg-muted/50 text-left min-w-[120px]">Time / Class</th>
+                                    {sortedClasses.map(c => (
+                                        <th key={c} className={cn(
+                                            "p-2 text-center text-sm font-semibold text-foreground min-w-[150px] transition-colors",
+                                            selectedClass === c && "bg-primary/10"
+                                        )}>{c}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {sortedTimeSlots.map(slot => {
+                                    const firstEntry = scheduleByDayClassTime[selectedDay]?.[sortedClasses[0]]?.[slot];
+                                    const isSpecial = firstEntry?.subject === 'Prayer' || firstEntry?.subject === 'Lunch';
+                                    
+                                    if (isSpecial) {
+                                        return (
+                                            <tr key={slot}>
+                                                <td className="sticky left-0 z-10 p-2 text-sm font-semibold text-foreground align-middle bg-card text-left">{slot}</td>
+                                                <td colSpan={sortedClasses.length} className="p-2 align-middle">
+                                                    <div className="h-full flex items-center justify-center p-3 text-center bg-secondary text-secondary-foreground font-semibold rounded-md">
+                                                        {firstEntry.subject}
+                                                    </div>
+                                                </td>
                                             </tr>
-                                        </thead>
-                                        <tbody>
-                                            {sortedTimeSlots.map(slot => {
-                                                const firstEntry = scheduleByDayClassTime[day]?.[sortedClasses[0]]?.[slot];
-                                                const isSpecial = firstEntry?.subject === 'Prayer' || firstEntry?.subject === 'Lunch';
+                                        );
+                                    }
+
+                                    return (
+                                        <tr key={slot}>
+                                            <td className="sticky left-0 z-10 p-2 text-sm font-semibold text-foreground align-top bg-card text-left">{slot}</td>
+                                            {sortedClasses.map(c => {
+                                                const entry = scheduleByDayClassTime[selectedDay]?.[c]?.[slot];
+                                                const isEmpty = !entry || entry?.subject === '---';
+                                                const teacherNames = (entry?.teacher || '').split(' & ').map(tId => teacherNameMap.get(tId.trim()) || tId).join(' & ');
                                                 
-                                                if (isSpecial) {
-                                                    return (
-                                                        <tr key={slot}>
-                                                            <td className="sticky left-0 z-20 p-2 text-sm font-semibold text-foreground align-middle bg-card text-left">{slot}</td>
-                                                            <td colSpan={sortedClasses.length} className="p-2 align-middle">
-                                                                <div className="h-full flex items-center justify-center p-3 text-center bg-secondary text-secondary-foreground font-semibold rounded-md">
-                                                                    {firstEntry.subject}
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                    );
+                                                if (isEmpty) {
+                                                    return <td key={`${c}-${slot}`} className={cn("p-2 border-t border-l border-dashed", selectedClass === c && "bg-primary/5")}></td>;
                                                 }
+                                                
+                                                const colorClass = getSubjectColor(entry.subject, subjectColorMap);
 
                                                 return (
-                                                    <tr key={slot}>
-                                                        <td className="sticky left-0 z-20 p-2 text-sm font-semibold text-foreground align-top bg-card text-left">{slot}</td>
-                                                        {sortedClasses.map(c => {
-                                                            const entry = scheduleByDayClassTime[day]?.[c]?.[slot];
-                                                            const isEmpty = !entry || entry?.subject === '---';
-                                                            const teacherNames = (entry?.teacher || '').split(' & ').map(tId => teacherNameMap.get(tId.trim()) || tId).join(' & ');
-                                                            
-                                                            if (isEmpty) {
-                                                                return <td key={`${c}-${slot}`} className="p-2 border-t border-b border-dashed"></td>;
-                                                            }
-                                                            
-                                                            const colorClass = getSubjectColor(entry.subject, subjectColorMap);
-
-                                                            return (
-                                                                <td key={`${c}-${slot}`} className="p-2 align-top border-t border-b">
-                                                                    <div className={cn("text-left p-3 space-y-1.5 bg-card rounded-lg shadow-sm border-l-4 h-full", colorClass)}>
-                                                                        <p className="font-bold text-sm text-foreground flex items-center">
-                                                                            {getSubjectIcon(entry.subject)}
-                                                                            {entry.subject}
-                                                                        </p>
-                                                                        <p className="text-xs text-muted-foreground">{teacherNames === 'N/A' ? '' : teacherNames}</p>
-                                                                    </div>
-                                                                </td>
-                                                            );
-                                                        })}
-                                                    </tr>
+                                                    <td key={`${c}-${slot}`} className={cn("p-2 align-top border-t border-l", selectedClass === c && "bg-primary/5")}>
+                                                        <div className={cn("text-left p-3 space-y-1.5 bg-card rounded-lg shadow-sm border-l-4 h-full", colorClass)}>
+                                                            <p className="font-bold text-sm text-foreground flex items-center">
+                                                                {getSubjectIcon(entry.subject)}
+                                                                {entry.subject}
+                                                            </p>
+                                                            <p className="text-xs text-muted-foreground">{teacherNames === 'N/A' ? '' : teacherNames}</p>
+                                                        </div>
+                                                    </td>
                                                 );
                                             })}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </TabsContent>
-                        ))}
-                    </Tabs>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
                 </CardContent>
             </Card>
         </div>
